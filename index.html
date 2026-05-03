@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
 <title>MixLab</title>
 <!-- Paint black BEFORE anything else — eliminates white/chrome flash -->
@@ -179,6 +180,8 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .fader-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
 .fader-track{width:14px;background:#0d0d0d;border-radius:7px;border:1px solid #333;position:relative;cursor:ns-resize;user-select:none;touch-action:none;}
 .fader-cap{width:26px;height:16px;background:linear-gradient(180deg,#555,#3a3a3a);border:1px solid #666;border-radius:3px;position:absolute;left:50%;transform:translateX(-50%);cursor:ns-resize;box-shadow:0 2px 4px #0008;}
+/* Larger invisible touch target around fader cap */
+.fader-cap::before{content:'';position:absolute;top:-10px;left:-10px;right:-10px;bottom:-10px;}
 .fader-cap::after{content:'';display:block;width:16px;height:1px;background:#888;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
 .fader-0db{position:absolute;right:-5px;width:4px;height:1px;background:var(--accent);opacity:.6;}
 .fader-val{font-size:9px;color:var(--dim);}
@@ -1668,10 +1671,39 @@ function createKnob({label,min,max,value:initVal,size=36,color='#e8a020',unit=''
   }
   render(val);
   let drag=false,sy=0,sv=0;
-  svg.addEventListener('mousedown',e=>{drag=true;sy=e.clientY;sv=val;e.preventDefault();});
-  window.addEventListener('mousemove',e=>{if(!drag)return;const s=e.shiftKey?0.003:0.012;val=Math.min(max,Math.max(min,sv+(sy-e.clientY)*(max-min)*s));render(val);onChange&&onChange(val);});
-  window.addEventListener('mouseup',()=>{drag=false;});
+
+  // ── DRAG: mouse + touch ──
+  function startDrag(clientY){ drag=true; sy=clientY; sv=val; }
+  function moveDrag(clientY){
+    if(!drag) return;
+    const s=0.012;
+    val=Math.min(max,Math.max(min,sv+(sy-clientY)*(max-min)*s));
+    render(val); onChange&&onChange(val);
+  }
+  function endDrag(){ drag=false; }
+
+  svg.addEventListener('mousedown', e=>{ startDrag(e.clientY); e.preventDefault(); });
+  window.addEventListener('mousemove', e=>{ moveDrag(e.clientY); });
+  window.addEventListener('mouseup', endDrag);
+
+  // Touch events — single finger drag maps 1:1 to mouse drag
+  svg.addEventListener('touchstart', e=>{
+    if(e.touches.length===1){ startDrag(e.touches[0].clientY); e.preventDefault(); }
+  }, {passive:false});
+  window.addEventListener('touchmove', e=>{
+    if(drag && e.touches.length===1){ moveDrag(e.touches[0].clientY); e.preventDefault(); }
+  }, {passive:false});
+  window.addEventListener('touchend', endDrag);
+
   svg.addEventListener('wheel',e=>{e.preventDefault();const s=e.shiftKey?(max-min)*0.002:(max-min)*0.012;val=Math.min(max,Math.max(min,val-Math.sign(e.deltaY)*s));render(val);onChange&&onChange(val);},{passive:false});
+
+  // Double-tap to reset (touch equivalent of dblclick)
+  let lastTap=0;
+  svg.addEventListener('touchend', e=>{
+    const now=Date.now();
+    if(now-lastTap<300){ val=initVal; render(val); onChange&&onChange(val); }
+    lastTap=now;
+  });
   svg.addEventListener('dblclick',()=>{val=initVal;render(val);onChange&&onChange(val);});
   function setFreqLabel(t){if(freqEl)freqEl.textContent=t;}
   return{el:wrap,getValue:()=>val,setValue:v=>{val=v;render(v);},setFreqLabel};
@@ -1789,6 +1821,34 @@ function createFader({min=-60,max=10,value:initVal=-60,height=90,onChange}){
   });
   window.addEventListener('mousemove', handleMove);
   window.addEventListener('mouseup', () => { drag = false; });
+
+  // ── TOUCH SUPPORT for fader ──
+  function handleTouchMove(e){
+    if(!drag || !e.touches.length) return;
+    // Synthesize a fake event object with clientY from touch
+    handleMove({ clientY: e.touches[0].clientY });
+    e.preventDefault();
+  }
+  track.addEventListener('touchstart', e=>{
+    drag=true;
+    handleTouchMove(e);
+    e.preventDefault();
+  }, {passive:false});
+  cap.addEventListener('touchstart', e=>{
+    drag=true;
+    e.preventDefault();
+    e.stopPropagation();
+  }, {passive:false});
+  window.addEventListener('touchmove', handleTouchMove, {passive:false});
+  window.addEventListener('touchend', ()=>{ drag=false; });
+
+  // Double-tap cap to reset to 0dB
+  let faderLastTap=0;
+  cap.addEventListener('touchend', e=>{
+    const now=Date.now();
+    if(now-faderLastTap<300){ val=0; render(val); onChange&&onChange(val); }
+    faderLastTap=now;
+  });
   cap.addEventListener('dblclick', () => { val=0; render(val); onChange&&onChange(val); });
 
   return { el:wrap, getValue:()=>val, setValue:v=>{ val=v; render(v); } };
