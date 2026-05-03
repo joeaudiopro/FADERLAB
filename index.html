@@ -939,7 +939,6 @@ body.splash-active #appRoot{
   <div style="display:flex;gap:5px;">
     <button class="btn play" id="playAll">▶ PLAY</button>
     <button class="btn stop" id="stopAll">■ STOP</button>
-    <button class="btn" id="loopBtn" title="Loop — repetir pistas sin fin">⟳ LOOP</button>
   </div>
   <div style="display:flex;gap:3px;">
     <button class="listen-btn active" data-bus="foh">FOH</button>
@@ -972,8 +971,6 @@ body.splash-active #appRoot{
   </div>
   <!-- NORMAL / NINJA MODE -->
   <button class="mode-btn" id="modeBtn">🥷 NINJA</button>
-  <!-- INPUT MANAGER -->
-  <button class="input-topbar-btn digital-only" id="inputMgrBtn">⬡ INPUTS</button>
   <span style="margin-left:auto;font-size:9px;color:var(--dim)">16 CH · MixLab v2.6</span>
 </div>
 
@@ -1384,7 +1381,7 @@ async function assignDeviceToChannel(devId, devLabel, chIdx, inputChIdx = 0){
 
     const chName = inputChIdx > 0 ? ` (IN${inputChIdx+1})` : '';
     showToast(`✔ ${devLabel}${chName} → CH${chIdx+1}`);
-    document.getElementById('inputMgrBtn').classList.add('live');
+    // input active
 
   } catch(e) {
     showToast(`Error: ` + e.message);
@@ -1531,7 +1528,7 @@ async function connectInputDevice(deviceId){
       gridEl.appendChild(badge);
     }
     updateInputGrid();
-    document.getElementById('inputMgrBtn').classList.add('live');
+    // input active
 
     // Re-enumerar con nombres reales
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -1595,20 +1592,11 @@ function _connectSplitterToChannel(srcIdx, ch){
 }
 
 // Panel open/close
-document.getElementById('inputMgrBtn').addEventListener('click', () => {
-  document.getElementById('inputPanel').classList.add('open');
-  // Escanear automáticamente al abrir si ya tenemos permiso
-  if(inputManager._permStream || inputManager.stream){
-    scanAudioInputs();
-  }
-});
+
 document.getElementById('inputCloseBtn').addEventListener('click', () => {
   document.getElementById('inputPanel').classList.remove('open');
 });
-document.getElementById('inputPanel').addEventListener('click', e => {
-  if(e.target === document.getElementById('inputPanel'))
-    document.getElementById('inputPanel').classList.remove('open');
-});
+
 document.getElementById('inputScanBtn').addEventListener('click', scanAudioInputs);
 
 // ──────────────────────────────────────────────────
@@ -2413,27 +2401,28 @@ function createChannel(i){
     buffer=await ctx.decodeAudioData(ab);
     fl.textContent=e.target.files[0].name.substring(0,15);fl.classList.add('loaded');
   });
-  function play(when, isLoop = false){
+  function play(when){
     if(!buffer) return;
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.connect(trimNode);
     src.start(when);
     activeSources.push(src);
-
-    // Loop: schedule next playback precisely at end of buffer
-    // Using onended + ctx.currentTime for sample-accurate restart
-    if(isLoop || window._loopEnabled){
-      src.onended = () => {
-        // Remove from activeSources
-        const idx = activeSources.indexOf(src);
-        if(idx > -1) activeSources.splice(idx, 1);
-        // Only reschedule if loop is still enabled and we haven't been stopped
-        if(window._loopEnabled && !src._stopped){
-          play(ctx.currentTime, true);
+    // When track ends, remove from active sources and check if all done
+    src.onended = () => {
+      src._stopped = true;
+      const idx = activeSources.indexOf(src);
+      if(idx > -1) activeSources.splice(idx, 1);
+      // If all sources finished naturally, reset play button to stopped state
+      if(activeSources.length === 0){
+        const pb = document.getElementById('playAll');
+        const sb = document.getElementById('stopAll');
+        if(pb && sb){
+          pb.classList.remove('active');
+          sb.classList.add('active');
         }
-      };
-    }
+      }
+    };
   }
 
   // ── SOURCE SWITCH LOGIC ──
@@ -2484,10 +2473,10 @@ function createChannel(i){
 
   srcFilBtn.addEventListener('click', setSourceFile);
 
-  srcInpBtn.addEventListener('click', () => {
+  srcInpBtn.addEventListener('click', async () => {
+    // If no devices scanned yet, do it now automatically
     if(!inputManager._scannedDevices || inputManager._scannedDevices.length === 0){
-      showToast('Abre ⬡ INPUTS → SCAN primero');
-      return;
+      await scanAudioInputs();
     }
     setSourceInput();
   });
@@ -2552,7 +2541,7 @@ function createChannel(i){
       const devName = track.label || devId.substr(0,16);
       const chName  = inChIdx === 0 ? 'IN1' : 'IN2';
       showToast(`✔ ${devName} ${chName} → ${lEl.textContent}`);
-      document.getElementById('inputMgrBtn').classList.add('live');
+      // input active
 
     } catch(e) {
       showToast('Error: ' + e.message);
@@ -3238,17 +3227,7 @@ setupPflOutput().then(() => {
 // STOP starts lit (no audio running)
 stopBtn.classList.add('active');
 
-// LOOP state
-window._loopEnabled = false;
-loopBtn.addEventListener('click', () => {
-  window._loopEnabled = !window._loopEnabled;
-  loopBtn.classList.toggle('loop-on', window._loopEnabled);
-  if(!window._loopEnabled){
-    // Disable loop — mark sources so onended won't restart them
-    activeSources.forEach(s => { s._stopped = true; });
-  }
-  showToast(window._loopEnabled ? '⟳ Loop activado' : '⟳ Loop desactivado');
-});
+
 
 playBtn.addEventListener('click', () => {
   if (ctx.state === 'suspended') ctx.resume();
