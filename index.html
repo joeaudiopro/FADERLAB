@@ -1225,58 +1225,85 @@ function buildDeviceList(audioIn){
     const devId  = d.deviceId || 'default';
     const label  = d.label || 'Dispositivo (' + devId.substr(0,8) + '...)';
 
-    // Encontrar si ya está asignado
-    const assignedCh = channels.findIndex(ch => ch._assignedDeviceId === devId);
+    // Encontrar asignaciones existentes para este deviceId
+    const assignedChs = channels
+      .map((ch,i) => ch._assignedDeviceId === devId ? i : -1)
+      .filter(i => i >= 0);
 
     const row = document.createElement('div');
-    row.className = 'input-dev-row' + (assignedCh >= 0 ? ' assigned' : '');
+    row.className = 'input-dev-row' + (assignedChs.length > 0 ? ' assigned' : '');
     row.dataset.devId = devId;
 
+    // Nombre del dispositivo
     const nameEl = document.createElement('div');
     nameEl.className = 'input-dev-name';
     nameEl.textContent = label;
     nameEl.title = label;
 
-    const chEl = document.createElement('div');
-    chEl.className = 'input-dev-ch';
-    chEl.textContent = assignedCh >= 0 ? '→ CH'+(assignedCh+1) : '';
-
-    const assignBtn = document.createElement('button');
-    if(assignedCh >= 0){
-      assignBtn.className = 'input-unassign-btn';
-      assignBtn.textContent = '✕';
-      assignBtn.title = 'Desasignar';
-      assignBtn.addEventListener('click', () => {
-        unassignDeviceFromChannel(assignedCh);
-        buildDeviceList(inputManager._scannedDevices || audioIn);
-        updateAssignTable();
-      });
-    } else {
-      assignBtn.className = 'input-assign-btn';
-      assignBtn.textContent = 'CH →';
-      assignBtn.title = 'Asignar al siguiente canal libre';
-      assignBtn.addEventListener('click', async () => {
-        const free = channels.findIndex(ch =>
-          ch.inputSrcIdx === null && !ch._assignedDeviceId
-        );
-        if(free < 0){ showToast('No hay canales libres sin asignar'); return; }
-        assignBtn.textContent = '...';
-        assignBtn.disabled = true;
-        await assignDeviceToChannel(devId, label, free);
-        buildDeviceList(inputManager._scannedDevices || audioIn);
-        updateAssignTable();
-      });
+    // Selector de canal de entrada (para interfaces multicanal)
+    const chSelect = document.createElement('select');
+    chSelect.style.cssText = `
+      font-family:'Share Tech Mono',monospace;font-size:8px;
+      background:#111;color:var(--accent2);
+      border:1px solid #333;border-radius:2px;
+      padding:1px 3px;outline:none;cursor:pointer;
+      max-width:60px;flex-shrink:0;
+    `;
+    chSelect.title = 'Canal de entrada de la interfaz';
+    // Opciones: canal 1 a 8
+    for(let c = 1; c <= 8; c++){
+      const opt = document.createElement('option');
+      opt.value = c - 1; // índice 0-based
+      opt.textContent = 'IN' + c;
+      chSelect.appendChild(opt);
     }
 
+    // Botón asignar
+    const assignBtn = document.createElement('button');
+    assignBtn.className = 'input-assign-btn';
+    assignBtn.textContent = 'CH →';
+    assignBtn.title = 'Asignar al siguiente canal libre de MixLab';
+    assignBtn.addEventListener('click', async () => {
+      const selectedInputCh = parseInt(chSelect.value); // canal de la interfaz
+      const free = channels.findIndex(ch =>
+        ch.inputSrcIdx === null && !ch._assignedDeviceId
+      );
+      if(free < 0){ showToast('No hay canales libres sin asignar'); return; }
+      assignBtn.textContent = '...';
+      assignBtn.disabled = true;
+      chSelect.disabled = true;
+      await assignDeviceToChannel(devId, label, free, selectedInputCh);
+      buildDeviceList(inputManager._scannedDevices || audioIn);
+      updateAssignTable();
+    });
+
+    // Botones de desasignación para canales ya asignados
+    const unassignWrap = document.createElement('div');
+    unassignWrap.style.cssText = 'display:flex;gap:3px;flex-wrap:wrap;';
+    assignedChs.forEach(chIdx => {
+      const ubtn = document.createElement('button');
+      ubtn.className = 'input-unassign-btn';
+      ubtn.textContent = 'CH'+(chIdx+1)+' ✕';
+      ubtn.title = 'Desasignar CH'+(chIdx+1);
+      ubtn.addEventListener('click', () => {
+        unassignDeviceFromChannel(chIdx);
+        buildDeviceList(inputManager._scannedDevices || audioIn);
+        updateAssignTable();
+      });
+      unassignWrap.appendChild(ubtn);
+    });
+
     row.appendChild(nameEl);
-    row.appendChild(chEl);
+    row.appendChild(chSelect);
+    if(assignedChs.length > 0) row.appendChild(unassignWrap);
     row.appendChild(assignBtn);
     listEl.appendChild(row);
   });
 }
 
 // Asignar un dispositivo específico a un canal de MixLab
-async function assignDeviceToChannel(devId, devLabel, chIdx){
+// inputChIdx: índice del canal de la interfaz (0=IN1, 1=IN2, etc.)
+async function assignDeviceToChannel(devId, devLabel, chIdx, inputChIdx = 0){
   const ch = channels[chIdx];
   if(!ch) return;
 
@@ -1289,42 +1316,62 @@ async function assignDeviceToChannel(devId, devLabel, chIdx){
 
     if(ctx.state === 'suspended') await ctx.resume();
 
-    // Abrir stream mono desde este deviceId específico
+    // Abrir stream solicitando el canal específico
+    // Pedimos stereo para tener acceso a ambos canales del par (L/R)
+    // luego usamos ChannelSplitter para elegir el canal exacto
     const stream = await navigator.mediaDevices.getUserMedia({
       audio:{
         deviceId:         { exact: devId },
         echoCancellation: false,
         noiseSuppression: false,
         autoGainControl:  false,
-        channelCount:     1,
+        channelCount:     { ideal: Math.max(2, inputChIdx + 1) },
       },
       video: false
     });
 
     const src = ctx.createMediaStreamSource(stream);
-    src.channelCount          = 1;
+    // Pedir el máximo de canales al source node
+    const actualCh = stream.getAudioTracks()[0].getSettings().channelCount || 1;
+    src.channelCount          = actualCh;
     src.channelCountMode      = 'explicit';
     src.channelInterpretation = 'discrete';
 
-    // Conectar directo al inputSrcGain del canal
-    if(ch._inputTapGain) try{ ch._inputTapGain.disconnect(); }catch(e){}
-    src.connect(ch._inputSrcGain);
+    // Splitter para elegir el canal específico
+    const splitter = ctx.createChannelSplitter(actualCh);
+    splitter.channelCount          = actualCh;
+    splitter.channelCountMode      = 'explicit';
+    splitter.channelInterpretation = 'discrete';
 
-    // Guardar estado
-    ch._assignedStream   = stream;
-    ch._assignedDeviceId = devId;
-    ch._inputTapGain     = src; // reutilizamos este campo para cleanup
-    ch.inputSrcIdx       = 0;   // marca como "tiene input"
+    // Merger para convertir a mono
+    const merger = ctx.createChannelMerger(1);
+
+    src.connect(splitter);
+    // Conectar el canal solicitado (o el último disponible si hay menos)
+    const useCh = Math.min(inputChIdx, actualCh - 1);
+    splitter.connect(merger, useCh, 0);
+
+    // Conectar al inputSrcGain del canal de MixLab
+    if(ch._inputTapGain) try{ ch._inputTapGain.disconnect(); }catch(e){}
+    merger.connect(ch._inputSrcGain);
+
+    // Guardar referencias para limpieza
+    ch._assignedStream    = stream;
+    ch._assignedDeviceId  = devId;
+    ch._assignedInputCh   = inputChIdx;
+    ch._inputTapGain      = merger; // reutilizamos para cleanup
+    ch.inputSrcIdx        = 0;
 
     // Activar modo INPUT en el canal
-    ch.assignInput(0); // activa el switch FILE/INPUT
+    ch.assignInput(0);
 
-    showToast(`✔ ${devLabel} → CH${chIdx+1}`);
+    const chName = inputChIdx > 0 ? ` (IN${inputChIdx+1})` : '';
+    showToast(`✔ ${devLabel}${chName} → CH${chIdx+1}`);
     document.getElementById('inputMgrBtn').classList.add('live');
 
   } catch(e) {
-    showToast(`Error al conectar ${devLabel}: ` + e.message);
-    console.error(e);
+    showToast(`Error: ` + e.message);
+    console.error('assignDeviceToChannel error:', e);
   }
 }
 
