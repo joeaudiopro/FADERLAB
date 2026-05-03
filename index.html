@@ -381,6 +381,37 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
   display:grid;grid-template-columns:repeat(4,1fr);
   gap:6px;margin-top:12px;
 }
+/* New per-device row */
+.input-dev-row{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 8px;
+  background:#111;border:1px solid #222;border-radius:4px;
+  transition:border-color .15s;
+}
+.input-dev-row:hover{border-color:#444;}
+.input-dev-row.assigned{border-color:var(--green);background:#0a1a0a;}
+.input-dev-name{
+  flex:1;font-size:9px;color:var(--text);
+  letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.input-dev-ch{
+  font-size:8px;color:var(--dim);letter-spacing:.5px;white-space:nowrap;
+}
+.input-assign-btn{
+  font-family:'Share Tech Mono',monospace;font-size:8px;
+  padding:2px 8px;border:1px solid #444;border-radius:2px;
+  background:#1a1a1a;color:var(--accent2);cursor:pointer;
+  letter-spacing:.5px;transition:all .15s;white-space:nowrap;
+}
+.input-assign-btn:hover{background:#001a1a;border-color:var(--accent2);}
+.input-assign-btn.assigned-btn{border-color:var(--green);color:var(--green);background:#0a1a0a;}
+.input-unassign-btn{
+  font-family:'Share Tech Mono',monospace;font-size:8px;
+  padding:2px 6px;border:1px solid #333;border-radius:2px;
+  background:#1a0a0a;color:var(--red);cursor:pointer;
+  letter-spacing:.5px;transition:all .15s;
+}
+.input-unassign-btn:hover{border-color:var(--red);}
 .input-ch-badge{
   background:#1a1a1a;border:1px solid #2a2a2a;
   border-radius:4px;padding:5px 4px;
@@ -933,38 +964,32 @@ body.splash-active #appRoot{
       <button class="input-close-btn" id="inputCloseBtn">✕</button>
     </div>
 
+    <!-- SCAN button -->
     <div class="input-device-row">
-      <span class="input-device-label">DEVICE</span>
-      <select class="input-device-select" id="inputDeviceSelect">
-        <option value="">— click SCAN to detect —</option>
-      </select>
-      <button class="input-scan-btn" id="inputScanBtn">SCAN</button>
-      <button class="input-scan-btn" id="inputConnectBtn" style="display:none;background:#001a0a;border-color:var(--green);color:var(--green);">CONECTAR</button>
-    </div>
-    <!-- Manual channel count -->
-    <div class="input-device-row" style="margin-top:4px;">
-      <span class="input-device-label">CANALES</span>
-      <div style="display:flex;align-items:center;gap:6px;flex:1;">
-        <input type="number" id="inputChCount" min="1" max="32" value="2"
-          style="width:52px;font-family:'Share Tech Mono',monospace;font-size:10px;
-                 background:#1a1a1a;color:var(--accent2);border:1px solid #444;
-                 border-radius:3px;padding:3px 6px;outline:none;text-align:center;"
-          title="Número de canales de entrada de tu interfaz"/>
-        <span style="font-size:8px;color:var(--dim);letter-spacing:.5px;">
-          canales — ajusta según tu interfaz (Focusrite 18i8 = 8)
-        </span>
-      </div>
+      <span class="input-device-label">ENTRADAS</span>
+      <button class="input-scan-btn" id="inputScanBtn" style="flex:1;">
+        SCAN — detectar dispositivos de audio
+      </button>
     </div>
 
-    <div class="input-status" id="inputStatus">Sin dispositivo seleccionado</div>
+    <div class="input-status" id="inputStatus">Presiona SCAN para detectar entradas disponibles</div>
 
-    <div style="font-size:8px;color:var(--dim);letter-spacing:1px;margin-top:12px;margin-bottom:6px;">
-      CANALES DISPONIBLES — clic para asignar al siguiente canal libre
+    <!-- Device list — each device can be assigned to a MixLab channel -->
+    <div style="font-size:8px;color:var(--dim);letter-spacing:1px;margin-top:10px;margin-bottom:6px;">
+      DISPOSITIVOS DISPONIBLES — asigna cada entrada a un canal de MixLab
     </div>
-    <div class="input-ch-grid" id="inputChGrid"></div>
+    <div id="inputDeviceList" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto;"></div>
 
-    <div style="font-size:8px;color:#444;margin-top:14px;line-height:1.6;">
-      ℹ  Selecciona una interfaz, luego asigna sus canales a los strips de la consola usando el switch FILE/INPUT de cada canal.
+    <!-- Assignment table -->
+    <div style="font-size:8px;color:var(--dim);letter-spacing:1px;margin-top:10px;margin-bottom:4px;">
+      ASIGNACIONES ACTUALES
+    </div>
+    <div id="inputAssignTable" style="font-size:8px;color:#555;font-family:'Share Tech Mono',monospace;">
+      — ninguna —
+    </div>
+
+    <div style="font-size:8px;color:#333;margin-top:10px;line-height:1.6;">
+      ℹ  En tu Focusrite, cada entrada (Analogue 1, Analogue 2…) aparece como dispositivo separado. Asígnala al canal de MixLab que desees usando el botón CH→.
     </div>
   </div>
 </div>
@@ -1140,69 +1165,199 @@ const inputManager = {
 
 // Populate device selector
 // ── SCAN ──
-// Si ya tenemos permiso (_permStream vivo o stream activo), enumera directamente.
-// Solo pide permiso si no hay ninguno concedido aún.
+// Lista TODOS los dispositivos de entrada individualmente.
+// Para interfaces como la Focusrite, cada canal aparece como
+// un deviceId separado: "Scarlett 18i8 Analogue 1", "Analogue 2", etc.
 async function scanAudioInputs(){
-  const statusEl  = document.getElementById('inputStatus');
-  const selectEl  = document.getElementById('inputDeviceSelect');
-  const connectBtn= document.getElementById('inputConnectBtn');
+  const statusEl   = document.getElementById('inputStatus');
+  const listEl     = document.getElementById('inputDeviceList');
+  const connectBtn = document.getElementById('inputConnectBtn');
+  if(connectBtn) connectBtn.style.display = 'none';
 
   statusEl.textContent = 'Buscando dispositivos...';
   statusEl.className = 'input-status';
-  connectBtn.style.display = 'none';
+  listEl.innerHTML = '';
 
   try {
-    // Verificar si ya tenemos permiso con algún stream activo
-    const yaPermiso = inputManager._permStream || inputManager.stream;
-
-    if(!yaPermiso){
-      // Primera vez sin permiso — pedirlo una sola vez
-      statusEl.textContent = 'Solicitando permiso de audio...';
+    // Pedir permiso si no lo tenemos
+    if(!inputManager._permStream && !inputManager.stream){
+      statusEl.textContent = 'Solicitando permiso...';
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false },
-        video: false
+        audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false },
+        video:false
       });
       inputManager._permStream = stream;
-      // NO cerrar el stream — lo mantenemos vivo para que el permiso persista
     }
 
-    // Enumerar dispositivos — con permiso ya concedido devuelve labels e IDs reales
+    // Enumerar TODOS los dispositivos de entrada
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioIn = devices.filter(d => d.kind === 'audioinput');
 
     if(audioIn.length === 0){
-      statusEl.textContent = 'No se encontraron dispositivos de audio.';
+      statusEl.textContent = 'No se encontraron dispositivos.';
       statusEl.className = 'input-status err';
       return;
     }
 
-    // Actualizar cache
     inputManager._scannedDevices = audioIn;
+    buildDeviceList(audioIn);
 
-    // Poblar el selector
-    selectEl.innerHTML = '';
-    audioIn.forEach((d, idx) => {
-      const opt = document.createElement('option');
-      opt.value = d.deviceId || 'default';
-      opt.textContent = d.label
-        ? d.label
-        : d.deviceId === 'default'        ? 'Predeterminado del sistema'
-        : d.deviceId === 'communications' ? 'Comunicaciones'
-        : 'Dispositivo ' + (idx + 1);
-      selectEl.appendChild(opt);
-    });
-    selectEl.selectedIndex = 0;
-
-    statusEl.textContent = `✔ ${audioIn.length} dispositivo(s) — elige uno y presiona CONECTAR`;
+    statusEl.textContent = `✔ ${audioIn.length} entrada(s) detectada(s) — asigna cada una a un canal de MixLab`;
     statusEl.className = 'input-status ok';
-    connectBtn.style.display = 'inline-block';
+
+    // Escanear salidas PFL también
+    setTimeout(scanPflOutputs, 300);
 
   } catch(e) {
     statusEl.textContent = e.name === 'NotAllowedError'
-      ? 'Permiso denegado. Ve a Configuración del navegador → Privacidad → Micrófono.'
+      ? 'Permiso denegado. Permite el acceso al micrófono en tu navegador.'
       : 'Error: ' + e.message;
     statusEl.className = 'input-status err';
   }
+}
+
+// Construir la lista de dispositivos con botones de asignación
+function buildDeviceList(audioIn){
+  const listEl = document.getElementById('inputDeviceList');
+  listEl.innerHTML = '';
+
+  audioIn.forEach((d) => {
+    const devId  = d.deviceId || 'default';
+    const label  = d.label || 'Dispositivo (' + devId.substr(0,8) + '...)';
+
+    // Encontrar si ya está asignado
+    const assignedCh = channels.findIndex(ch => ch._assignedDeviceId === devId);
+
+    const row = document.createElement('div');
+    row.className = 'input-dev-row' + (assignedCh >= 0 ? ' assigned' : '');
+    row.dataset.devId = devId;
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'input-dev-name';
+    nameEl.textContent = label;
+    nameEl.title = label;
+
+    const chEl = document.createElement('div');
+    chEl.className = 'input-dev-ch';
+    chEl.textContent = assignedCh >= 0 ? '→ CH'+(assignedCh+1) : '';
+
+    const assignBtn = document.createElement('button');
+    if(assignedCh >= 0){
+      assignBtn.className = 'input-unassign-btn';
+      assignBtn.textContent = '✕';
+      assignBtn.title = 'Desasignar';
+      assignBtn.addEventListener('click', () => {
+        unassignDeviceFromChannel(assignedCh);
+        buildDeviceList(inputManager._scannedDevices || audioIn);
+        updateAssignTable();
+      });
+    } else {
+      assignBtn.className = 'input-assign-btn';
+      assignBtn.textContent = 'CH →';
+      assignBtn.title = 'Asignar al siguiente canal libre';
+      assignBtn.addEventListener('click', async () => {
+        const free = channels.findIndex(ch =>
+          ch.inputSrcIdx === null && !ch._assignedDeviceId
+        );
+        if(free < 0){ showToast('No hay canales libres sin asignar'); return; }
+        assignBtn.textContent = '...';
+        assignBtn.disabled = true;
+        await assignDeviceToChannel(devId, label, free);
+        buildDeviceList(inputManager._scannedDevices || audioIn);
+        updateAssignTable();
+      });
+    }
+
+    row.appendChild(nameEl);
+    row.appendChild(chEl);
+    row.appendChild(assignBtn);
+    listEl.appendChild(row);
+  });
+}
+
+// Asignar un dispositivo específico a un canal de MixLab
+async function assignDeviceToChannel(devId, devLabel, chIdx){
+  const ch = channels[chIdx];
+  if(!ch) return;
+
+  try {
+    // Cerrar stream anterior de este canal si lo hay
+    if(ch._assignedStream){
+      ch._assignedStream.getTracks().forEach(t => t.stop());
+      if(ch._inputTapGain) try{ ch._inputTapGain.disconnect(); }catch(e){}
+    }
+
+    if(ctx.state === 'suspended') await ctx.resume();
+
+    // Abrir stream mono desde este deviceId específico
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio:{
+        deviceId:         { exact: devId },
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl:  false,
+        channelCount:     1,
+      },
+      video: false
+    });
+
+    const src = ctx.createMediaStreamSource(stream);
+    src.channelCount          = 1;
+    src.channelCountMode      = 'explicit';
+    src.channelInterpretation = 'discrete';
+
+    // Conectar directo al inputSrcGain del canal
+    if(ch._inputTapGain) try{ ch._inputTapGain.disconnect(); }catch(e){}
+    src.connect(ch._inputSrcGain);
+
+    // Guardar estado
+    ch._assignedStream   = stream;
+    ch._assignedDeviceId = devId;
+    ch._inputTapGain     = src; // reutilizamos este campo para cleanup
+    ch.inputSrcIdx       = 0;   // marca como "tiene input"
+
+    // Activar modo INPUT en el canal
+    ch.assignInput(0); // activa el switch FILE/INPUT
+
+    showToast(`✔ ${devLabel} → CH${chIdx+1}`);
+    document.getElementById('inputMgrBtn').classList.add('live');
+
+  } catch(e) {
+    showToast(`Error al conectar ${devLabel}: ` + e.message);
+    console.error(e);
+  }
+}
+
+// Desasignar dispositivo de un canal
+function unassignDeviceFromChannel(chIdx){
+  const ch = channels[chIdx];
+  if(!ch) return;
+  if(ch._assignedStream){
+    ch._assignedStream.getTracks().forEach(t => t.stop());
+    ch._assignedStream = null;
+  }
+  if(ch._inputTapGain){
+    try{ ch._inputTapGain.disconnect(); }catch(e){}
+    ch._inputTapGain = null;
+  }
+  ch._assignedDeviceId = null;
+  ch.inputSrcIdx       = null;
+  ch._inputSrcGain.gain.value = 0;
+  showToast(`CH${chIdx+1} desasignado`);
+}
+
+// Mostrar tabla de asignaciones actuales
+function updateAssignTable(){
+  const el = document.getElementById('inputAssignTable');
+  if(!el) return;
+  const assigned = channels
+    .map((ch, i) => ch._assignedDeviceId
+      ? `CH${i+1} ← ${ch._assignedDeviceId.substr(0,20)}...`
+      : null)
+    .filter(Boolean);
+  el.textContent = assigned.length > 0 ? assigned.join('\n') : '— ninguna —';
+  el.style.whiteSpace = 'pre';
+  el.style.lineHeight = '1.8';
 }
 
 // ── CONNECT ──
@@ -1378,7 +1533,7 @@ function _connectSplitterToChannel(srcIdx, ch){
 // Panel open/close
 document.getElementById('inputMgrBtn').addEventListener('click', () => {
   document.getElementById('inputPanel').classList.add('open');
-  // Si ya tenemos permiso, escanear automáticamente al abrir
+  // Escanear automáticamente al abrir si ya tenemos permiso
   if(inputManager._permStream || inputManager.stream){
     scanAudioInputs();
   }
@@ -1391,26 +1546,6 @@ document.getElementById('inputPanel').addEventListener('click', e => {
     document.getElementById('inputPanel').classList.remove('open');
 });
 document.getElementById('inputScanBtn').addEventListener('click', scanAudioInputs);
-// CONECTAR button — opens the selected device
-document.getElementById('inputConnectBtn').addEventListener('click', async () => {
-  const selectEl = document.getElementById('inputDeviceSelect');
-  // Get the selected value — if placeholder is selected, take the first real device
-  let deviceId = selectEl.value;
-  if(!deviceId || deviceId === ''){
-    // Find first option with a non-empty value
-    const firstReal = Array.from(selectEl.options).find(o => o.value && o.value !== '');
-    if(firstReal){
-      deviceId = firstReal.value;
-      selectEl.value = deviceId; // visually select it
-    }
-  }
-  if(!deviceId){
-    document.getElementById('inputStatus').textContent = 'No hay dispositivos disponibles — presiona SCAN primero';
-    document.getElementById('inputStatus').className = 'input-status err';
-    return;
-  }
-  await connectInputDevice(deviceId);
-});
 
 // ──────────────────────────────────────────────────
 // ══════════════════════════════════════════════════
@@ -2278,9 +2413,11 @@ function createChannel(i){
     gateOn:gateH.isOn, compOn:compH.isOn,
     isMuted:false,isSolo:false,
     sends:[s_aux1,s_aux2,s_fx1,s_fx2],
-    inputSrcIdx:    null,
-    _inputTapGain:  null,
-    _inputSrcGain:  inputSrcGain,  // reference so _connectSplitterToChannel can wire it
+    inputSrcIdx:       null,
+    _inputTapGain:     null,
+    _inputSrcGain:     inputSrcGain,
+    _assignedDeviceId: null,   // deviceId of assigned input device
+    _assignedStream:   null,   // stream for assigned device
     assignInput,
     getLabel: ()=>lEl.textContent,
     get volume(){return dbToGain(fader.getValue());},
