@@ -89,7 +89,8 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .channel.muted{opacity:.5;}
 .channel.soloed{border-color:var(--yellow)!important;}
 .channel.pfl-on{border-color:var(--yellow)!important;box-shadow:0 0 8px #e8e02022;}
-.ch-number{font-size:9px;color:var(--dim);letter-spacing:2px;}
+.ch-number{font-size:10px;color:var(--dim);letter-spacing:2px;font-weight:bold;}
+
 .ch-label-wrap{position:relative;width:102px;display:flex;align-items:center;justify-content:center;gap:3px;}
 .ch-label{font-size:10px;color:var(--accent);text-align:center;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:1px;outline:none;cursor:pointer;border-bottom:1px dashed transparent;transition:all .15s;}
 .ch-label:hover{border-bottom-color:#444;}
@@ -97,7 +98,7 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .edit-icon{font-size:9px;color:var(--dim);cursor:pointer;opacity:.5;transition:opacity .15s;user-select:none;}
 .edit-icon:hover{opacity:1;color:var(--accent);}
 .ch-flags{display:flex;gap:4px;}
-.flag-btn{font-size:8px;padding:2px 5px;border:1px solid #444;border-radius:2px;background:#1a1a1a;color:var(--dim);cursor:pointer;letter-spacing:.5px;transition:all .15s;}
+.flag-btn{font-size:9px;padding:2px 6px;border:1px solid #444;border-radius:2px;background:#1a1a1a;color:var(--dim);cursor:pointer;letter-spacing:.5px;transition:all .15s;}
 .flag-btn.active-48v{background:#b0208044;color:#e060c0;border-color:#e060c0;}
 .flag-btn.active-hpf{background:#2080b044;color:var(--accent2);border-color:var(--accent2);}
 .file-wrap{width:102px;}
@@ -108,14 +109,14 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 
 /* KNOB */
 .knob-wrap{display:flex;flex-direction:column;align-items:center;gap:1px;}
-.knob-label{font-size:8px;color:var(--dim);letter-spacing:1px;text-align:center;}
-.knob-freq{font-size:7px;color:#444;letter-spacing:.5px;text-align:center;margin-top:-1px;}
-.knob-val{font-size:8px;color:var(--dim);text-align:center;min-width:32px;}
+.knob-label{font-size:9px;color:var(--dim);letter-spacing:1px;text-align:center;}
+.knob-freq{font-size:8px;color:#555;letter-spacing:.5px;text-align:center;margin-top:-1px;}
+.knob-val{font-size:9px;color:var(--dim);text-align:center;min-width:32px;}
 .knob{cursor:ns-resize;user-select:none;touch-action:none;}
 
 /* EQ */
 .eq-section{width:102px;border:1px solid #2a2a2a;border-radius:4px;padding:5px 4px;background:#1a1a1a;}
-.section-title{font-size:8px;color:var(--dim);text-align:center;letter-spacing:2px;margin-bottom:4px;}
+.section-title{font-size:9px;color:var(--dim);text-align:center;letter-spacing:2px;margin-bottom:4px;}
 .eq-band{display:flex;flex-direction:column;align-items:center;gap:1px;padding:3px 0;}
 .eq-band+.eq-band{border-top:1px solid #2a2a2a;margin-top:2px;padding-top:4px;}
 
@@ -144,7 +145,7 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .vu-with-scale{display:flex;gap:1px;align-items:stretch;}
 /* Scale labels column */
 .vu-scale{display:flex;flex-direction:column;justify-content:space-between;width:14px;padding:1px 0;position:relative;}
-.vu-scale-mark{font-size:6px;color:#444;text-align:right;line-height:1;position:absolute;right:2px;transform:translateY(50%);}
+.vu-scale-mark{font-size:7px;color:#555;text-align:right;line-height:1;position:absolute;right:2px;transform:translateY(50%);}
 /* VU bars */
 .vu-meter{display:flex;gap:2px;height:80px;padding:2px;background:#0d0d0d;border-radius:3px;border:1px solid #2a2a2a;}
 .vu-bar-wrap{width:9px;height:76px;background:#111;border-radius:2px;position:relative;overflow:hidden;}
@@ -178,7 +179,7 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .fader-cap{width:26px;height:16px;background:linear-gradient(180deg,#555,#3a3a3a);border:1px solid #666;border-radius:3px;position:absolute;left:50%;transform:translateX(-50%);cursor:ns-resize;box-shadow:0 2px 4px #0008;}
 .fader-cap::after{content:'';display:block;width:16px;height:1px;background:#888;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
 .fader-0db{position:absolute;right:-5px;width:4px;height:1px;background:var(--accent);opacity:.6;}
-.fader-val{font-size:8px;color:var(--dim);}
+.fader-val{font-size:9px;color:var(--dim);}
 
 /* RIGHT SECTION */
 .right-section{display:flex;flex-direction:column;gap:8px;min-width:380px;padding-left:10px;}
@@ -2060,19 +2061,19 @@ function createChannel(i){
     padding:2px 4px;outline:none;cursor:pointer;
   `;
 
-  // Selector de canal de la interfaz (IN1-IN8)
+  // Selector de canal de la interfaz (solo IN1 e IN2 — Chrome limita a estéreo)
   const srcChSelect = document.createElement('select');
   srcChSelect.style.cssText = `
     display:none;width:100%;
-    font-family:'Share Tech Mono',monospace;font-size:7px;
+    font-family:'Share Tech Mono',monospace;font-size:8px;
     background:#001a1a;color:var(--accent2);
     border:1px solid #004444;border-radius:3px;
     padding:2px 4px;outline:none;cursor:pointer;
   `;
-  for(let c=1;c<=8;c++){
-    const o=document.createElement('option');o.value=c-1;o.textContent='↳ Canal IN'+c;
+  [{v:0,t:'↳ IN 1 (izquierdo)'},{v:1,t:'↳ IN 2 (derecho)'}].forEach(({v,t})=>{
+    const o=document.createElement('option');o.value=v;o.textContent=t;
     srcChSelect.appendChild(o);
-  }
+  });
 
   srcWrap.appendChild(srcSwitch);
   srcWrap.appendChild(srcDevSelect);
@@ -2099,8 +2100,8 @@ function createChannel(i){
   const faderNode =ctx.createGain();         faderNode.gain.value=0;
   const panNode   =ctx.createStereoPanner();
   const analyser  =ctx.createAnalyser();
-  analyser.fftSize = 4096;  // higher resolution for RTA
-  analyser.smoothingTimeConstant = 0.8; // smooth ballistics
+  analyser.fftSize = 8192;           // max resolution: 4096 frequency bins
+  analyser.smoothingTimeConstant = 0.75;
   const analyserBuf=new Uint8Array(analyser.fftSize);
 
   trimNode.connect(hpfNode); hpfNode.connect(lowEQ); lowEQ.connect(midEQ); midEQ.connect(highEQ);
@@ -2371,7 +2372,6 @@ function createChannel(i){
     srcDevSelect.style.display = 'none';
     srcChSelect.style.display  = 'none';
     inputSrcGain.gain.value = 0;
-    // Disconnect any assigned stream
     if(ch._assignedStream){
       ch._assignedStream.getTracks().forEach(t => t.stop());
       ch._assignedStream = null;
@@ -2406,41 +2406,51 @@ function createChannel(i){
   async function connectSelectedInput(){
     const devId = srcDevSelect.value;
     if(!devId) return;
-    const inChIdx = parseInt(srcChSelect.value) || 0;
+    const inChIdx = parseInt(srcChSelect.value) || 0; // 0=left/IN1, 1=right/IN2
 
     // Disconnect previous
     if(ch._assignedStream){
       ch._assignedStream.getTracks().forEach(t => t.stop());
       if(ch._inputTapGain) try{ ch._inputTapGain.disconnect(); }catch(e){}
-      ch._assignedStream = null; ch._inputTapGain = null;
+      ch._assignedStream = null;
+      ch._inputTapGain   = null;
     }
 
     try {
       if(ctx.state === 'suspended') await ctx.resume();
 
+      // Open a stereo stream from the device
+      // Chrome reliably delivers 2 channels (L=IN1, R=IN2) for any interface
       const stream = await navigator.mediaDevices.getUserMedia({
         audio:{
           deviceId:{ exact: devId },
-          echoCancellation:false, noiseSuppression:false, autoGainControl:false,
-          channelCount:{ ideal: Math.max(2, inChIdx+1) },
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl:  false,
+          channelCount: 2,   // explicitly request stereo
         }, video:false
       });
 
-      const actualCh = stream.getAudioTracks()[0].getSettings().channelCount || 1;
+      const track    = stream.getAudioTracks()[0];
+      const settings = track.getSettings();
+      const nCh      = settings.channelCount || 1;
+
       const src = ctx.createMediaStreamSource(stream);
-      src.channelCount = actualCh;
-      src.channelCountMode = 'explicit';
+      src.channelCount          = nCh;
+      src.channelCountMode      = 'explicit';
       src.channelInterpretation = 'discrete';
 
-      // Extract specific channel via splitter
-      const splitter = ctx.createChannelSplitter(actualCh);
-      splitter.channelCount = actualCh;
-      splitter.channelCountMode = 'explicit';
+      // Splitter: output 0 = IN1 (left), output 1 = IN2 (right)
+      const splitter = ctx.createChannelSplitter(Math.max(nCh, 2));
+      splitter.channelCount          = Math.max(nCh, 2);
+      splitter.channelCountMode      = 'explicit';
       splitter.channelInterpretation = 'discrete';
       src.connect(splitter);
 
+      // Merge selected channel back to mono → inputSrcGain
       const merger = ctx.createChannelMerger(1);
-      splitter.connect(merger, Math.min(inChIdx, actualCh-1), 0);
+      const useIdx = inChIdx < nCh ? inChIdx : 0;
+      splitter.connect(merger, useIdx, 0);
       merger.connect(inputSrcGain);
 
       ch._assignedStream   = stream;
@@ -2449,13 +2459,14 @@ function createChannel(i){
       ch.inputSrcIdx       = inChIdx;
       inputSrcGain.gain.value = 1;
 
-      const devName = stream.getAudioTracks()[0].label || devId.substr(0,12);
-      showToast(`✔ ${devName} IN${inChIdx+1} → ${lEl.textContent}`);
+      const devName = track.label || devId.substr(0,16);
+      const chName  = inChIdx === 0 ? 'IN1' : 'IN2';
+      showToast(`✔ ${devName} ${chName} → ${lEl.textContent}`);
       document.getElementById('inputMgrBtn').classList.add('live');
 
     } catch(e) {
       showToast('Error: ' + e.message);
-      console.error(e);
+      console.error('connectSelectedInput:', e);
     }
   }
 
@@ -2694,12 +2705,19 @@ analyserDisplay.style.cssText = `
 
 // Header
 const adHeader = document.createElement('div');
-adHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
+adHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;';
 const adTitle = document.createElement('div');
-adTitle.style.cssText = "font-family:'Orbitron',sans-serif;font-size:9px;color:var(--accent);letter-spacing:2px;";
+adTitle.style.cssText = "font-family:'Orbitron',sans-serif;font-size:10px;color:var(--accent);letter-spacing:2px;";
 adTitle.textContent = 'CHANNEL ANALYSER';
 const adChLabel = document.createElement('div');
-adChLabel.style.cssText = 'font-size:9px;color:var(--dim);letter-spacing:1px;font-family:"Share Tech Mono",monospace;';
+adChLabel.style.cssText = `
+  font-size:11px;
+  color:var(--accent2);
+  letter-spacing:1px;
+  font-family:'Orbitron',sans-serif;
+  font-weight:700;
+  text-shadow:0 0 8px rgba(32,200,232,0.4);
+`;
 adChLabel.textContent = '— select a channel —';
 adHeader.appendChild(adTitle);
 adHeader.appendChild(adChLabel);
@@ -2832,42 +2850,49 @@ function drawEQ() {
     // ── RTA SPECTRUM (drawn first, behind EQ curve) ──
     if(rtaAnalyser && rtaBuf){
       rtaAnalyser.getByteFrequencyData(rtaBuf);
-      const nyquist   = ctx.sampleRate / 2;
-      const binCount  = rtaAnalyser.frequencyBinCount;
+      const nyquist  = ctx.sampleRate / 2;
+      const binCount = rtaAnalyser.frequencyBinCount; // 4096 bins with fftSize=8192
 
-      // Filled spectrum
+      // Helper: interpolated bin value at frequency f (Hz)
+      // Uses linear interpolation between adjacent bins for smooth display
+      function rtaValueAtFreq(f){
+        const exactBin = f / nyquist * binCount;
+        const b0 = Math.floor(exactBin);
+        const b1 = Math.min(b0 + 1, binCount - 1);
+        const frac = exactBin - b0;
+        return (rtaBuf[b0] * (1-frac) + rtaBuf[b1] * frac) / 255;
+      }
+
+      // Draw filled spectrum
       g.beginPath();
       g.moveTo(0, H);
       for(let px = 0; px < W; px++){
-        const f       = 20 * Math.pow(1000, px / (W-1)); // log freq
-        const binIdx  = Math.round(f / nyquist * binCount);
-        const val     = rtaBuf[Math.min(binIdx, binCount-1)] / 255; // 0–1
-        // Map to dB range: val=1 → +24dB top, val=0 → bottom
-        const dbVal   = (val - 0.5) * 60; // approx mapping
-        const y       = dbToY(Math.max(-24, Math.min(24, dbVal)));
-        if(px === 0) g.moveTo(px, H);
+        const f   = 20 * Math.pow(1000, px / (W-1));
+        const val = rtaValueAtFreq(f);
+        // Map 0–1 amplitude to dB range ±24
+        // 0=silence(-24), 0.5≈0dB, 1.0=+24dB
+        const dbVal = (val - 0.4) * 72;
+        const y = dbToY(Math.max(-24, Math.min(24, dbVal)));
         g.lineTo(px, y);
       }
       g.lineTo(W, H);
       g.closePath();
-      // Gradient fill: cyan at top, transparent at bottom
       const grad = g.createLinearGradient(0,0,0,H);
-      grad.addColorStop(0,   'rgba(32,200,232,0.25)');
-      grad.addColorStop(0.5, 'rgba(32,200,232,0.08)');
+      grad.addColorStop(0,   'rgba(32,200,232,0.22)');
+      grad.addColorStop(0.4, 'rgba(32,200,232,0.10)');
       grad.addColorStop(1,   'rgba(32,200,232,0)');
       g.fillStyle = grad;
       g.fill();
 
-      // Spectrum outline
-      g.strokeStyle = 'rgba(32,200,232,0.35)';
+      // Spectrum outline — sharper line
+      g.strokeStyle = 'rgba(32,200,232,0.45)';
       g.lineWidth = 1;
       g.beginPath();
       for(let px = 0; px < W; px++){
-        const f      = 20 * Math.pow(1000, px / (W-1));
-        const binIdx = Math.round(f / nyquist * binCount);
-        const val    = rtaBuf[Math.min(binIdx, binCount-1)] / 255;
-        const dbVal  = (val - 0.5) * 60;
-        const y      = dbToY(Math.max(-24, Math.min(24, dbVal)));
+        const f   = 20 * Math.pow(1000, px / (W-1));
+        const val = rtaValueAtFreq(f);
+        const dbVal = (val - 0.4) * 72;
+        const y = dbToY(Math.max(-24, Math.min(24, dbVal)));
         if(px===0) g.moveTo(px,y); else g.lineTo(px,y);
       }
       g.stroke();
