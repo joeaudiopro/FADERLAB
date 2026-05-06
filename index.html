@@ -666,26 +666,29 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 }
 /* enter button */
 .splash-enter{
-  font-family:'Share Tech Mono',monospace;
-  font-size:11px;
-  letter-spacing:4px;
-  padding:10px 32px;
-  border:1px solid #e8a020;
-  border-radius:3px;
-  background:transparent;
-  color:#e8a020;
-  cursor:pointer;
-  margin-top:16px;
+  font-family:'Share Tech Mono',monospace !important;
+  font-size:11px !important;
+  letter-spacing:4px !important;
+  padding:10px 32px !important;
+  border:1px solid #e8a020 !important;
+  border-radius:3px !important;
+  background:transparent !important;
+  color:#e8a020 !important;
+  cursor:pointer !important;
+  margin-top:16px !important;
   transition:all .25s;
-  text-shadow:0 0 8px #e8a02066;
-  box-shadow:0 0 12px #e8a02022;
+  text-shadow:0 0 8px #e8a02066 !important;
+  box-shadow:0 0 12px #e8a02022 !important;
   animation:splashFadeIn 2.6s cubic-bezier(0.16,1,0.3,1) both;
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  outline:none !important;
 }
 .splash-enter:hover{
-  background:#1e1600;
-  color:#f5d06a;
-  border-color:#f5d06a;
-  box-shadow:0 0 20px #e8a02044;
+  background:#1e1600 !important;
+  color:#f5d06a !important;
+  border-color:#f5d06a !important;
+  box-shadow:0 0 20px #e8a02044 !important;
 }
   background:#1e1600;
   border-color:var(--accent);
@@ -3791,24 +3794,30 @@ const VU_FLOOR = -40; // dBFS — por debajo de esto el VU no muestra actividad
 
 function meterLoop(){
   channels.forEach(ch=>{
+    // Solo mostrar actividad si hay audio cargado o input activo
+    const hasSignal = (ch.buffer !== null) || (ch.inputSrcIdx !== null);
+
     // ── Channel VU (mono — post-fader) ──
     ch.analyser.getByteTimeDomainData(ch.analyserBuf);
     let sum=0;for(let i=0;i<ch.analyserBuf.length;i++){const s=(ch.analyserBuf[i]-128)/128;sum+=s*s;}
     const db=gainToDB(Math.sqrt(sum/ch.analyserBuf.length));
-    const vuDb = db < VU_FLOOR ? -100 : db;
-    ch.vu.setLevel(0, vuDb); // mono — single bar only
+    // Piso más alto: -35dBFS evita falsos positivos por ruido de cuantización
+    const vuDb = (!hasSignal || db < -35) ? -100 : db;
+    ch.vu.setLevel(0, vuDb);
 
-    // ── Signal LED (pre-fader, siempre activo) ──
+    // ── Signal LED (pre-fader) ──
     ch.sigAnalyser.getByteTimeDomainData(ch.sigBuf);
     let sigSum=0;for(let i=0;i<ch.sigBuf.length;i++){const s=(ch.sigBuf[i]-128)/128;sigSum+=s*s;}
     const sigDb=gainToDB(Math.sqrt(sigSum/ch.sigBuf.length));
-    // Clases según nivel pre-fader
     ch.sigLed.className='signal-led';
-    if     (sigDb >= -1)  ch.sigLed.classList.add('sig-clip');
-    else if(sigDb >= -12) ch.sigLed.classList.add('sig-hot');
-    else if(sigDb >= -40) ch.sigLed.classList.add('sig-mid');
-    else if(sigDb >= -60) ch.sigLed.classList.add('sig-low');
-    // por debajo de -60: LED apagado (sin clase extra)
+    if(hasSignal){
+      // Umbral más alto para evitar falsos positivos
+      if     (sigDb >= -1)  ch.sigLed.classList.add('sig-clip');
+      else if(sigDb >= -12) ch.sigLed.classList.add('sig-hot');
+      else if(sigDb >= -35) ch.sigLed.classList.add('sig-mid');
+      // por debajo de -35dBFS: LED apagado
+    }
+    // sin señal cargada: LED siempre apagado
 
     // ── Gate ──
     ch.dyn.gateInAnalyser.getByteTimeDomainData(ch.dyn.gateInBuf);
