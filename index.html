@@ -2993,16 +2993,24 @@ const masterAnalysers=[];
 function makeMasterCh(label,bus,color,isMain){
   const mc=document.createElement('div');mc.className='master-ch'+(isMain?' main':'');
   const lbl=document.createElement('div');lbl.className='master-label';lbl.style.cssText=`color:${color};`;lbl.textContent=label;
-  const vu=createVUMeter();
+  // Master = stereo L/R, Aux/FX = mono
+  const vu = isMain ? createVUMeter() : createVUMeterMono();
 
-  // For stereo L/R metering, use a ChannelSplitter
-  // This lets us measure L and R independently so panning shows on the VU
-  const splitter = ctx.createChannelSplitter(2);
-  const anL=ctx.createAnalyser();anL.fftSize=1024;const bufL=new Uint8Array(anL.fftSize);
-  const anR=ctx.createAnalyser();anR.fftSize=1024;const bufR=new Uint8Array(anR.fftSize);
-  bus.connect(splitter);
-  splitter.connect(anL,0); // L channel
-  splitter.connect(anR,1); // R channel
+  // For stereo L/R metering on MASTER only — aux/fx are mono
+  let anEntry;
+  if(isMain){
+    const splitter = ctx.createChannelSplitter(2);
+    const anL=ctx.createAnalyser();anL.fftSize=1024;const bufL=new Uint8Array(anL.fftSize);
+    const anR=ctx.createAnalyser();anR.fftSize=1024;const bufR=new Uint8Array(anR.fftSize);
+    bus.connect(splitter);
+    splitter.connect(anL,0);
+    splitter.connect(anR,1);
+    anEntry = {vu, anL, anR, bufL, bufR, stereo:true};
+  } else {
+    const an=ctx.createAnalyser();an.fftSize=1024;const buf=new Uint8Array(an.fftSize);
+    bus.connect(an);
+    anEntry = {vu, an, buf, stereo:false};
+  }
 
   const fdr=createFader({min:-60,max:10,value:0,height:120,onChange:v=>{if(mPwrOn)bus.gain.value=dbToGain(v);}});
 
@@ -3019,8 +3027,7 @@ function makeMasterCh(label,bus,color,isMain){
 
   mc.appendChild(lbl);mc.appendChild(mPwrBtn);mc.appendChild(vu.el);mc.appendChild(fdr.el);
   masterRow.appendChild(mc);
-  // Store both L and R analysers for stereo metering
-  masterAnalysers.push({vu, anL, anR, bufL, bufR, stereo:true});
+  masterAnalysers.push(anEntry);
 }
 makeMasterCh('MASTER',masterBus,'#e8a020',true);
 makeMasterCh('AUX 1', aux1Bus, '#20c8e8',false);
@@ -3865,7 +3872,7 @@ function meterLoop(){
 
   masterAnalysers.forEach(m=>{
     if(m.stereo){
-      // True stereo L/R metering
+      // True stereo L/R — only for MASTER
       m.anL.getByteTimeDomainData(m.bufL);
       m.anR.getByteTimeDomainData(m.bufR);
       let sL=0, sR=0;
@@ -3875,13 +3882,14 @@ function meterLoop(){
       }
       const dbL=gainToDB(Math.sqrt(sL/m.bufL.length));
       const dbR=gainToDB(Math.sqrt(sR/m.bufR.length));
-      m.vu.setLevel(0,dbL); // L bar
-      m.vu.setLevel(1,dbR); // R bar
+      m.vu.setLevel(0,dbL);
+      m.vu.setLevel(1,dbR);
     } else {
+      // Mono — AUX and FX buses
       m.an.getByteTimeDomainData(m.buf);
       let s2=0;for(let i=0;i<m.buf.length;i++){const s=(m.buf[i]-128)/128;s2+=s*s;}
       const db=gainToDB(Math.sqrt(s2/m.buf.length));
-      m.vu.setLevel(0,db);m.vu.setLevel(1,db);
+      m.vu.setLevel(0,db);
     }
   });
 
