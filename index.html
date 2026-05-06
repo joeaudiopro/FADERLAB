@@ -2077,6 +2077,7 @@ const sharedColorPicker = (() => {
   document.body.appendChild(el);
 
   let onPick = null;
+  let justOpened = false; // prevents immediate close on same click
 
   COLORS.forEach(c => {
     const sw = document.createElement('div');
@@ -2102,14 +2103,19 @@ const sharedColorPicker = (() => {
   });
   el.appendChild(reset);
 
-  document.addEventListener('click', () => { el.style.display = 'none'; }, {passive:true});
+  // Close when clicking outside — but not on the same click that opened it
+  document.addEventListener('click', () => {
+    if(justOpened){ justOpened=false; return; }
+    el.style.display = 'none';
+  }, {passive:true});
 
   return {
     show(anchor, callback){
       onPick = callback;
+      justOpened = true; // ignore next document click
       el.style.display = 'flex';
       const rect = anchor.getBoundingClientRect();
-      const pw = el.offsetWidth  || 120;
+      const pw = el.offsetWidth  || 130;
       const ph = el.offsetHeight || 64;
       let left = rect.left;
       let top  = rect.bottom + 4;
@@ -2517,9 +2523,12 @@ function createChannel(i){
     buffer = await ctx.decodeAudioData(ab);
     ch.buffer = buffer;
     useLocalBuffer = true;
-    fl.textContent = e.target.files[0].name.substring(0,15);
+    const shortName = e.target.files[0].name.substring(0,15);
+    fl.textContent = shortName;
     fl.classList.add('loaded');
     clearBtn.style.display = 'inline';
+    // Reset channel label so student can name it themselves
+    lEl.textContent = 'CH ' + (i+1);
   });
 
   // Clear button — resets file and allows stem library to take over
@@ -3110,6 +3119,10 @@ async function loadStemSet(setId, btn, statusEl){
         if(ch){
           ch.buffer = audioBuf;
           ch.clearLocalFile(); // reset any local file so stem takes priority
+
+          // Show stem name in the file load button
+          const fileLabel = ch.el ? ch.el.querySelector('.file-label') : null;
+          if(fileLabel){ fileLabel.textContent = '▸ ' + stem.label; fileLabel.classList.add('loaded'); }
 
           // Update channel label
           const chLabelEl = ch.el ? ch.el.querySelector('.ch-label') : null;
@@ -3808,7 +3821,7 @@ const TOUR_STEPS = [
     },
     arrow: 'top',
     title: '① Carga tu audio',
-    body: `Cada canal tiene un botón <strong>▸ LOAD AUDIO</strong>. Haz clic para cargar un archivo de audio desde tu computadora.<br><br>Puedes cargar distintas pistas en cada uno de los <strong>16 canales</strong>.`,
+    body: `Cada canal tiene un botón <strong>▸ LOAD AUDIO</strong> para cargar una pista desde tu computadora.<br><br>También puedes usar la <strong>📚 STEM LIBRARY</strong> en el panel derecho — carga automáticamente un set completo de instrumentos en todos los canales con un solo clic.<br><br>Ideal para practicar sin necesidad de tener multitracks propios.`,
     cardPos: (r, cw, ch) => ({
       top:  r.bottom + 20,
       left: Math.min(r.left - cw/2 + r.width/2, window.innerWidth - cw - 16)
