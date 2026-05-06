@@ -1,0 +1,18 @@
+{
+  "name": "Pop Fusion — 10ch",
+  "genre": "Pop Fusion",
+  "channels": 10,
+  "difficulty": "intermediate",
+  "stems": [
+    {"file": "kd 03.1_sideral 1_2026.mp3",    "label": "Kick",       "color": "#e82020"},
+    {"file": "sn 03.1_sideral 1_2026.mp3",    "label": "Snare",      "color": "#e86020"},
+    {"file": "hh 03.1_sideral 1_2026.mp3",    "label": "Hi-Hats",    "color": "#e8a020"},
+    {"file": "oh 03.1_sideral 1_2026.mp3",    "label": "Overhead",   "color": "#e8e020"},
+    {"file": "8pad 05.1_sideral 1_2026.mp3",  "label": "Tom 1",      "color": "#20e880"},
+    {"file": "8pad 06.1_sideral 1_2026.mp3",  "label": "Tom 2",      "color": "#20c8e8"},
+    {"file": "bass 03.1_sideral 1_2026.mp3",  "label": "Bajo",       "color": "#2060e8"},
+    {"file": "gtr 05.1_sideral 1_2026.mp3",   "label": "Guitarra L", "color": "#a020e8"},
+    {"file": "gtr 06.1_sideral 1_2026.mp3",   "label": "Guitarra R", "color": "#e820a0"},
+    {"file": "sax 03.1_sideral 1_2026.mp3",   "label": "Saxofón",    "color": "#20e8a0"}
+  ]
+}
