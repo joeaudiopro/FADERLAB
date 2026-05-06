@@ -2371,11 +2371,28 @@ function createChannel(i){
     }
     return curve;
   }
-  satNode.curve = buildSatCurve(0.3); // nearly transparent at rest
+  // Start with identity curve (completely transparent — no processing)
+  // This prevents noise when no signal is present
+  function buildIdentityCurve(){
+    const n=256, curve=new Float32Array(n);
+    for(let i=0;i<n;i++) curve[i]=(i*2/n)-1; // linear passthrough
+    return curve;
+  }
+  satNode.curve = buildIdentityCurve();
 
-  // ── EXPONENTIAL EQ CURVE ──
-  // Maps knob position to dB gain with exponential response
-  // Subtle in the middle, aggressive at extremes — like analog EQ
+  function updateSaturation(){
+    const hiVal  = Math.abs(highEQ.gain.value);
+    const midVal = Math.abs(midEQ.gain.value);
+    const loVal  = Math.abs(lowEQ.gain.value);
+    const activity = (hiVal + midVal + loVal) / (24*3);
+    if(activity < 0.05){
+      satNode.curve = buildIdentityCurve();
+    } else {
+      satNode.curve = buildSatCurve(0.3 + activity * 2.0);
+    }
+  }
+
+  // Exponential EQ curve — subtle in middle, aggressive at extremes
   const EQ_K = 2.5;
   function eqCurve(knobVal, maxDb=24){
     if(knobVal===0) return 0;
@@ -2383,10 +2400,6 @@ function createChannel(i){
     const norm=Math.abs(knobVal)/maxDb;
     const curved=(Math.exp(norm*EQ_K)-1)/(Math.exp(EQ_K)-1);
     return sign*curved*maxDb;
-  }
-  function updateSaturation(){
-    const activity=(Math.abs(highEQ.gain.value)+Math.abs(midEQ.gain.value)+Math.abs(lowEQ.gain.value))/(24*3);
-    satNode.curve=buildSatCurve(0.3+activity*2.0);
   }
 
   trimNode.connect(hpfNode); hpfNode.connect(lowEQ); lowEQ.connect(midEQ); midEQ.connect(highEQ);
