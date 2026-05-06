@@ -2236,8 +2236,13 @@ function createChannel(i){
   const faderNode =ctx.createGain();         faderNode.gain.value=0;
   const panNode   =ctx.createStereoPanner();
   const analyser  =ctx.createAnalyser();
-  analyser.fftSize = 8192;           // max resolution: 4096 frequency bins
+  analyser.fftSize = 8192;
   analyser.smoothingTimeConstant = 0.75;
+  // Calibrate frequency range to match VU meter scale
+  // minDecibels/maxDecibels define what 0 and 255 map to in getByteFrequencyData
+  // We use -60dBFS to 0dBFS so that normal levels (-18dBFS) appear mid-scale
+  analyser.minDecibels = -60;
+  analyser.maxDecibels = 0;
   const analyserBuf=new Uint8Array(analyser.fftSize);
 
   trimNode.connect(hpfNode); hpfNode.connect(lowEQ); lowEQ.connect(midEQ); midEQ.connect(highEQ);
@@ -3275,15 +3280,28 @@ function drawEQ() {
         return (rtaBuf[b0] * (1-frac) + rtaBuf[b1] * frac) / 255;
       }
 
+      // Map 0-1 to dBFS:
+      // analyser range is minDecibels(-60) to maxDecibels(0)
+      // val=1.0 → 0dBFS → show at top of EQ display (+24 area)
+      // val=0.5 → -30dBFS → show near 0dB line on EQ display
+      // val=0.0 → -60dBFS → show at bottom (silent)
+      // We map so that -18dBFS (typical program level) sits around 0dB on EQ
+      // dBFS = minDecibels + val * (maxDecibels - minDecibels)
+      // dBFS = -60 + val * 60
+      // On EQ display: 0dB line = center, ±24dB = full range
+      // So: displayDB = dBFS + 18  (shift so -18dBFS = 0 on display)
+      function valToDisplayDb(val){
+        const dBFS = -60 + val * 60;  // -60 to 0 dBFS
+        return dBFS + 18;             // shift: -18dBFS = 0dB on display
+      }
+
       // Draw filled spectrum
       g.beginPath();
       g.moveTo(0, H);
       for(let px = 0; px < W; px++){
         const f   = 20 * Math.pow(1000, px / (W-1));
         const val = rtaValueAtFreq(f);
-        // Map 0–1 amplitude to dB range ±24
-        // 0=silence(-24), 0.5≈0dB, 1.0=+24dB
-        const dbVal = (val - 0.4) * 72;
+        const dbVal = valToDisplayDb(val);
         const y = dbToY(Math.max(-24, Math.min(24, dbVal)));
         g.lineTo(px, y);
       }
@@ -3296,14 +3314,14 @@ function drawEQ() {
       g.fillStyle = grad;
       g.fill();
 
-      // Spectrum outline — sharper line
+      // Spectrum outline
       g.strokeStyle = 'rgba(32,200,232,0.45)';
       g.lineWidth = 1;
       g.beginPath();
       for(let px = 0; px < W; px++){
         const f   = 20 * Math.pow(1000, px / (W-1));
         const val = rtaValueAtFreq(f);
-        const dbVal = (val - 0.4) * 72;
+        const dbVal = valToDisplayDb(val);
         const y = dbToY(Math.max(-24, Math.min(24, dbVal)));
         if(px===0) g.moveTo(px,y); else g.lineTo(px,y);
       }
