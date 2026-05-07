@@ -1050,6 +1050,17 @@ body.splash-active #appRoot{
   </div>
   <!-- NORMAL / NINJA MODE -->
   <button class="mode-btn" id="modeBtn">🥷 NINJA</button>
+  <!-- Audio engine recovery -->
+  <button id="audioRecoverBtn" title="Recuperar motor de audio" style="
+    font-family:'Share Tech Mono',monospace;font-size:9px;padding:4px 8px;
+    border:1px solid #333;border-radius:2px;background:#1a1a1a;
+    color:#666;cursor:pointer;letter-spacing:.5px;transition:all .2s;
+  " onclick="
+    ctx.resume().then(()=>{
+      this.style.color='var(--green)';
+      setTimeout(()=>this.style.color='#666',1000);
+    });
+  ">⟳ AUDIO</button>
   <span style="margin-left:auto;font-size:9px;color:var(--dim)">MixLab v3.0 · Joe Mendoza</span>
 </div>
 
@@ -2403,7 +2414,7 @@ function createChannel(i){
   }
 
   trimNode.connect(hpfNode); hpfNode.connect(lowEQ); lowEQ.connect(midEQ); midEQ.connect(highEQ);
-  highEQ.connect(satNode); satNode.connect(dynIn);
+  highEQ.connect(dynIn); // satNode removed — was causing digital artifacts
   dynOut.connect(faderNode); faderNode.connect(chPowerGain); chPowerGain.connect(panNode); panNode.connect(analyser); analyser.connect(masterBus);
 
   const pflGain=ctx.createGain(); pflGain.gain.value=0;
@@ -2515,13 +2526,13 @@ function createChannel(i){
   // Also focus on channel click
   el.addEventListener('mousedown', focusThisChannel, { capture:true });
 
-  const hiK=createKnob({label:'HI',min:-24,max:24,value:0,size:32,color:'#60c0ff',unit:'dB',decimals:0,freqLabel:fmtFreq(8000),onChange:v=>{highEQ.gain.value=eqCurve(v);updateSaturation();focusThisChannel();}});
+  const hiK=createKnob({label:'HI',min:-24,max:24,value:0,size:32,color:'#60c0ff',unit:'dB',decimals:0,freqLabel:fmtFreq(8000),onChange:v=>{highEQ.gain.value=eqCurve(v);focusThisChannel();}});
   hiBand.appendChild(hiK.el);eqSec.appendChild(hiBand);
 
   const MID_FREQS=[200,300,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000];
   let midFreqIdx=6;
   const midBand=document.createElement('div');midBand.className='eq-band';
-  const midK=createKnob({label:'MID',min:-24,max:24,value:0,size:32,color:'#e8e020',unit:'dB',decimals:0,freqLabel:fmtFreq(MID_FREQS[midFreqIdx]),onChange:v=>{midEQ.gain.value=eqCurve(v);updateSaturation();focusThisChannel();}});
+  const midK=createKnob({label:'MID',min:-24,max:24,value:0,size:32,color:'#e8e020',unit:'dB',decimals:0,freqLabel:fmtFreq(MID_FREQS[midFreqIdx]),onChange:v=>{midEQ.gain.value=eqCurve(v);focusThisChannel();}});
   midBand.appendChild(midK.el);
   const swRow=document.createElement('div');swRow.style.cssText='display:flex;align-items:center;gap:3px;margin-top:2px;';
   swRow.appendChild(Object.assign(document.createElement('div'),{style:'font-size:7px;color:#444;letter-spacing:.5px;',textContent:'FREQ'}));
@@ -2530,7 +2541,7 @@ function createChannel(i){
   swRow.appendChild(swK.el);midBand.appendChild(swRow);eqSec.appendChild(midBand);
 
   const loBand=document.createElement('div');loBand.className='eq-band';
-  const loK=createKnob({label:'LO',min:-24,max:24,value:0,size:32,color:'#e87020',unit:'dB',decimals:0,freqLabel:fmtFreq(120),onChange:v=>{lowEQ.gain.value=eqCurve(v);updateSaturation();focusThisChannel();}});
+  const loK=createKnob({label:'LO',min:-24,max:24,value:0,size:32,color:'#e87020',unit:'dB',decimals:0,freqLabel:fmtFreq(120),onChange:v=>{lowEQ.gain.value=eqCurve(v);focusThisChannel();}});
   loBand.appendChild(loK.el);eqSec.appendChild(loBand);
   el.appendChild(eqSec);
 
@@ -3730,6 +3741,11 @@ navigator.mediaDevices.addEventListener('devicechange', async () => {
     }
   }
   showToast('🔌 Dispositivo de audio detectado — lista actualizada');
+
+  // Recover AudioContext if it got suspended due to device change
+  if(ctx.state === 'suspended' || ctx.state === 'interrupted'){
+    try{ await ctx.resume(); showToast('🔊 Motor de audio recuperado'); }catch(e){}
+  }
 });
 
 pflOutSelect.addEventListener('change', async () => {
