@@ -1022,12 +1022,24 @@ async function handleSubmit(){
   body.append(ENTRY_COUNTRY, country);
 
   try {
-    // Google Forms acepta CORS via no-cors — no retorna respuesta pero sí guarda
+    // Método 1: fetch no-cors (funciona en muchos navegadores)
     await fetch(formUrl, { method:'POST', mode:'no-cors', body });
   } catch(e){
-    // no-cors siempre "falla" en el catch pero igual guarda — es esperado
-    console.log('Form submitted (no-cors expected behavior)');
+    console.log('fetch bloqueado, usando iframe silencioso');
   }
+
+  // Método 2: iframe invisible como respaldo garantizado
+  // Google Forms siempre acepta esto sin importar CORS
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  const params = new URLSearchParams();
+  params.append(ENTRY_EMAIL,   email);
+  params.append(ENTRY_ROLE,    role);
+  params.append(ENTRY_COUNTRY, country);
+  params.append('submit',      'Submit');
+  iframe.src = formUrl + '?' + params.toString();
+  document.body.appendChild(iframe);
+  setTimeout(() => { if(iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 5000);
 
   // Save to localStorage so we remember this user
   localStorage.setItem('ml_access', JSON.stringify({
