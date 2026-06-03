@@ -1010,36 +1010,19 @@ async function handleSubmit(){
   // 4. Reemplaza los valores de abajo con tus entry IDs
   // 5. Reemplaza FORM_ID con el ID de tu formulario
 
-  const FORM_ID      = '1FAIpQLSf0wKZBmFY-8lVyVyURNJDLfIhOMZft_PzhypR7mQGHRbCR7A'; // e.g. 1FAIpQLSd...
-  const ENTRY_EMAIL  = 'entry.172259885';  // reemplaza con tu entry ID
-  const ENTRY_ROLE   = 'entry.886577281';  // reemplaza con tu entry ID
-  const ENTRY_COUNTRY= 'entry.385326736';  // reemplaza con tu entry ID
-
-  const formUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
-  const body = new FormData();
-  body.append(ENTRY_EMAIL,   email);
-  body.append(ENTRY_ROLE,    role);
-  body.append(ENTRY_COUNTRY, country);
+  // Apps Script webhook — guarda directo en Google Sheets
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzvagYbrAAf6rFO1Jsqh8e9QIDxCUhrY6jW062mQkN1-UgaKvP_H8SSf5r1-I4TFRZn/exec';
 
   try {
-    // Método 1: fetch no-cors (funciona en muchos navegadores)
-    await fetch(formUrl, { method:'POST', mode:'no-cors', body });
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, role, country })
+    });
   } catch(e){
-    console.log('fetch bloqueado, usando iframe silencioso');
+    console.log('Apps Script fetch error:', e);
   }
-
-  // Método 2: iframe invisible como respaldo garantizado
-  // Google Forms siempre acepta esto sin importar CORS
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  const params = new URLSearchParams();
-  params.append(ENTRY_EMAIL,   email);
-  params.append(ENTRY_ROLE,    role);
-  params.append(ENTRY_COUNTRY, country);
-  params.append('submit',      'Submit');
-  iframe.src = formUrl + '?' + params.toString();
-  document.body.appendChild(iframe);
-  setTimeout(() => { if(iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 5000);
 
   // Save to localStorage so we remember this user
   localStorage.setItem('ml_access', JSON.stringify({
