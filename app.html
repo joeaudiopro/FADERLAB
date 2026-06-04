@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
-<title>FaderLab — Joe Mendoza</title>
+<title>MixLab v3.0 — Joe Mendoza</title>
 <!-- Paint black BEFORE anything else — eliminates white/chrome flash -->
 <style>
   html{background:#141414;}
@@ -561,7 +561,7 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
   50%{transform:scaleY(0.35);}
 }
 
-/* FADERLAB wordmark */
+/* MIXLAB wordmark */
 .splash-title{
   font-family:'Bebas Neue',sans-serif;
   font-size:clamp(72px,12vw,110px);
@@ -869,6 +869,41 @@ body.splash-active #appRoot{
   pointer-events:all;
 }
 #tourSkip:hover{color:#888;}
+/* ── FEEDBACK BUTTON ── */
+#feedbackBtn{
+  position:fixed;
+  bottom:24px;
+  right:24px;
+  z-index:6000;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-family:'Share Tech Mono',monospace;
+  font-size:10px;
+  letter-spacing:1px;
+  padding:9px 16px;
+  background:#0a0a0a;
+  border:1px solid #333;
+  border-radius:24px;
+  color:var(--dim);
+  cursor:pointer;
+  text-decoration:none;
+  transition:all .25s;
+  box-shadow:0 2px 12px rgba(0,0,0,.5);
+}
+#feedbackBtn:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:#1a1200;
+  box-shadow:0 0 16px rgba(232,160,32,0.2);
+}
+#feedbackBtn svg{
+  opacity:.5;
+  transition:opacity .2s;
+  flex-shrink:0;
+}
+#feedbackBtn:hover svg{ opacity:1; }
+
 </style>
 </head>
 <body class="splash-active">
@@ -909,12 +944,12 @@ body.splash-active #appRoot{
       <div class="splash-eq-bar"></div>
     </div>
 
-    <div class="splash-title">FADERLAB</div>
+    <div class="splash-title">MIXLAB</div>
 
-    <div class="splash-tagline">Live Audio Console · Web Audio Engine</div>
+    <div class="splash-tagline">Live Sound Console · Web Audio Engine</div>
     <div class="splash-rule"></div>
     <div class="splash-credit">by <span>Joe Mendoza</span></div>
-    <div class="splash-version">v1.0 · Web Audio Engine</div>
+    <div class="splash-version">v3.0 · Web Audio Engine</div>
 
     <!-- Social links -->
     <div class="splash-social">
@@ -925,11 +960,11 @@ body.splash-active #appRoot{
         @joeaudiopro
       </a>
       <span class="splash-social-sep">·</span>
-      <a href="https://instagram.com/mixlab.audio" target="_blank" class="splash-social-link" title="Instagram FaderLab">
+      <a href="https://www.instagram.com/faderlab.audio" target="_blank" class="splash-social-link" title="Instagram FaderLab">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
         </svg>
-        @mixlab.audio
+        @faderlab.audio
       </a>
     </div>
 
@@ -957,7 +992,7 @@ body.splash-active #appRoot{
   "></div>
 
   <div style="font-family:'Orbitron',sans-serif;font-size:.75rem;color:var(--accent);letter-spacing:4px;text-shadow:0 0 10px #e8a02055;">
-    FADERLAB <span style="font-size:.5rem;color:var(--dim);letter-spacing:2px;">v1.0</span>
+    MIXLAB <span style="font-size:.5rem;color:var(--dim);letter-spacing:2px;">v3.0</span>
   </div>
 
   <!-- big mic icon SVG -->
@@ -974,7 +1009,7 @@ body.splash-active #appRoot{
       ACCESO AL AUDIO
     </div>
     <div style="font-size:10px;color:#555;letter-spacing:1px;" id="permMsg">
-      FaderLab necesita acceso a tus dispositivos de audio para poder recibir señales en vivo desde tu interfaz.
+      MixLab necesita acceso a tus dispositivos de audio para poder recibir señales en vivo desde tu interfaz.
     </div>
   </div>
 
@@ -1014,7 +1049,7 @@ body.splash-active #appRoot{
 <div id="appRoot">
 
 <div class="topbar">
-  <h1>FADERLAB</h1>
+  <h1>MIXLAB</h1>
   <div style="display:flex;gap:5px;">
     <button class="btn play" id="playAll">▶ PLAY</button>
     <button class="btn stop" id="stopAll">■ STOP</button>
@@ -1058,7 +1093,7 @@ body.splash-active #appRoot{
   </div>
   <!-- NORMAL / NINJA MODE -->
   <button class="mode-btn" id="modeBtn">🥷 NINJA</button>
-  <span style="margin-left:auto;font-size:9px;color:var(--dim)">FaderLab · Joe Mendoza</span>
+  <span style="margin-left:auto;font-size:9px;color:var(--dim)">MixLab v3.0 · Joe Mendoza</span>
 </div>
 
 <!-- Toast notification -->
@@ -1089,7 +1124,7 @@ body.splash-active #appRoot{
     <div id="inputDeviceList" style="display:flex;flex-direction:column;gap:3px;max-height:200px;overflow-y:auto;font-size:8px;color:#555;font-family:'Share Tech Mono',monospace;padding:4px;"></div>
 
     <div style="font-size:8px;color:#333;margin-top:12px;line-height:1.7;">
-      ℹ Una vez escaneado, ve a cada canal de FaderLab → presiona <span style="color:var(--accent2);">INPUT</span> → elige el dispositivo y el canal de entrada desde el dropdown del strip.
+      ℹ Una vez escaneado, ve a cada canal de MixLab → presiona <span style="color:var(--accent2);">INPUT</span> → elige el dispositivo y el canal de entrada desde el dropdown del strip.
     </div>
   </div>
 </div>
@@ -1280,31 +1315,23 @@ let masterProcActive = false; // starts bypassed
 const masterProcBypassGain = ctx.createGain();
 masterProcBypassGain.gain.value = 0; // off by default
 
-// Master Proc chain: masterBus → EQ → Comp → MakeupGain → monitorGain
-// La cadena SIEMPRE está conectada. El bypass se hace con masterProcBypassGain:
-//   gain=0 → silencia la cadena proc (bypass real: masterBus → monitorGain directo)
-//   gain=1 → activa la cadena proc
+// Connect chain: masterBus splits to direct (existing monitorGain) and proc chain
+masterEQFilters[0].connect(masterEQFilters.length > 1 ? masterEQFilters[1] : masterComp); // already chained above
 masterEQFilters[masterEQFilters.length-1].connect(masterComp);
 masterComp.connect(masterMakeupGain);
 masterMakeupGain.connect(masterProcBypassGain);
 masterProcBypassGain.connect(monitorGain);
-// La conexión directa masterBus → monitorGain es la que siempre está activa (bypass)
-// Al activar proc: desconectamos la directa y activamos la cadena
 
 function connectMasterProc(active) {
   masterProcActive = active;
+  masterProcBypassGain.gain.setTargetAtTime(active ? 1 : 0, ctx.currentTime, 0.01);
+  // When proc is active, remove direct masterBus → monitorGain to avoid parallel
   if(active) {
-    // Activar proc: desconectar ruta directa, conectar por la cadena
     try { masterBus.disconnect(monitorGain); } catch(e){}
     masterBus.connect(masterEQFilters[0]);
-    masterProcBypassGain.gain.setTargetAtTime(1, ctx.currentTime, 0.02);
   } else {
-    // Bypass: desconectar cadena, restaurar ruta directa
-    masterProcBypassGain.gain.setTargetAtTime(0, ctx.currentTime, 0.02);
-    setTimeout(() => {
-      try { masterBus.disconnect(masterEQFilters[0]); } catch(e){}
-      try { masterBus.connect(monitorGain); } catch(e){}
-    }, 100);
+    try { masterBus.disconnect(masterEQFilters[0]); } catch(e){}
+    try { masterBus.connect(monitorGain); } catch(e){}
   }
 }
 
@@ -1463,7 +1490,7 @@ function buildDeviceList(audioIn){
     const assignBtn = document.createElement('button');
     assignBtn.className = 'input-assign-btn';
     assignBtn.textContent = 'CH →';
-    assignBtn.title = 'Asignar al siguiente canal libre de FaderLab';
+    assignBtn.title = 'Asignar al siguiente canal libre de MixLab';
     assignBtn.addEventListener('click', async () => {
       const selectedInputCh = parseInt(chSelect.value); // canal de la interfaz
       const free = channels.findIndex(ch =>
@@ -1502,7 +1529,7 @@ function buildDeviceList(audioIn){
   });
 }
 
-// Asignar un dispositivo específico a un canal de FaderLab
+// Asignar un dispositivo específico a un canal de MixLab
 // inputChIdx: índice del canal de la interfaz (0=IN1, 1=IN2, etc.)
 async function assignDeviceToChannel(devId, devLabel, chIdx, inputChIdx = 0){
   const ch = channels[chIdx];
@@ -1552,7 +1579,7 @@ async function assignDeviceToChannel(devId, devLabel, chIdx, inputChIdx = 0){
     const useCh = Math.min(inputChIdx, actualCh - 1);
     splitter.connect(merger, useCh, 0);
 
-    // Conectar al inputSrcGain del canal de FaderLab
+    // Conectar al inputSrcGain del canal de MixLab
     if(ch._inputTapGain) try{ ch._inputTapGain.disconnect(); }catch(e){}
     merger.connect(ch._inputSrcGain);
 
@@ -3562,7 +3589,7 @@ stemPanel.appendChild(stemList);
 right.appendChild(stemPanel);
 
 // ── LOAD STEM SET ──
-const BASE_URL = 'https://joeaudiopro.github.io/FADERLAB/stems/';
+const BASE_URL = 'https://joeaudiopro.github.io/MIXLAB/stems/';
 
 async function loadStemSet(setId, btn, statusEl){
   try {
@@ -3582,21 +3609,6 @@ async function loadStemSet(setId, btn, statusEl){
 
     statusEl.textContent = `${info.name} — cargando stems...`;
     const total = info.stems.length;
-
-    // Limpiar TODOS los canales antes de cargar el nuevo set
-    channels.forEach((ch, idx) => {
-      ch.buffer = null;
-      ch.clearLocalFile();
-      const chLabelEl = ch.el ? ch.el.querySelector('.ch-label') : null;
-      if(chLabelEl) chLabelEl.textContent = 'CH ' + (idx + 1);
-      if(ch.el){
-        ch.el.querySelectorAll('.ch-color-bar').forEach(bar => {
-          bar.style.background = '#2a2a2a';
-          bar.style.boxShadow  = 'none';
-        });
-      }
-    });
-    stemList.innerHTML = '';
 
     for(let i = 0; i < total; i++){
       const stem = info.stems[i];
@@ -4349,7 +4361,7 @@ document.getElementById('permGrantBtn').addEventListener('click', async () => {
       <line x1="44" y1="20" x2="20" y2="44" stroke="#e82020" stroke-width="3" stroke-linecap="round"/>
     `;
     if(e.name === 'NotAllowedError'){
-      msg.textContent = 'Permiso denegado. Podrás usar FaderLab con archivos de audio solamente.';
+      msg.textContent = 'Permiso denegado. Podrás usar MixLab con archivos de audio solamente.';
     } else {
       msg.textContent = 'No se encontraron dispositivos. Continuando en modo archivo.';
     }
@@ -4641,5 +4653,13 @@ document.addEventListener('keydown', e => {
 });
 </script>
 </div><!-- #appRoot -->
+<!-- ── FEEDBACK BUTTON ── -->
+<a id="feedbackBtn" href="https://www.instagram.com/faderlab.audio" target="_blank" title="Deja tu feedback en Instagram">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+  </svg>
+  💬 FEEDBACK
+</a>
+
 </body>
 </html>
