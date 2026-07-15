@@ -2106,9 +2106,28 @@ function createVUMeterWithScale(){
   return{el:outer,setLevel};
 }
 
-// Simple VU (for master section — no scale, no clip)
+// Stereo VU with scale (for master/bus section)
 function createVUMeter(){
-  // STEREO — 2 bars (L/R) for master and bus meters
+  const outer=document.createElement('div');
+  outer.style.cssText='display:flex;flex-direction:row;align-items:stretch;gap:1px;';
+
+  // Scale column LEFT
+  const scale=document.createElement('div');
+  scale.style.cssText='width:18px;height:'+VU_H+'px;position:relative;flex-shrink:0;';
+  SCALE_MARKS.forEach(db=>{
+    const mark=document.createElement('div');
+    const cls = db>=0?'vu-scale-mark mark-hot':db>=-6?'vu-scale-mark mark-warn':db>=-20?'vu-scale-mark mark-ok':'vu-scale-mark mark-low';
+    mark.className=cls;
+    const frac=(db-VU_MIN)/VU_RANGE;
+    const pxFromTop=(1-frac)*(VU_H-4);
+    mark.style.top=pxFromTop+'px';
+    mark.style.right='1px';
+    mark.textContent=(db>0?'+':'')+db;
+    scale.appendChild(mark);
+  });
+  outer.appendChild(scale);
+
+  // Meters
   const wrap=document.createElement('div');wrap.className='vu-meter';
   const bars=[];
   for(let i=0;i<2;i++){
@@ -2117,16 +2136,18 @@ function createVUMeter(){
     const pk=document.createElement('div');pk.className='vu-peak';pk.style.bottom='0px';
     bw.appendChild(bar);bw.appendChild(pk);wrap.appendChild(bw);bars.push({bar,pk});
   }
+  outer.appendChild(wrap);
+
   const ph=[{db:-100,t:null},{db:-100,t:null}];
   function setLevel(ch,db){
     const b=bars[ch];if(!b)return;
-    const pct=Math.max(0,(db+60)/70*100);
+    const pct=Math.max(0,(db-VU_MIN)/VU_RANGE*100);
     b.bar.style.height=pct+'%';
     b.bar.style.background=db>-3?'linear-gradient(to top,#e82020,#ff4040)':db>-9?'linear-gradient(to top,#e8c020,#ffe040)':db>-20?'linear-gradient(to top,#20e860,#40ff80)':'linear-gradient(to top,#20a840,#20e860)';
     if(db>ph[ch].db){ph[ch].db=db;clearTimeout(ph[ch].t);ph[ch].t=setTimeout(()=>{ph[ch].db=-100;},2000);}
-    b.pk.style.bottom=Math.max(0,(ph[ch].db+60)/70*100)+'%';
+    b.pk.style.bottom=Math.max(0,(ph[ch].db-VU_MIN)/VU_RANGE*100)+'%';
   }
-  return{el:wrap,setLevel};
+  return{el:outer,setLevel};
 }
 
 function createVUMeterMono(){
@@ -3563,7 +3584,7 @@ stemPanel.appendChild(stemList);
 right.appendChild(stemPanel);
 
 // ── LOAD STEM SET ──
-const BASE_URL = 'https://joeaudiopro.github.io/MIXLAB/stems/';
+const BASE_URL = 'https://faderlab.mx/stems/';
 
 async function loadStemSet(setId, btn, statusEl){
   try {
