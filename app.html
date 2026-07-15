@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
-<title>FaderLab — Joe Mendoza</title>
+<title>MixLab v3.0 — Joe Mendoza</title>
 <!-- Paint black BEFORE anything else — eliminates white/chrome flash -->
 <style>
   html{background:#141414;}
@@ -148,14 +148,18 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .vu-with-scale{display:flex;gap:1px;align-items:stretch;}
 /* Scale labels column */
 .vu-scale{display:flex;flex-direction:column;justify-content:space-between;width:14px;padding:1px 0;position:relative;}
-.vu-scale-mark{font-size:7px;color:#555;text-align:right;line-height:1;position:absolute;right:2px;transform:translateY(50%);}
+.vu-scale-mark{font-size:7px;font-family:'Share Tech Mono',monospace;text-align:right;line-height:1;position:absolute;right:2px;transform:translateY(50%);white-space:nowrap;}
+.vu-scale-mark.mark-hot{color:#e82020;}
+.vu-scale-mark.mark-warn{color:#e8c020;}
+.vu-scale-mark.mark-ok{color:#20e860;}
+.vu-scale-mark.mark-low{color:#3a3a3a;}
 /* VU bars */
-.vu-meter{display:flex;gap:2px;height:80px;padding:2px;background:#0d0d0d;border-radius:3px;border:1px solid #2a2a2a;}
-.vu-bar-wrap{width:9px;height:76px;background:#111;border-radius:2px;position:relative;overflow:hidden;}
+.vu-meter{display:flex;gap:2px;height:160px;padding:2px;background:#0d0d0d;border-radius:3px;border:1px solid #2a2a2a;}
+.vu-bar-wrap{width:9px;height:156px;background:#111;border-radius:2px;position:relative;overflow:hidden;}
 .vu-bar{position:absolute;bottom:0;width:100%;height:0;border-radius:2px 2px 0 0;transition:height 0.04s;}
 .vu-peak{position:absolute;width:100%;height:2px;background:#fff;opacity:.8;}
 /* CLIP LED */
-.clip-led{width:100%;height:6px;border-radius:2px;background:#1a0a0a;border:1px solid #333;margin-bottom:2px;transition:background .05s;cursor:pointer;}
+.clip-led{width:100%;height:8px;border-radius:2px;background:#1a0a0a;border:1px solid #333;margin-bottom:3px;transition:background .05s;cursor:pointer;}
 .clip-led.clip{background:var(--red);box-shadow:0 0 6px var(--red);}
 
 /* BOTTOM */
@@ -909,7 +913,7 @@ body.splash-active #appRoot{
       <div class="splash-eq-bar"></div>
     </div>
 
-    <div class="splash-title">FADERLAB</div>
+    <div class="splash-title">MIXLAB</div>
 
     <div class="splash-tagline">Live Sound Console · Web Audio Engine</div>
     <div class="splash-rule"></div>
@@ -2036,11 +2040,11 @@ function createFader({min=-60,max=10,value:initVal=-60,height=90,onChange}){
 //  Scale marks at: +6, 0, -6, -12, -20, -40 dBFS
 //  mapped onto the 80px height (range -60 to +10 = 70dB)
 // ══════════════════════════════════════════════════
-const VU_H = 80;   // total vu-meter height in px (including padding)
-const VU_BAR_H = 76; // usable bar height
+const VU_H = 160;  // total vu-meter height in px (including padding)
+const VU_BAR_H = 156; // usable bar height
 const VU_MIN = -60, VU_MAX = 10, VU_RANGE = 70;
 
-const SCALE_MARKS = [6, 0, -6, -12, -20, -40]; // dBFS
+const SCALE_MARKS = [6, 3, 0, -3, -6, -9, -12, -18, -24, -40, -60]; // dBFS
 
 function createVUMeterWithScale(){
   const outer=document.createElement('div');
@@ -2058,12 +2062,17 @@ function createVUMeterWithScale(){
 
   // Scale column
   const scale=document.createElement('div');
-  scale.style.cssText='width:14px;height:'+VU_H+'px;position:relative;flex-shrink:0;';
+  scale.style.cssText='width:18px;height:'+VU_H+'px;position:relative;flex-shrink:0;';
   SCALE_MARKS.forEach(db=>{
-    const mark=document.createElement('div');mark.className='vu-scale-mark';
-    // position: fraction of bar from bottom
-    const frac=(db - VU_MIN)/VU_RANGE; // 0=bottom, 1=top
-    const pxFromTop=(1-frac)*(VU_H-4); // px from top of the scale div
+    const mark=document.createElement('div');
+    // Color code by level
+    const cls = db >= 0 ? 'vu-scale-mark mark-hot'
+              : db >= -6 ? 'vu-scale-mark mark-warn'
+              : db >= -20 ? 'vu-scale-mark mark-ok'
+              : 'vu-scale-mark mark-low';
+    mark.className=cls;
+    const frac=(db - VU_MIN)/VU_RANGE;
+    const pxFromTop=(1-frac)*(VU_H-4);
     mark.style.top=pxFromTop+'px';
     mark.style.right='1px';
     mark.textContent=(db>0?'+':'')+db;
@@ -3554,7 +3563,7 @@ stemPanel.appendChild(stemList);
 right.appendChild(stemPanel);
 
 // ── LOAD STEM SET ──
-const BASE_URL = 'https://faderlab.mx/stems/';
+const BASE_URL = 'https://joeaudiopro.github.io/MIXLAB/stems/';
 
 async function loadStemSet(setId, btn, statusEl){
   try {
