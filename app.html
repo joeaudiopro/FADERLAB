@@ -393,6 +393,58 @@ body.analog-mode #analyserDisplay {
   display: none !important;
 }
 
+
+/* ══ GATE / COMP FLOATING PANELS ══ */
+.dyn-panel-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.72);z-index:8500;
+  align-items:center;justify-content:center;
+}
+.dyn-panel-overlay.open{display:flex;}
+.dyn-panel{
+  background:#0a0a10;border:1px solid #2a2a3a;border-radius:6px;
+  width:560px;max-width:97vw;
+  display:flex;flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,.85);
+  overflow:hidden;
+}
+.dyn-panel-header{
+  display:flex;align-items:center;gap:10px;padding:8px 12px;
+  border-bottom:1px solid #1a1a2a;background:#080810;flex-shrink:0;
+}
+.dyn-panel-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dyn-panel-title{
+  font-family:'Orbitron',sans-serif;font-size:10px;
+  color:#aaa;letter-spacing:3px;flex:1;
+}
+.dyn-panel-bypass{
+  font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;
+  padding:3px 10px;border:1px solid #333;border-radius:2px;
+  background:#111;color:#555;cursor:pointer;transition:all .15s;
+}
+.dyn-panel-bypass.on{border-color:#20e880;color:#20e880;background:#001a0a;}
+.dyn-panel-close{
+  font-family:'Share Tech Mono',monospace;font-size:14px;color:#444;
+  background:none;border:none;cursor:pointer;padding:0 4px;transition:color .15s;
+}
+.dyn-panel-close:hover{color:#e82020;}
+.dyn-panel-canvas{display:block;width:100%;height:200px;cursor:crosshair;flex-shrink:0;}
+.dyn-panel-knobs{
+  display:flex;gap:0;border-top:1px solid #161622;flex-shrink:0;
+  padding:10px 8px 12px;justify-content:center;gap:6px;flex-wrap:wrap;
+}
+/* open buttons in strip */
+.dyn-open-btn{
+  font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:1px;
+  padding:2px 5px;border:1px solid #2a2a2a;border-radius:2px;
+  background:#0a0a0a;color:#555;cursor:pointer;transition:all .15s;
+  flex:1;
+}
+.dyn-open-btn:hover{border-color:#888;color:#888;}
+.dyn-open-btn.gate-open{border-color:#20a8e8;color:#20a8e8;background:#001018;}
+.dyn-open-btn.comp-open{border-color:#e8a060;color:#e8a060;background:#181008;}
+.dyn-open-row{display:flex;gap:3px;margin-top:3px;}
+
 /* NORMAL / NINJA MODE toggle */
 .mode-btn{
   font-family:'Orbitron',sans-serif;
@@ -2650,6 +2702,47 @@ function createChannel(i){
   dynSec.appendChild(compH.el);dynSec.appendChild(compGR.el);dynSec.appendChild(compKnobs);
   el.appendChild(dynSec);
 
+  // ── GATE / COMP panel open buttons (Ninja only) ──
+  const dynOpenRow = document.createElement('div');
+  dynOpenRow.className = 'dyn-open-row digital-only';
+  const gateOpenBtn = document.createElement('button');
+  gateOpenBtn.className = 'dyn-open-btn';
+  gateOpenBtn.textContent = '📊 GATE';
+  const compOpenBtn = document.createElement('button');
+  compOpenBtn.className = 'dyn-open-btn';
+  compOpenBtn.textContent = '📊 COMP';
+  gateOpenBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    openGatePanel({
+      label: lEl.textContent,
+      getThr:()=>gThrK.getValue(), setThr:v=>{gThrK.setValue(v);dyn.setGateThreshold(v);},
+      getAtt:()=>gAttK.getValue(), setAtt:v=>{gAttK.setValue(v);dyn.setGateAttack(v);},
+      getRel:()=>gRelK.getValue(), setRel:v=>{gRelK.setValue(v);dyn.setGateRelease(v);},
+      isOn:()=>gateH.isOn(), toggle:()=>gateH.toggle(),
+      gateInAnalyser:dyn.gateInAnalyser, gateInBuf:dyn.gateInBuf,
+    });
+    gateOpenBtn.classList.add('gate-open');
+  });
+  compOpenBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    openCompPanel({
+      label: lEl.textContent,
+      getThr: ()=>cThrK.getValue(), setThr: v=>{cThrK.setValue(v);dyn.setCompThreshold(v);},
+      getRat: ()=>cRatK.getValue(), setRat: v=>{cRatK.setValue(v);dyn.setCompRatio(v);},
+      getAtt: ()=>cAttK.getValue(), setAtt: v=>{cAttK.setValue(v);dyn.setCompAttack(v);},
+      getRel: ()=>cRelK.getValue(), setRel: v=>{cRelK.setValue(v);dyn.setCompRelease(v);},
+      getKne: ()=>cKneK.getValue(), setKne: v=>{cKneK.setValue(v);dyn.setCompKnee(v);},
+      getMkp: ()=>cMkpK.getValue(), setMkp: v=>{cMkpK.setValue(v);dyn.setMakeupGain(v);},
+      getGR:  ()=>dyn.getCompGR(),
+      isOn:()=>compH.isOn(), toggle:()=>compH.toggle(),
+      gateInAnalyser:dyn.gateInAnalyser, gateInBuf:dyn.gateInBuf,
+    });
+    compOpenBtn.classList.add('comp-open');
+  });
+  dynOpenRow.appendChild(gateOpenBtn);
+  dynOpenRow.appendChild(compOpenBtn);
+  el.appendChild(dynOpenRow);
+
   // EQ  ±32dB  vertical
   const eqSec=document.createElement('div');eqSec.className='eq-section';
   eqSec.appendChild(Object.assign(document.createElement('div'),{className:'section-title',textContent:'EQ'}));
@@ -2709,11 +2802,24 @@ function createChannel(i){
     e.stopPropagation();
     // B1=lowEQ, B2=midEQ, B3=pEq3 (full param), B4=highEQ
     // gainOnly=true: only GAIN knob shown (freq/Q fixed like strip knobs)
+    // B1 freq range: 20-800Hz, B2 freq: 200-5kHz (synced to MID sweep), B4 freq: 2k-20kHz
+    const B1_FREQ = {min:20,  max:800,   syncKnob: null,  syncLabel: loK.el.querySelector('.knob-freq')};
+    const B2_FREQ = {min:200, max:5000,  syncKnob: swK,   syncLabel: midK.el.querySelector('.knob-freq')};
+    const B4_FREQ = {min:2000,max:20000, syncKnob: null,  syncLabel: hiK.el.querySelector('.knob-freq')};
     const eq4 = [
-      { node: lowEQ,  gainOnly:true,  freqLabel:'120Hz',  bandName:'B1 — LO',   gainKnob: loK  },
-      { node: midEQ,  gainOnly:true,  freqLabel:'1kHz',   bandName:'B2 — MID',  gainKnob: midK },
-      { node: pEq3,   gainOnly:false,                     bandName:'B3 — PARAM'              },
-      { node: highEQ, gainOnly:true,  freqLabel:'8kHz',   bandName:'B4 — HI',   gainKnob: hiK  },
+      { node: lowEQ,  gainOnly:true,  freqLabel:'120Hz',  bandName:'B1 — LO',
+        gainKnob:loK,  freqRange:B1_FREQ, showQ: ()=> lowEQ.type==='peaking',
+        setFreq: v=>{ lowEQ.frequency.value=v; if(B1_FREQ.syncLabel) B1_FREQ.syncLabel.textContent=fmtFreq(v); },
+        setQ:    v=>{ lowEQ.Q.value=v; } },
+      { node: midEQ,  gainOnly:true,  freqLabel:'1kHz',   bandName:'B2 — MID',
+        gainKnob:midK, freqRange:B2_FREQ, showQ: ()=>true,
+        setFreq: v=>{ midEQ.frequency.value=v; midFreqIdx=0; if(B2_FREQ.syncKnob&&B2_FREQ.syncKnob.setValue) B2_FREQ.syncKnob.setValue(v); if(B2_FREQ.syncLabel) B2_FREQ.syncLabel.textContent=fmtFreq(v); },
+        setQ:    v=>{ midEQ.Q.value=v; } },
+      { node: pEq3,   gainOnly:false,                     bandName:'B3 — PARAM' },
+      { node: highEQ, gainOnly:true,  freqLabel:'8kHz',   bandName:'B4 — HI',
+        gainKnob:hiK,  freqRange:B4_FREQ, showQ: ()=> highEQ.type==='peaking',
+        setFreq: v=>{ highEQ.frequency.value=v; if(B4_FREQ.syncLabel) B4_FREQ.syncLabel.textContent=fmtFreq(v); },
+        setQ:    v=>{ highEQ.Q.value=v; } },
     ];
     const barEl = el.querySelector('.ch-color-bar');
     const chColor = barEl ? barEl.style.background : '#e8a020';
@@ -3616,13 +3722,9 @@ eqCanvas.height = 130;
 eqCanvas.style.cssText = 'width:100%;height:130px;border-radius:4px;background:#080808;display:block;';
 analyserDisplay.appendChild(eqCanvas);
 
-// Dynamics Canvas
-const dynCanvas = document.createElement('canvas');
-dynCanvas.width  = 320;
-dynCanvas.height = 80;
-dynCanvas.style.cssText = 'width:100%;height:80px;border-radius:4px;background:#080808;display:block;';
-dynCanvas.className = 'digital-only';
-analyserDisplay.appendChild(dynCanvas);
+// dynCanvas removed — replaced by floating Gate/Comp panels
+const dynCanvas = document.createElement('canvas'); // kept as stub so drawDynamics() doesn't crash
+dynCanvas.width = 320; dynCanvas.height = 80;
 
 right.appendChild(analyserDisplay);
 
@@ -4140,7 +4242,6 @@ function drawAnalysers(){
     return;
   }
   drawEQ();
-  drawDynamics();
   requestAnimationFrame(drawAnalysers);
 }
 drawAnalysers();
@@ -5035,11 +5136,11 @@ function buildPEqBands(){
     col.appendChild(lbl);
 
     if(band.gainOnly){
-      // ── GAIN-ONLY BANDS (B1/B2/B4 — linked to strip 3-band EQ) ──
-      // B1 and B4 get type button; B2 (mid) stays fixed
+      // ── BANDS B1/B2/B4 — linked to strip, with FREQ+Q+GAIN ──
+      // Type button for B1 and B4
       const hasTypeBtn = (bi === 0 || bi === 3);
       if(hasTypeBtn){
-        const B1_TYPES = ['lowshelf','highpass','peaking'];
+        const B1_TYPES = ['lowshelf','peaking'];
         const B4_TYPES = ['highshelf','lowpass','peaking'];
         const typeList = bi===0 ? B1_TYPES : B4_TYPES;
         const typeBtn2 = document.createElement('button');
@@ -5051,25 +5152,60 @@ function buildPEqBands(){
           const next = typeList[(idx+1) % typeList.length];
           band.node.type = next;
           typeBtn2.textContent = typeLabels[next] || next.toUpperCase();
-          freqInfoEl.textContent = (typeLabels[next]||next.toUpperCase()) + (band.freqLabel ? ' · '+band.freqLabel : '');
+          // Show/hide Q knob
+          if(band._qKnobEl){
+            const showQ = band.showQ ? band.showQ() : true;
+            band._qKnobEl.style.opacity = showQ ? '1' : '0.2';
+            band._qKnobEl.style.pointerEvents = showQ ? '' : 'none';
+          }
           if(band._gainKnobEl) band._gainKnobEl.style.opacity =
-            (next==='highpass'||next==='lowpass') ? '0.3' : '1';
+            (next==='lowpass') ? '0.3' : '1';
         });
         col.appendChild(typeBtn2);
+      } else {
+        // B2: fixed peaking label
+        const sp=document.createElement('div');
+        sp.style.cssText="font-family:'Share Tech Mono',monospace;font-size:7px;color:#444;letter-spacing:1px;text-align:center;height:17px;line-height:17px;";
+        sp.textContent='PEAKING'; col.appendChild(sp);
       }
-      const freqInfoEl = document.createElement('div');
-      freqInfoEl.style.cssText = "font-family:'Share Tech Mono',monospace;font-size:7px;color:#444;letter-spacing:1px;text-align:center;";
-      freqInfoEl.textContent = (typeLabels[band.node.type]||band.node.type.toUpperCase()) + (band.freqLabel?' · '+band.freqLabel:'');
-      col.appendChild(freqInfoEl);
 
-      // Only GAIN knob — big
+      // FREQ + Q + GAIN knobs row
       const kRow = document.createElement('div');
       kRow.className = 'peq-knobs-row';
-      kRow.style.justifyContent = 'center';
+
+      const fr = band.freqRange || {min:20, max:20000};
+      const freqK = createKnob({
+        label:'FREQ', min:fr.min, max:fr.max, value:band.node.frequency.value,
+        size:26, color:BAND_COLORS[bi], unit:'Hz', decimals:0, unipolar:true,
+        formatValue: v => v>=1000 ? (v/1000).toFixed(1)+'k' : Math.round(v)+'',
+        onChange: v => {
+          band.node.frequency.value = v;
+          if(band.setFreq) band.setFreq(v);
+        }
+      });
+      band._freqKnob = freqK;
+      kRow.appendChild(freqK.el);
+
+      const showQ = band.showQ ? band.showQ() : true;
+      const qK = createKnob({
+        label:'Q', min:0.1, max:10, value:band.node.Q.value,
+        size:26, color:BAND_COLORS[bi], unit:'', decimals:2,
+        onChange: v => {
+          band.node.Q.value = v;
+          if(band.setQ) band.setQ(v);
+        }
+      });
+      band._qKnob = qK;
+      band._qKnobEl = qK.el;
+      if(!showQ){ qK.el.style.opacity='0.2'; qK.el.style.pointerEvents='none'; }
+      kRow.appendChild(qK.el);
+
+      const gainCol=document.createElement('div');
+      gainCol.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;';
       const gainK = createKnob({
         label:'GAIN', min:-32, max:32,
         value: band.node.gain ? band.node.gain.value : 0,
-        size:40, color:BAND_COLORS[bi], unit:'dB', decimals:1,
+        size:36, color:BAND_COLORS[bi], unit:'dB', decimals:1,
         onChange: v => {
           if(band.node.gain) band.node.gain.value = v;
           if(band.gainKnob && band.gainKnob.setValue) band.gainKnob.setValue(v);
@@ -5077,7 +5213,8 @@ function buildPEqBands(){
       });
       band._gainKnob = gainK;
       band._gainKnobEl = gainK.el;
-      kRow.appendChild(gainK.el);
+      gainCol.appendChild(gainK.el);
+      kRow.appendChild(gainCol);
       col.appendChild(kRow);
 
     } else {
@@ -5214,6 +5351,356 @@ document.addEventListener('keydown', e => {
   if(e.key==='Escape' && pEqOverlay.classList.contains('open')) closePEqPanel();
 });
 
+
+// ══════════════════════════════════════════════════════════
+//  GATE PANEL
+// ══════════════════════════════════════════════════════════
+let gatePanel_ch = null, gatePanelRaf = null;
+let gatePanelOverlay, gateCanvas, gatePanelBypass, gatePanelClose, gatePanelTitle, gateKnobsRow;
+
+function initGatePanel(){
+  gatePanelOverlay = document.getElementById('gatePanelOverlay');
+  gateCanvas       = document.getElementById('gateCanvas');
+  gatePanelBypass  = document.getElementById('gatePanelBypass');
+  gatePanelClose   = document.getElementById('gatePanelClose');
+  gatePanelTitle   = document.getElementById('gatePanelTitle');
+  gateKnobsRow     = document.getElementById('gateKnobsRow');
+  if(!gatePanelOverlay) return;
+  gatePanelClose.addEventListener('click', closeGatePanel);
+  gatePanelOverlay.addEventListener('click', e=>{ if(e.target===gatePanelOverlay) closeGatePanel(); });
+  gatePanelBypass.addEventListener('click', ()=>{
+    if(!gatePanel_ch) return;
+    gatePanel_ch.toggle();
+    syncGateBypass();
+  });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeGatePanel(); });
+}
+if(document.readyState!=='loading') initGatePanel();
+else document.addEventListener('DOMContentLoaded', initGatePanel);
+
+function syncGateBypass(){
+  if(!gatePanel_ch) return;
+  const on = gatePanel_ch.isOn();
+  gatePanelBypass.textContent = on ? 'ON' : 'OFF';
+  gatePanelBypass.classList.toggle('on', on);
+}
+
+function openGatePanel(ch){
+  gatePanel_ch = ch;
+  if(!gatePanelOverlay) return;
+  gatePanelTitle.textContent = (ch.label||'CHANNEL') + ' — GATE';
+  syncGateBypass();
+  buildGateKnobs(ch);
+  gatePanelOverlay.classList.add('open');
+  gatePanelRaf = requestAnimationFrame(gateLoop);
+}
+function closeGatePanel(){
+  if(gatePanelOverlay) gatePanelOverlay.classList.remove('open');
+  if(gatePanelRaf){ cancelAnimationFrame(gatePanelRaf); gatePanelRaf=null; }
+  document.querySelectorAll('.dyn-open-btn.gate-open').forEach(b=>b.classList.remove('gate-open'));
+  gatePanel_ch = null;
+}
+
+function buildGateKnobs(ch){
+  gateKnobsRow.innerHTML='';
+  [
+    {label:'THR', min:-80,max:0,   get:ch.getThr, set:ch.setThr, unit:'dB', dec:0, color:'#20a8e8'},
+    {label:'ATT', min:1,  max:500, get:ch.getAtt, set:ch.setAtt, unit:'ms', dec:0, color:'#20a8e8'},
+    {label:'REL', min:10, max:2000,get:ch.getRel, set:ch.setRel, unit:'ms', dec:0, color:'#20a8e8'},
+  ].forEach(p=>{
+    const k = createKnob({label:p.label, min:p.min, max:p.max, value:p.get(),
+      size:32, color:p.color, unit:p.unit, decimals:p.dec, onChange:v=>p.set(v)});
+    gateKnobsRow.appendChild(k.el);
+  });
+}
+
+function drawGatePanel(){
+  if(!gatePanel_ch || !gateCanvas) return;
+  const W=gateCanvas.width, H=gateCanvas.height;
+  const g=gateCanvas.getContext('2d');
+  g.clearRect(0,0,W,H);
+  g.fillStyle='#080810'; g.fillRect(0,0,W,H);
+
+  const dbMin=-80, dbRange=80;
+  const dbToX = db => (db-dbMin)/dbRange*W;
+  const dbToY = db => H - (db-dbMin)/dbRange*H;
+
+  // Fine grid
+  g.strokeStyle='#111118'; g.lineWidth=0.5;
+  for(let db=dbMin;db<=0;db+=10){
+    const x=dbToX(db), y=dbToY(db);
+    g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();
+    g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();
+  }
+  // Unity diagonal
+  g.strokeStyle='#1e1e2e'; g.lineWidth=1;
+  g.beginPath();g.moveTo(0,H);g.lineTo(W,0);g.stroke();
+
+  // Labels
+  g.fillStyle='#2a2a4a'; g.font="9px 'Share Tech Mono',monospace";
+  g.fillText('IN →', W-36, H-4);
+  g.fillText('↑ OUT', 4, 14);
+  [-60,-40,-20,0].forEach(db=>{
+    g.fillText(db+'dB', dbToX(db)+2, H-4);
+  });
+
+  const thr = gatePanel_ch.getThr();
+  const on  = gatePanel_ch.isOn();
+
+  // Gate curve: below thr → mute (output = dbMin), above → unity
+  g.beginPath();
+  let first=true;
+  for(let px=0;px<W;px++){
+    const inDb = dbMin+(px/W)*dbRange;
+    const outDb = inDb<thr ? dbMin : inDb;
+    const y = dbToY(outDb);
+    first?(g.moveTo(px,y),first=false):g.lineTo(px,y);
+  }
+  g.strokeStyle = on ? '#20a8e8cc' : '#20a8e844';
+  g.lineWidth = on ? 2 : 1;
+  g.stroke();
+
+  // Threshold vertical line
+  const tx = dbToX(thr);
+  g.strokeStyle='#20a8e877'; g.lineWidth=1.5;
+  g.setLineDash([4,4]);
+  g.beginPath();g.moveTo(tx,0);g.lineTo(tx,H);g.stroke();
+  g.setLineDash([]);
+  g.fillStyle='#20a8e8cc'; g.font="9px 'Share Tech Mono',monospace";
+  g.fillText('THR '+thr+'dB', tx+4, 16);
+
+  // Live signal ball using analyser
+  if(on && gatePanel_ch.gateInAnalyser && gatePanel_ch.gateInBuf){
+    gatePanel_ch.gateInAnalyser.getByteTimeDomainData(gatePanel_ch.gateInBuf);
+    let sum=0;
+    for(let i=0;i<gatePanel_ch.gateInBuf.length;i++){const s=(gatePanel_ch.gateInBuf[i]-128)/128;sum+=s*s;}
+    const rms=Math.sqrt(sum/gatePanel_ch.gateInBuf.length);
+    const inDb=rms>0?Math.max(dbMin,20*Math.log10(rms)):dbMin;
+    const outDb=inDb<thr?dbMin:inDb;
+    const bx=dbToX(inDb), by=dbToY(outDb);
+    const open=inDb>=thr;
+    const col=open?'#20e880':'#e82020';
+    g.fillStyle=col; g.shadowColor=col; g.shadowBlur=10;
+    g.beginPath();g.arc(bx,by,5,0,Math.PI*2);g.fill();
+    g.shadowBlur=0;
+    g.fillStyle=col+'cc'; g.font="8px 'Share Tech Mono',monospace";
+    g.fillText(inDb.toFixed(1)+'dB', bx+8, by-4);
+  }
+
+  // Drag on canvas — move threshold
+  if(!gateCanvas._dragSet){
+    gateCanvas._dragSet=true;
+    let drag=false;
+    gateCanvas.addEventListener('mousedown', ()=>drag=true);
+    gateCanvas.addEventListener('touchstart', ()=>drag=true, {passive:true});
+    document.addEventListener('mouseup', ()=>drag=false);
+    document.addEventListener('touchend', ()=>drag=false);
+    function onMove(e){
+      if(!drag||!gatePanel_ch) return;
+      const rect=gateCanvas.getBoundingClientRect();
+      const cx=(e.clientX||e.touches?.[0]?.clientX||0)-rect.left;
+      const scaleX=W/rect.width;
+      const db=dbMin+(cx*scaleX/W)*dbRange;
+      const clamped=Math.max(-80,Math.min(0,db));
+      gatePanel_ch.setThr(clamped);
+    }
+    gateCanvas.addEventListener('mousemove', onMove);
+    gateCanvas.addEventListener('touchmove', onMove, {passive:true});
+  }
+}
+
+function gateLoop(){
+  if(!gatePanelOverlay?.classList.contains('open')){ gatePanelRaf=null; return; }
+  drawGatePanel();
+  gatePanelRaf=requestAnimationFrame(gateLoop);
+}
+
+// ══════════════════════════════════════════════════════════
+//  COMP PANEL
+// ══════════════════════════════════════════════════════════
+let compPanel_ch=null, compPanelRaf=null;
+let compPanelOverlay, compCanvas, compPanelBypass, compPanelClose, compPanelTitle, compKnobsRow;
+
+function initCompPanel(){
+  compPanelOverlay = document.getElementById('compPanelOverlay');
+  compCanvas       = document.getElementById('compCanvas');
+  compPanelBypass  = document.getElementById('compPanelBypass');
+  compPanelClose   = document.getElementById('compPanelClose');
+  compPanelTitle   = document.getElementById('compPanelTitle');
+  compKnobsRow     = document.getElementById('compKnobsRow');
+  if(!compPanelOverlay) return;
+  compPanelClose.addEventListener('click', closeCompPanel);
+  compPanelOverlay.addEventListener('click', e=>{ if(e.target===compPanelOverlay) closeCompPanel(); });
+  compPanelBypass.addEventListener('click', ()=>{
+    if(!compPanel_ch) return;
+    compPanel_ch.toggle();
+    syncCompBypass();
+  });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeCompPanel(); });
+}
+if(document.readyState!=='loading') initCompPanel();
+else document.addEventListener('DOMContentLoaded', initCompPanel);
+
+function syncCompBypass(){
+  if(!compPanel_ch) return;
+  const on = compPanel_ch.isOn();
+  compPanelBypass.textContent = on ? 'ON' : 'OFF';
+  compPanelBypass.classList.toggle('on', on);
+}
+
+function openCompPanel(ch){
+  compPanel_ch = ch;
+  if(!compPanelOverlay) return;
+  compPanelTitle.textContent = (ch.label||'CHANNEL') + ' — COMPRESOR';
+  syncCompBypass();
+  buildCompKnobs(ch);
+  compPanelOverlay.classList.add('open');
+  compPanelRaf = requestAnimationFrame(compLoop);
+}
+function closeCompPanel(){
+  if(compPanelOverlay) compPanelOverlay.classList.remove('open');
+  if(compPanelRaf){ cancelAnimationFrame(compPanelRaf); compPanelRaf=null; }
+  document.querySelectorAll('.dyn-open-btn.comp-open').forEach(b=>b.classList.remove('comp-open'));
+  compPanel_ch = null;
+}
+
+function buildCompKnobs(ch){
+  compKnobsRow.innerHTML='';
+  [
+    {label:'THR',  min:-60,max:0,   get:ch.getThr,  set:ch.setThr,  unit:'dB', dec:0, color:'#e8a060'},
+    {label:'RATIO',min:1,  max:20,  get:ch.getRat,  set:ch.setRat,  unit:':1', dec:1, color:'#e8a060'},
+    {label:'ATT',  min:0.1,max:200, get:ch.getAtt,  set:ch.setAtt,  unit:'ms', dec:1, color:'#e8a060'},
+    {label:'REL',  min:10, max:2000,get:ch.getRel,  set:ch.setRel,  unit:'ms', dec:0, color:'#e8a060'},
+    {label:'KNEE', min:0,  max:30,  get:ch.getKne,  set:ch.setKne,  unit:'dB', dec:0, color:'#e8c080'},
+    {label:'MKUP', min:0,  max:24,  get:ch.getMkp,  set:ch.setMkp,  unit:'dB', dec:0, color:'#20e8a0'},
+  ].forEach(p=>{
+    const k=createKnob({label:p.label,min:p.min,max:p.max,value:p.get(),
+      size:32,color:p.color,unit:p.unit,decimals:p.dec,onChange:v=>p.set(v)});
+    compKnobsRow.appendChild(k.el);
+  });
+}
+
+function drawCompPanel(){
+  if(!compPanel_ch||!compCanvas) return;
+  const W=compCanvas.width, H=compCanvas.height;
+  const g=compCanvas.getContext('2d');
+  g.clearRect(0,0,W,H);
+  g.fillStyle='#080810'; g.fillRect(0,0,W,H);
+
+  const dbMin=-60, dbRange=60;
+  const dbToX = db=>(db-dbMin)/dbRange*W;
+  const dbToY = db=>H-(db-dbMin)/dbRange*H;
+
+  // Fine grid
+  g.strokeStyle='#111118'; g.lineWidth=0.5;
+  for(let db=dbMin;db<=0;db+=10){
+    const x=dbToX(db),y=dbToY(db);
+    g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();
+    g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();
+  }
+  // Unity diagonal
+  g.strokeStyle='#1e1e2e'; g.lineWidth=1;
+  g.beginPath();g.moveTo(0,H);g.lineTo(W,0);g.stroke();
+
+  // Labels
+  g.fillStyle='#2a2a4a'; g.font="9px 'Share Tech Mono',monospace";
+  g.fillText('IN →',W-36,H-4); g.fillText('↑ OUT',4,14);
+  [-40,-20,0].forEach(db=>{
+    g.fillText(db+'dB', dbToX(db)+2, H-4);
+  });
+
+  const thr=compPanel_ch.getThr();
+  const rat=compPanel_ch.getRat();
+  const kne=compPanel_ch.getKne();
+  const on =compPanel_ch.isOn();
+  const halfKne=kne/2;
+
+  function compOut(inDb){
+    if(inDb<thr-halfKne) return inDb;
+    if(inDb>thr+halfKne) return thr+(inDb-thr)/rat;
+    const x2=inDb-thr+halfKne;
+    return inDb+((1/rat-1)*x2*x2)/(2*Math.max(kne,0.001));
+  }
+
+  // Transfer curve
+  g.beginPath(); let first=true;
+  for(let px=0;px<W;px++){
+    const inDb=dbMin+(px/W)*dbRange;
+    const y=dbToY(Math.max(dbMin,compOut(inDb)));
+    first?(g.moveTo(px,y),first=false):g.lineTo(px,y);
+  }
+  g.strokeStyle=on?'#e8a060cc':'#e8a06044';
+  g.lineWidth=on?2:1; g.stroke();
+
+  // Threshold line
+  const tx=dbToX(thr);
+  g.strokeStyle='#e8a02077'; g.lineWidth=1.5; g.setLineDash([4,4]);
+  g.beginPath();g.moveTo(tx,0);g.lineTo(tx,H);g.stroke();
+  g.setLineDash([]);
+  g.fillStyle='#e8a020cc'; g.font="9px 'Share Tech Mono',monospace";
+  g.fillText('THR '+thr+'dB', tx+4, 16);
+  g.fillText('RATIO '+rat.toFixed(1)+':1', tx+4, 28);
+
+  // Live ball
+  if(on && compPanel_ch.gateInAnalyser && compPanel_ch.gateInBuf){
+    compPanel_ch.gateInAnalyser.getByteTimeDomainData(compPanel_ch.gateInBuf);
+    let sum=0;
+    for(let i=0;i<compPanel_ch.gateInBuf.length;i++){const s=(compPanel_ch.gateInBuf[i]-128)/128;sum+=s*s;}
+    const rms=Math.sqrt(sum/compPanel_ch.gateInBuf.length);
+    const inDb=rms>0?Math.max(dbMin,20*Math.log10(rms)):dbMin;
+    const outDb=Math.max(dbMin,compOut(inDb));
+    const grDb=Math.max(0,compPanel_ch.getGR());
+    const bx=dbToX(inDb), by=dbToY(outDb);
+    const col=grDb>6?'#e82020':grDb>2?'#e8e020':'#20e880';
+    g.fillStyle=col; g.shadowColor=col; g.shadowBlur=grDb>1?10:4;
+    g.beginPath();g.arc(bx,by,5,0,Math.PI*2);g.fill();
+    g.shadowBlur=0;
+    if(grDb>0.3){
+      g.fillStyle=col+'cc'; g.font="8px 'Share Tech Mono',monospace";
+      g.fillText('GR -'+grDb.toFixed(1)+'dB', bx+8, by-4);
+    }
+  }
+
+  // Drag on canvas: horizontal=threshold, vertical=ratio
+  if(!compCanvas._dragSet){
+    compCanvas._dragSet=true;
+    let drag=false, startX=0, startY=0, startThr=0, startRat=1;
+    compCanvas.addEventListener('mousedown', e=>{
+      drag=true; startX=e.clientX; startY=e.clientY;
+      if(compPanel_ch){ startThr=compPanel_ch.getThr(); startRat=compPanel_ch.getRat(); }
+    });
+    compCanvas.addEventListener('touchstart', e=>{
+      drag=true; startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+      if(compPanel_ch){ startThr=compPanel_ch.getThr(); startRat=compPanel_ch.getRat(); }
+    },{passive:true});
+    document.addEventListener('mouseup', ()=>drag=false);
+    document.addEventListener('touchend', ()=>drag=false);
+    function onMove(e){
+      if(!drag||!compPanel_ch) return;
+      const rect=compCanvas.getBoundingClientRect();
+      const cx=(e.clientX||e.touches?.[0]?.clientX||0)-rect.left;
+      const cy=(e.clientY||e.touches?.[0]?.clientY||0)-rect.top;
+      const scaleX=W/rect.width, scaleY=H/rect.height;
+      const dx=(e.clientX||e.touches?.[0]?.clientX||0)-startX;
+      const dy=(e.clientY||e.touches?.[0]?.clientY||0)-startY;
+      // Horizontal drag = threshold
+      const newThr=Math.max(-60,Math.min(0,startThr+dx/rect.width*dbRange));
+      compPanel_ch.setThr(newThr);
+      // Vertical drag = ratio (up = more ratio)
+      const newRat=Math.max(1,Math.min(20,startRat-dy/rect.height*10));
+      compPanel_ch.setRat(newRat);
+    }
+    compCanvas.addEventListener('mousemove', onMove);
+    compCanvas.addEventListener('touchmove', onMove,{passive:true});
+  }
+}
+
+function compLoop(){
+  if(!compPanelOverlay?.classList.contains('open')){ compPanelRaf=null; return; }
+  drawCompPanel();
+  compPanelRaf=requestAnimationFrame(compLoop);
+}
+
 </script>
 
 <!-- ══ PARAMETRIC EQ PANEL (NINJA ONLY) ══ -->
@@ -5232,6 +5719,34 @@ document.addEventListener('keydown', e => {
     <div id="pEqBandsRow">
       <!-- band columns injected by JS -->
     </div>
+  </div>
+</div>
+
+<!-- ══ GATE PANEL ══ -->
+<div class="dyn-panel-overlay" id="gatePanelOverlay">
+  <div class="dyn-panel">
+    <div class="dyn-panel-header">
+      <div class="dyn-panel-dot" style="background:#20a8e8;"></div>
+      <div class="dyn-panel-title" id="gatePanelTitle">GATE</div>
+      <button class="dyn-panel-bypass" id="gatePanelBypass">OFF</button>
+      <button class="dyn-panel-close" id="gatePanelClose">✕</button>
+    </div>
+    <canvas class="dyn-panel-canvas" id="gateCanvas" width="560" height="200"></canvas>
+    <div class="dyn-panel-knobs" id="gateKnobsRow"></div>
+  </div>
+</div>
+
+<!-- ══ COMP PANEL ══ -->
+<div class="dyn-panel-overlay" id="compPanelOverlay">
+  <div class="dyn-panel">
+    <div class="dyn-panel-header">
+      <div class="dyn-panel-dot" style="background:#e8a060;"></div>
+      <div class="dyn-panel-title" id="compPanelTitle">COMPRESOR</div>
+      <button class="dyn-panel-bypass" id="compPanelBypass">OFF</button>
+      <button class="dyn-panel-close" id="compPanelClose">✕</button>
+    </div>
+    <canvas class="dyn-panel-canvas" id="compCanvas" width="560" height="200"></canvas>
+    <div class="dyn-panel-knobs" id="compKnobsRow"></div>
   </div>
 </div>
 </div><!-- #appRoot -->
