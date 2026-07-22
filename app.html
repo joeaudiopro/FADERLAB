@@ -387,6 +387,16 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .peq-open-btn:hover{border-color:#c080ff;color:#c080ff;}
 .peq-open-btn.peq-active{border-color:#c080ff;color:#c080ff;background:#1a0a2a;}
 
+
+/* Ninja mode (no analog-mode class): hide right-side analyser */
+body:not(.analog-mode) #analyserDisplay {
+  display: none !important;
+}
+/* Normal mode (analog-mode class on body): show analyser */
+body.analog-mode #analyserDisplay {
+  display: flex !important;
+}
+
 /* NORMAL / NINJA MODE toggle */
 .mode-btn{
   font-family:'Orbitron',sans-serif;
@@ -3551,6 +3561,7 @@ right.appendChild(dcaMasterSec);
 // ══════════════════════════════════════════════════
 const analyserDisplay = document.createElement('div');
 analyserDisplay.className = 'digital-only';
+analyserDisplay.id = 'analyserDisplay';
 analyserDisplay.style.cssText = `
   background:#0e0e0e;
   border:1px solid #2a2a2a;
@@ -3662,7 +3673,7 @@ stemPanel.appendChild(stemList);
 right.appendChild(stemPanel);
 
 // ── LOAD STEM SET ──
-const BASE_URL = 'https://joeaudiopro.github.io/MIXLAB/stems/';
+const BASE_URL = 'https://faderlab.mx/stems/';
 
 async function loadStemSet(setId, btn, statusEl){
   try {
