@@ -2656,7 +2656,7 @@ function createChannel(i){
     let on=false;
     b.addEventListener('click',()=>{on=!on;b.classList.toggle('active',on);b.textContent=on?'ON':'OFF';onToggle(on);});
     h.appendChild(t);h.appendChild(b);
-    return{el:h,isOn:()=>on};
+    return{el:h,isOn:()=>on,toggle:()=>{on=!on;b.classList.toggle('active',on);b.textContent=on?'ON':'OFF';onToggle(on);}};
   }
   function makeGRBar(cls){
     const w=document.createElement('div');w.className='gr-wrap';
@@ -2707,10 +2707,10 @@ function createChannel(i){
   dynOpenRow.className = 'dyn-open-row digital-only';
   const gateOpenBtn = document.createElement('button');
   gateOpenBtn.className = 'dyn-open-btn';
-  gateOpenBtn.textContent = '📊 GATE';
+  gateOpenBtn.textContent = '▶ GATE';
   const compOpenBtn = document.createElement('button');
   compOpenBtn.className = 'dyn-open-btn';
-  compOpenBtn.textContent = '📊 COMP';
+  compOpenBtn.textContent = '▶ COMP';
   gateOpenBtn.addEventListener('click', e => {
     e.stopPropagation();
     openGatePanel({
