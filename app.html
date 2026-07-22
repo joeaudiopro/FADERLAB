@@ -388,12 +388,8 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .peq-open-btn.peq-active{border-color:#c080ff;color:#c080ff;background:#1a0a2a;}
 
 
-/* Ninja mode (no analog-mode class): hide right-side analyser */
-body:not(.analog-mode) #analyserDisplay {
-  display: none !important;
-}
-/* Normal mode (analog-mode class on body): show analyser */
-body.analog-mode #analyserDisplay {
+/* analyserDisplay always visible — dynCanvas is digital-only so it handles itself */
+#analyserDisplay {
   display: flex !important;
 }
 
@@ -3607,6 +3603,7 @@ const dynCanvas = document.createElement('canvas');
 dynCanvas.width  = 320;
 dynCanvas.height = 80;
 dynCanvas.style.cssText = 'width:100%;height:80px;border-radius:4px;background:#080808;display:block;';
+dynCanvas.className = 'digital-only';
 analyserDisplay.appendChild(dynCanvas);
 
 right.appendChild(analyserDisplay);
@@ -4813,22 +4810,23 @@ function drawPEqPanel(){
     g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke();
   }
 
-  // Freq labels
-  g.fillStyle = '#2a2a3a';
-  g.font = "7px 'Share Tech Mono', monospace";
+  // Freq labels — bigger and more visible
+  g.font = "9px 'Share Tech Mono', monospace";
   g.textAlign = 'center';
   [100,200,500,1000,2000,5000,10000,20000].forEach(f => {
     const x = pEqFtoX(f, W);
     const lbl = f>=1000 ? (f/1000)+'k' : f+'';
-    g.fillText(lbl, x, H-3);
+    g.fillStyle = '#3a3a5a';
+    g.fillText(lbl, x, H-4);
   });
 
-  // dB labels
+  // dB labels — bigger and more visible
   g.textAlign = 'right';
   [-12,-6,0,6,12].forEach(db => {
     const y = pEqDbToY(db, H);
-    g.fillStyle = db===0 ? '#3a3a5a' : '#222230';
-    g.fillText((db>0?'+':'')+db, 22, y+3);
+    g.font = "9px 'Share Tech Mono', monospace";
+    g.fillStyle = db===0 ? '#5a5a8a' : '#333350';
+    g.fillText((db>0?'+':'')+db+'dB', 26, y+3);
   });
   g.textAlign = 'left';
 
@@ -4898,11 +4896,8 @@ function drawPEqPanel(){
     const f = PEQ_F_MIN * Math.pow(PEQ_F_MAX/PEQ_F_MIN, px/(W-1));
     let db = 0;
     if(pEqChannel.hpfOn) db += biquadMagnitude(pEqChannel.hpfNode, f);
+    // eq4 already contains B1=lowEQ, B2=midEQ, B3=pEq3, B4=highEQ — no double count
     if(pEqChannel.eq4) pEqChannel.eq4.forEach(b => { db += biquadMagnitude(b.node, f); });
-    // Also add 3-band EQ from strip
-    if(pEqChannel.loFilter) db += biquadMagnitude(pEqChannel.loFilter, f);
-    if(pEqChannel.midFilter) db += biquadMagnitude(pEqChannel.midFilter, f);
-    if(pEqChannel.hiFilter)  db += biquadMagnitude(pEqChannel.hiFilter, f);
     const y = pEqDbToY(Math.max(PEQ_DB_MIN-2, Math.min(PEQ_DB_MAX+2, db)), H);
     px===0 ? g.moveTo(px, y) : g.lineTo(px, y);
   }
@@ -5023,11 +5018,31 @@ function buildPEqBands(){
 
     if(band.gainOnly){
       // ── GAIN-ONLY BANDS (B1/B2/B4 — linked to strip 3-band EQ) ──
-      // Show fixed freq label instead of type button
-      const freqInfo = document.createElement('div');
-      freqInfo.style.cssText = "font-family:'Share Tech Mono',monospace;font-size:7px;color:#444;letter-spacing:1px;text-align:center;";
-      freqInfo.textContent = (typeLabels[band.node.type] || band.node.type.toUpperCase()) + (band.freqLabel ? ' · ' + band.freqLabel : '');
-      col.appendChild(freqInfo);
+      // B1 and B4 get type button; B2 (mid) stays fixed
+      const hasTypeBtn = (bi === 0 || bi === 3);
+      if(hasTypeBtn){
+        const B1_TYPES = ['lowshelf','highpass','peaking'];
+        const B4_TYPES = ['highshelf','lowpass','peaking'];
+        const typeList = bi===0 ? B1_TYPES : B4_TYPES;
+        const typeBtn2 = document.createElement('button');
+        typeBtn2.className = 'peq-type-btn';
+        typeBtn2.textContent = typeLabels[band.node.type] || band.node.type.toUpperCase();
+        typeBtn2.style.borderColor = BAND_COLORS[bi] + '55';
+        typeBtn2.addEventListener('click', ()=>{
+          const idx = typeList.indexOf(band.node.type);
+          const next = typeList[(idx+1) % typeList.length];
+          band.node.type = next;
+          typeBtn2.textContent = typeLabels[next] || next.toUpperCase();
+          freqInfoEl.textContent = (typeLabels[next]||next.toUpperCase()) + (band.freqLabel ? ' · '+band.freqLabel : '');
+          if(band._gainKnobEl) band._gainKnobEl.style.opacity =
+            (next==='highpass'||next==='lowpass') ? '0.3' : '1';
+        });
+        col.appendChild(typeBtn2);
+      }
+      const freqInfoEl = document.createElement('div');
+      freqInfoEl.style.cssText = "font-family:'Share Tech Mono',monospace;font-size:7px;color:#444;letter-spacing:1px;text-align:center;";
+      freqInfoEl.textContent = (typeLabels[band.node.type]||band.node.type.toUpperCase()) + (band.freqLabel?' · '+band.freqLabel:'');
+      col.appendChild(freqInfoEl);
 
       // Only GAIN knob — big
       const kRow = document.createElement('div');
@@ -5039,11 +5054,11 @@ function buildPEqBands(){
         size:40, color:BAND_COLORS[bi], unit:'dB', decimals:1,
         onChange: v => {
           if(band.node.gain) band.node.gain.value = v;
-          // Sync strip knob visually if ref provided
           if(band.gainKnob && band.gainKnob.setValue) band.gainKnob.setValue(v);
         }
       });
       band._gainKnob = gainK;
+      band._gainKnobEl = gainK.el;
       kRow.appendChild(gainK.el);
       col.appendChild(kRow);
 
