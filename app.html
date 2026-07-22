@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
-<title>MixLab v3.0 — Joe Mendoza</title>
+<title>FaderLab — Joe Mendoza</title>
 <!-- Paint black BEFORE anything else — eliminates white/chrome flash -->
 <style>
   html{background:#141414;}
@@ -148,10 +148,10 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .vu-with-scale{display:flex;gap:1px;align-items:stretch;}
 /* Scale labels column */
 .vu-scale{display:flex;flex-direction:column;justify-content:space-between;width:14px;padding:1px 0;position:relative;}
-.vu-scale-mark{font-size:7px;color:#555;text-align:right;line-height:1;position:absolute;right:2px;transform:translateY(50%);}
+.vu-scale-mark{font-family:'Share Tech Mono',monospace;font-size:9px;color:#bbb;text-align:right;line-height:1;position:absolute;right:2px;transform:translateY(50%);white-space:nowrap;pointer-events:none;overflow:visible;}
 /* VU bars */
-.vu-meter{display:flex;gap:2px;height:80px;padding:2px;background:#0d0d0d;border-radius:3px;border:1px solid #2a2a2a;}
-.vu-bar-wrap{width:9px;height:76px;background:#111;border-radius:2px;position:relative;overflow:hidden;}
+.vu-meter{display:flex;gap:2px;height:208px;padding:2px;background:#0d0d0d;border-radius:3px;border:1px solid #2a2a2a;}
+.vu-bar-wrap{width:9px;height:204px;background:#111;border-radius:2px;position:relative;overflow:hidden;}
 .vu-bar{position:absolute;bottom:0;width:100%;height:0;border-radius:2px 2px 0 0;transition:height 0.04s;}
 .vu-peak{position:absolute;width:100%;height:2px;background:#fff;opacity:.8;}
 /* CLIP LED */
@@ -640,7 +640,7 @@ body.analog-mode #analyserDisplay {
   50%{transform:scaleY(0.35);}
 }
 
-/* MIXLAB wordmark */
+/* FADERLAB wordmark */
 .splash-title{
   font-family:'Bebas Neue',sans-serif;
   font-size:clamp(72px,12vw,110px);
@@ -988,9 +988,9 @@ body.splash-active #appRoot{
       <div class="splash-eq-bar"></div>
     </div>
 
-    <div class="splash-title">MIXLAB</div>
+    <div class="splash-title">FADERLAB</div>
 
-    <div class="splash-tagline">Live Sound Console · Web Audio Engine</div>
+    <div class="splash-tagline">Live Audio Console · Web Audio Engine</div>
     <div class="splash-rule"></div>
     <div class="splash-credit">by <span>Joe Mendoza</span></div>
     <div class="splash-version">v3.0 · Web Audio Engine</div>
@@ -1036,7 +1036,7 @@ body.splash-active #appRoot{
   "></div>
 
   <div style="font-family:'Orbitron',sans-serif;font-size:.75rem;color:var(--accent);letter-spacing:4px;text-shadow:0 0 10px #e8a02055;">
-    MIXLAB <span style="font-size:.5rem;color:var(--dim);letter-spacing:2px;">v3.0</span>
+    FADERLAB <span style="font-size:.5rem;color:var(--dim);letter-spacing:2px;">v1.0</span>
   </div>
 
   <!-- big mic icon SVG -->
@@ -1093,7 +1093,7 @@ body.splash-active #appRoot{
 <div id="appRoot">
 
 <div class="topbar">
-  <h1>MIXLAB</h1>
+  <h1>FADERLAB</h1>
   <div style="display:flex;gap:5px;">
     <button class="btn play" id="playAll">▶ PLAY</button>
     <button class="btn stop" id="stopAll">■ STOP</button>
@@ -1137,7 +1137,7 @@ body.splash-active #appRoot{
   </div>
   <!-- NORMAL / NINJA MODE -->
   <button class="mode-btn" id="modeBtn">🥷 NINJA</button>
-  <span style="margin-left:auto;font-size:9px;color:var(--dim)">MixLab v3.0 · Joe Mendoza</span>
+  <span style="margin-left:auto;font-size:9px;color:var(--dim)">FaderLab · Joe Mendoza</span>
 </div>
 
 <!-- Toast notification -->
@@ -2115,11 +2115,12 @@ function createFader({min=-60,max=10,value:initVal=-60,height=90,onChange}){
 //  Scale marks at: +6, 0, -6, -12, -20, -40 dBFS
 //  mapped onto the 80px height (range -60 to +10 = 70dB)
 // ══════════════════════════════════════════════════
-const VU_H = 80;   // total vu-meter height in px (including padding)
-const VU_BAR_H = 76; // usable bar height
+const VU_H = 208;  // total vu-meter height in px (including padding)
+const VU_BAR_H = 204; // usable bar height
 const VU_MIN = -60, VU_MAX = 10, VU_RANGE = 70;
+const METER_OFFSET = 6;
 
-const SCALE_MARKS = [6, 0, -6, -12, -20, -40]; // dBFS
+const SCALE_MARKS = [6, 0, -6, -12, -20, -40, -60]; // dBFS
 
 function createVUMeterWithScale(){
   const outer=document.createElement('div');
@@ -2137,7 +2138,7 @@ function createVUMeterWithScale(){
 
   // Scale column
   const scale=document.createElement('div');
-  scale.style.cssText='width:14px;height:'+VU_H+'px;position:relative;flex-shrink:0;';
+  scale.style.cssText='width:22px;height:'+VU_H+'px;position:relative;flex-shrink:0;overflow:visible;';
   SCALE_MARKS.forEach(db=>{
     const mark=document.createElement('div');mark.className='vu-scale-mark';
     // position: fraction of bar from bottom
@@ -2190,11 +2191,11 @@ function createVUMeter(){
   const ph=[{db:-100,t:null},{db:-100,t:null}];
   function setLevel(ch,db){
     const b=bars[ch];if(!b)return;
-    const pct=Math.max(0,(db+60)/70*100);
+    const pct=Math.max(0,(db-VU_MIN)/VU_RANGE*100);
     b.bar.style.height=pct+'%';
     b.bar.style.background=db>-3?'linear-gradient(to top,#e82020,#ff4040)':db>-9?'linear-gradient(to top,#e8c020,#ffe040)':db>-20?'linear-gradient(to top,#20e860,#40ff80)':'linear-gradient(to top,#20a840,#20e860)';
     if(db>ph[ch].db){ph[ch].db=db;clearTimeout(ph[ch].t);ph[ch].t=setTimeout(()=>{ph[ch].db=-100;},2000);}
-    b.pk.style.bottom=Math.max(0,(ph[ch].db+60)/70*100)+'%';
+    b.pk.style.bottom=Math.max(0,(ph[ch].db-VU_MIN)/VU_RANGE*100)+'%';
   }
   return{el:wrap,setLevel};
 }
@@ -2210,11 +2211,11 @@ function createVUMeterMono(){
   let peakDb=-100, peakTimer=null;
   function setLevel(ch,db){
     if(ch!==0) return; // mono — ignore ch 1
-    const pct=Math.max(0,(db+60)/70*100);
+    const pct=Math.max(0,(db-VU_MIN)/VU_RANGE*100);
     bar.style.height=pct+'%';
     bar.style.background=db>-3?'linear-gradient(to top,#e82020,#ff4040)':db>-9?'linear-gradient(to top,#e8c020,#ffe040)':db>-20?'linear-gradient(to top,#20e860,#40ff80)':'linear-gradient(to top,#20a840,#20e860)';
     if(db>peakDb){peakDb=db;clearTimeout(peakTimer);peakTimer=setTimeout(()=>{peakDb=-100;},2000);}
-    pk.style.bottom=Math.max(0,(peakDb+60)/70*100)+'%';
+    pk.style.bottom=Math.max(0,(peakDb-VU_MIN)/VU_RANGE*100)+'%';
   }
   return{el:wrap,setLevel};
 }
@@ -2509,11 +2510,8 @@ function createChannel(i){
   const lowEQ     =ctx.createBiquadFilter(); lowEQ.type='lowshelf';    lowEQ.frequency.value=120;  // 120Hz más musical que 80Hz
   const midEQ     =ctx.createBiquadFilter(); midEQ.type='peaking';     midEQ.frequency.value=1000; midEQ.Q.value=0.7; // Q más ancho = más musical
   const highEQ    =ctx.createBiquadFilter(); highEQ.type='highshelf';  highEQ.frequency.value=8000;
-  // ── 4-band parametric EQ (Ninja mode panel) ──
-  const pEq1 = ctx.createBiquadFilter(); pEq1.type='lowshelf';  pEq1.frequency.value=100;  pEq1.Q.value=0.7; pEq1.gain.value=0;
-  const pEq2 = ctx.createBiquadFilter(); pEq2.type='peaking';   pEq2.frequency.value=800;  pEq2.Q.value=0.7; pEq2.gain.value=0;
-  const pEq3 = ctx.createBiquadFilter(); pEq3.type='peaking';   pEq3.frequency.value=3000; pEq3.Q.value=0.7; pEq3.gain.value=0;
-  const pEq4 = ctx.createBiquadFilter(); pEq4.type='highshelf'; pEq4.frequency.value=10000;pEq4.Q.value=0.7; pEq4.gain.value=0;
+  // ── Parametric EQ extra band (Ninja panel B3 — full parametric) ──
+  const pEq3 = ctx.createBiquadFilter(); pEq3.type='peaking'; pEq3.frequency.value=3000; pEq3.Q.value=0.7; pEq3.gain.value=0;
   const dynIn     =ctx.createGain();
   const dynOut    =ctx.createGain();
   const faderNode =ctx.createGain();         faderNode.gain.value=0;
@@ -2559,7 +2557,7 @@ function createChannel(i){
   }
 
   trimNode.connect(hpfNode); hpfNode.connect(lowEQ); lowEQ.connect(midEQ); midEQ.connect(highEQ);
-  highEQ.connect(pEq1); pEq1.connect(pEq2); pEq2.connect(pEq3); pEq3.connect(pEq4); pEq4.connect(satNode); satNode.connect(dynIn);
+  highEQ.connect(pEq3); pEq3.connect(satNode); satNode.connect(dynIn);
   dynOut.connect(faderNode); faderNode.connect(chPowerGain); chPowerGain.connect(panNode); panNode.connect(analyser); analyser.connect(masterBus);
 
   const pflGain=ctx.createGain(); pflGain.gain.value=0;
@@ -2697,16 +2695,19 @@ function createChannel(i){
   pEqBtn.title = 'Abrir ecualizador paramétrico (Ninja)';
   pEqBtn.addEventListener('click', e => {
     e.stopPropagation();
-    // Build eq4 array with audio nodes + knob refs
+    // B1=lowEQ, B2=midEQ, B3=pEq3 (full param), B4=highEQ
+    // gainOnly=true: only GAIN knob shown (freq/Q fixed like strip knobs)
     const eq4 = [
-      { node: pEq1 },
-      { node: pEq2 },
-      { node: pEq3 },
-      { node: pEq4 },
+      { node: lowEQ,  gainOnly:true,  freqLabel:'120Hz',  bandName:'B1 — LO',   gainKnob: loK  },
+      { node: midEQ,  gainOnly:true,  freqLabel:'1kHz',   bandName:'B2 — MID',  gainKnob: midK },
+      { node: pEq3,   gainOnly:false,                     bandName:'B3 — PARAM'              },
+      { node: highEQ, gainOnly:true,  freqLabel:'8kHz',   bandName:'B4 — HI',   gainKnob: hiK  },
     ];
+    const barEl = el.querySelector('.ch-color-bar');
+    const chColor = barEl ? barEl.style.background : '#e8a020';
     openPEqPanel({
       label:     lEl.textContent,
-      color:     el.querySelector('.ch-color-bar') ? el.querySelector('.ch-color-bar').style.background : '#e8a020',
+      color:     chColor,
       eq4,
       loFilter:  lowEQ,
       midFilter: midEQ,
@@ -3073,6 +3074,7 @@ function createChannel(i){
     el.classList.toggle('pfl-on', ch.isSolo);
     // PFL routing
     pflGain.gain.value = ch.isSolo ? 1 : 0;
+    if(ch.isSolo && pflCtx && pflCtx.state==='suspended') pflCtx.resume();
     if(ch.isSolo) activePFLs.add(i); else activePFLs.delete(i);
     updatePFLStatus();
     updateMix();
@@ -4307,7 +4309,7 @@ function meterLoop(){
     const db=gainToDB(Math.sqrt(sum/ch.analyserBuf.length));
     // Piso más alto: -35dBFS evita falsos positivos por ruido de cuantización
     const vuDb = (!hasSignal || db < -35) ? -100 : db;
-    ch.vu.setLevel(0, vuDb);
+    ch.vu.setLevel(0, vuDb + METER_OFFSET);
 
     // ── Signal LED (pre-fader) ──
     ch.sigAnalyser.getByteTimeDomainData(ch.sigBuf);
@@ -4347,20 +4349,20 @@ function meterLoop(){
       }
       const dbL=gainToDB(Math.sqrt(sL/m.bufL.length));
       const dbR=gainToDB(Math.sqrt(sR/m.bufR.length));
-      m.vu.setLevel(0,dbL); // L bar
-      m.vu.setLevel(1,dbR); // R bar
+      m.vu.setLevel(0,dbL + METER_OFFSET); // L bar
+      m.vu.setLevel(1,dbR + METER_OFFSET); // R bar
     } else {
       m.an.getByteTimeDomainData(m.buf);
       let s2=0;for(let i=0;i<m.buf.length;i++){const s=(m.buf[i]-128)/128;s2+=s*s;}
       const db=gainToDB(Math.sqrt(s2/m.buf.length));
-      m.vu.setLevel(0,db);m.vu.setLevel(1,db);
+      m.vu.setLevel(0,db + METER_OFFSET);m.vu.setLevel(1,db + METER_OFFSET);
     }
   });
 
   pflAnalyser.getByteTimeDomainData(pflBuf2);
   let ps=0;for(let i=0;i<pflBuf2.length;i++){const s=(pflBuf2[i]-128)/128;ps+=s*s;}
   const pdb=gainToDB(Math.sqrt(ps/pflBuf2.length));
-  pflVU.setLevel(0,pdb);pflVU.setLevel(1,pdb+(Math.random()*.6-.3));
+  pflVU.setLevel(0,pdb + METER_OFFSET);pflVU.setLevel(1,pdb + METER_OFFSET + (Math.random()*.6-.3));
 
   // Master Bus Processor GR meter
   updateMasterGR();
@@ -4949,23 +4951,28 @@ function buildPEqHandles(){
       const dy = r.clientY - startY;
       const W = pEqCanvas.offsetWidth || pEqCanvas.width;
       const H = pEqCanvas.offsetHeight || pEqCanvas.height;
-      // Freq: map dx to log freq space
+      const dbPerPx = (PEQ_DB_MAX - PEQ_DB_MIN) / H;
       const fr = pEqChannel.eq4[bi];
-      const logMin = Math.log10(BAND_FREQ_RANGES[bi].min);
-      const logMax = Math.log10(BAND_FREQ_RANGES[bi].max);
-      const logStart = Math.log10(startFreq);
-      const logNew = Math.max(logMin, Math.min(logMax, logStart + dx/W * (logMax-logMin)));
-      const newFreq = Math.pow(10, logNew);
-      band.node.frequency.value = newFreq;
-      // Gain (not for HPF/LPF types)
-      if(band.node.type !== 'highpass' && band.node.type !== 'lowpass'){
-        const dbPerPx = (PEQ_DB_MAX - PEQ_DB_MIN) / H;
-        const newGain = Math.max(-18, Math.min(18, startGain - dy * dbPerPx * 2));
-        band.node.gain.value = newGain;
+
+      if(!band.gainOnly){
+        // Full param band: horizontal = freq, vertical = gain
+        const logMin = Math.log10(200);
+        const logMax = Math.log10(15000);
+        const logStart = Math.log10(Math.max(200, startFreq));
+        const logNew = Math.max(logMin, Math.min(logMax, logStart + dx/W * (logMax-logMin)));
+        const newFreq = Math.pow(10, logNew);
+        band.node.frequency.value = newFreq;
+        fr._freqKnob && fr._freqKnob.setValue(newFreq);
       }
-      // Update knobs UI
-      fr._freqKnob && fr._freqKnob.setValue(newFreq);
-      fr._gainKnob && fr._gainKnob.setValue(band.node.gain ? band.node.gain.value : 0);
+      // Vertical = gain (all bands)
+      if(band.node.type !== 'highpass' && band.node.type !== 'lowpass' && band.node.type !== 'notch'){
+        const gainRange = band.gainOnly ? 32 : 18;
+        const newGain = Math.max(-gainRange, Math.min(gainRange, startGain - dy * dbPerPx * 2));
+        band.node.gain.value = newGain;
+        fr._gainKnob && fr._gainKnob.setValue(newGain);
+        // Sync strip knob for gainOnly bands
+        if(band.gainOnly && band.gainKnob && band.gainKnob.setValue) band.gainKnob.setValue(newGain);
+      }
       e.preventDefault();
     }
     function onUp(){ dragging=false; h.classList.remove('drag'); }
@@ -5000,6 +5007,9 @@ function buildPEqBands(){
   pEqBandsRow.innerHTML = '';
   if(!pEqChannel || !pEqChannel.eq4) return;
 
+  const typeLabels = {'lowshelf':'LOW SHELF','highpass':'HIGH PASS','peaking':'PEAKING',
+                      'highshelf':'HI SHELF','lowpass':'LOW PASS'};
+
   pEqChannel.eq4.forEach((band, bi) => {
     const col = document.createElement('div');
     col.className = 'peq-band-col';
@@ -5008,78 +5018,92 @@ function buildPEqBands(){
     const lbl = document.createElement('div');
     lbl.className = 'peq-band-label';
     lbl.style.color = BAND_COLORS[bi];
-    lbl.textContent = BAND_NAMES[bi];
+    lbl.textContent = band.bandName || BAND_NAMES[bi];
     col.appendChild(lbl);
 
-    // Type button (only B1 and B4 are variable)
-    const typeList = bi===0 ? BAND1_TYPES : bi===3 ? BAND4_TYPES : ['peaking'];
-    if(typeList.length > 1){
+    if(band.gainOnly){
+      // ── GAIN-ONLY BANDS (B1/B2/B4 — linked to strip 3-band EQ) ──
+      // Show fixed freq label instead of type button
+      const freqInfo = document.createElement('div');
+      freqInfo.style.cssText = "font-family:'Share Tech Mono',monospace;font-size:7px;color:#444;letter-spacing:1px;text-align:center;";
+      freqInfo.textContent = (typeLabels[band.node.type] || band.node.type.toUpperCase()) + (band.freqLabel ? ' · ' + band.freqLabel : '');
+      col.appendChild(freqInfo);
+
+      // Only GAIN knob — big
+      const kRow = document.createElement('div');
+      kRow.className = 'peq-knobs-row';
+      kRow.style.justifyContent = 'center';
+      const gainK = createKnob({
+        label:'GAIN', min:-32, max:32,
+        value: band.node.gain ? band.node.gain.value : 0,
+        size:40, color:BAND_COLORS[bi], unit:'dB', decimals:1,
+        onChange: v => {
+          if(band.node.gain) band.node.gain.value = v;
+          // Sync strip knob visually if ref provided
+          if(band.gainKnob && band.gainKnob.setValue) band.gainKnob.setValue(v);
+        }
+      });
+      band._gainKnob = gainK;
+      kRow.appendChild(gainK.el);
+      col.appendChild(kRow);
+
+    } else {
+      // ── FULL PARAMETRIC BAND (B3 — pEq3) ──
+      // Type button
+      const BAND3_TYPES = ['peaking','lowshelf','highshelf','highpass','lowpass','notch'];
       const typeBtn = document.createElement('button');
       typeBtn.className = 'peq-type-btn';
-      const typeLabels = {'lowshelf':'LOW SHELF','highpass':'HIGH PASS','peaking':'PEAKING',
-                          'highshelf':'HI SHELF','lowpass':'LOW PASS'};
       typeBtn.textContent = typeLabels[band.node.type] || band.node.type.toUpperCase();
       typeBtn.style.borderColor = BAND_COLORS[bi] + '44';
       typeBtn.addEventListener('click', ()=>{
-        const idx = typeList.indexOf(band.node.type);
-        const next = typeList[(idx+1) % typeList.length];
+        const idx = BAND3_TYPES.indexOf(band.node.type);
+        const next = BAND3_TYPES[(idx+1) % BAND3_TYPES.length];
         band.node.type = next;
         typeBtn.textContent = typeLabels[next] || next.toUpperCase();
-        // Hide gain knob for HP/LP types
-        if(band._gainCol) band._gainCol.style.opacity = (next==='highpass'||next==='lowpass') ? '0.3' : '1';
+        if(band._gainCol) band._gainCol.style.opacity =
+          (next==='highpass'||next==='lowpass'||next==='notch') ? '0.3' : '1';
       });
       col.appendChild(typeBtn);
-    } else {
-      // Spacer for alignment
-      const sp = document.createElement('div');
-      sp.style.height = '17px';
-      col.appendChild(sp);
-    }
 
-    // Knobs row: FREQ (small) · Q (small) · GAIN (big)
-    const kRow = document.createElement('div');
-    kRow.className = 'peq-knobs-row';
+      // FREQ + Q + GAIN knobs
+      const kRow = document.createElement('div');
+      kRow.className = 'peq-knobs-row';
 
-    const fr = BAND_FREQ_RANGES[bi];
+      const fr = {min:200, max:15000, def:3000};
+      const freqK = createKnob({
+        label:'FREQ', min:fr.min, max:fr.max, value:band.node.frequency.value,
+        size:26, color:BAND_COLORS[bi], unit:'Hz', decimals:0, unipolar:true,
+        formatValue: v => v>=1000 ? (v/1000).toFixed(1)+'k' : Math.round(v)+'',
+        onChange: v => { band.node.frequency.value=v; }
+      });
+      band._freqKnob = freqK;
+      kRow.appendChild(freqK.el);
 
-    // FREQ knob
-    const freqK = createKnob({
-      label:'FREQ', min:fr.min, max:fr.max, value:band.node.frequency.value,
-      size:26, color:BAND_COLORS[bi], unit:'Hz', decimals:0, unipolar:true,
-      formatValue: v => v>=1000 ? (v/1000).toFixed(1)+'k' : Math.round(v)+'',
-      onChange: v => { band.node.frequency.value=v; }
-    });
-    band._freqKnob = freqK;
-    kRow.appendChild(freqK.el);
+      const qK = createKnob({
+        label:'Q', min:0.1, max:10, value:band.node.Q.value,
+        size:26, color:BAND_COLORS[bi], unit:'', decimals:2,
+        onChange: v => { band.node.Q.value=v; }
+      });
+      band._qKnob = qK;
+      kRow.appendChild(qK.el);
 
-    // Q knob
-    const qK = createKnob({
-      label:'Q', min:BAND_Q_RANGE.min, max:BAND_Q_RANGE.max, value:band.node.Q.value,
-      size:26, color:BAND_COLORS[bi], unit:'', decimals:2,
-      onChange: v => { band.node.Q.value=v; }
-    });
-    band._qKnob = qK;
-    kRow.appendChild(qK.el);
+      const gainCol = document.createElement('div');
+      gainCol.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;';
+      const gainK = createKnob({
+        label:'GAIN', min:-18, max:18,
+        value: band.node.gain ? band.node.gain.value : 0,
+        size:36, color:BAND_COLORS[bi], unit:'dB', decimals:1,
+        onChange: v => { if(band.node.gain) band.node.gain.value=v; }
+      });
+      band._gainKnob = gainK;
+      band._gainCol  = gainCol;
+      gainCol.appendChild(gainK.el);
+      kRow.appendChild(gainCol);
+      col.appendChild(kRow);
 
-    // GAIN knob — bigger
-    const gainCol = document.createElement('div');
-    gainCol.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;';
-    const gainK = createKnob({
-      label:'GAIN', min:-18, max:18, value: band.node.gain ? band.node.gain.value : 0,
-      size:36, color:BAND_COLORS[bi], unit:'dB', decimals:1,
-      onChange: v => {
-        if(band.node.gain) band.node.gain.value=v;
+      if(band.node.type==='highpass'||band.node.type==='lowpass'||band.node.type==='notch'){
+        gainCol.style.opacity='0.3';
       }
-    });
-    band._gainKnob = gainK;
-    band._gainCol  = gainCol;
-    gainCol.appendChild(gainK.el);
-    kRow.appendChild(gainCol);
-    col.appendChild(kRow);
-
-    // Hide gain for HP/LP on initial type
-    if(band.node.type==='highpass' || band.node.type==='lowpass'){
-      gainCol.style.opacity = '0.3';
     }
 
     pEqBandsRow.appendChild(col);
