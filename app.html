@@ -2625,7 +2625,7 @@ function createChannel(i){
   dynOut.connect(faderNode); faderNode.connect(chPowerGain); chPowerGain.connect(panNode); panNode.connect(analyser); analyser.connect(masterBus);
 
   const pflGain=ctx.createGain(); pflGain.gain.value=0;
-  dynOut.connect(pflGain); pflGain.connect(pflBus);
+  hpfNode.connect(pflGain); pflGain.connect(pflBus); // PFL tap: post-HPF, pre-processing (estructura de ganancias)
 
   function makeSend(bus){
     const preG=ctx.createGain();preG.gain.value=1;
