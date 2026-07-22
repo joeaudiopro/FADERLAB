@@ -2989,6 +2989,7 @@ function createChannel(i){
     buffer = await ctx.decodeAudioData(ab);
     ch.buffer = buffer;
     useLocalBuffer = true;
+    flMarkAudio();
     const shortName = e.target.files[0].name.substring(0,15);
     fl.textContent = shortName;
     fl.classList.add('loaded');
@@ -3880,6 +3881,7 @@ async function loadStemSet(setId, btn, statusEl){
     }
 
     statusEl.textContent = `✔ ${info.name} listo — presiona PLAY`;
+    flMarkAudio();
     statusEl.style.color = '#20e880';
     setTimeout(()=>{ stemProgress.style.display='none'; stemProgressBar.style.width='0%'; }, 1500);
 
@@ -4332,6 +4334,7 @@ stopBtn.classList.add('active');
 
 
 playBtn.addEventListener('click', () => {
+  flMarkChanged();
   if (ctx.state === 'suspended') ctx.resume();
   const when = ctx.currentTime + 0.05;
   channels.forEach(ch => ch.play(when));
@@ -5701,6 +5704,26 @@ function compLoop(){
   compPanelRaf=requestAnimationFrame(compLoop);
 }
 
+
+// ── BEFOREUNLOAD: confirmar salida si hay audio cargado o parámetros modificados ──
+// Any interaction with controls after audio loads marks changes
+let flHasAudio = false;     // true cuando se cargan stems o archivo local
+let flHasChanges = false;   // true cuando se modifica cualquier parámetro
+
+function flMarkChanged() { flHasChanges = true; }
+function flMarkAudio()   { flHasAudio   = true; }
+function flReset()       { flHasAudio = false; flHasChanges = false; }
+
+document.addEventListener('mousedown', () => {
+  if(flHasAudio) flMarkChanged();
+}, { capture: true });
+
+window.addEventListener('beforeunload', e => {
+  if(flHasAudio || flHasChanges){
+    e.preventDefault();
+    e.returnValue = ''; // requerido por Chrome
+  }
+});
 </script>
 
 <!-- ══ PARAMETRIC EQ PANEL (NINJA ONLY) ══ -->
