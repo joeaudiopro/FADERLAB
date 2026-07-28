@@ -1548,6 +1548,19 @@ const busGeqFilters = {
   'BUS 5': createGeqSet(),
   'BUS 6': createGeqSet(),
 };
+// Post-GEQ output nodes — listen/PFL routes through these so GEQ affects sound
+const busGeqOutputs = {
+  'BUS 1': ctx.createGain(),
+  'BUS 2': ctx.createGain(),
+  'BUS 3': ctx.createGain(),
+  'BUS 4': ctx.createGain(),
+  'BUS 5': ctx.createGain(),
+  'BUS 6': ctx.createGain(),
+};
+// Connect: busGeqFilters[last] → busGeqOutputs
+Object.keys(busGeqFilters).forEach(key => {
+  busGeqFilters[key][GEQ_BANDS-1].connect(busGeqOutputs[key]);
+});
 // Master compressor node
 const masterComp = ctx.createDynamicsCompressor();
 masterComp.threshold.value = -24;
@@ -1646,12 +1659,32 @@ function updateSofFader(channelIdx, db){
   }
 }
 
-// Por defecto escuchamos FOH (masterBus)
+// Por defecto escuchamos FOH
 let listenBus = masterBus;
-masterBus.connect(monitorGain);
+// Master GEQ always active — connect permanently through processor chain
+// (connectMasterProc handles switching between bypass and active)
+// Force active on load so GEQ is heard:
+connectMasterProc(true);
 
-const BUS_MAP = {foh:masterBus,aux1:aux1Bus,aux2:aux2Bus,fx1:fx1Bus,fx2:fx2Bus,
-  bus3:aux3Bus,bus4:aux4Bus,bus5:aux5Bus,bus6:aux6Bus};
+// BUS_MAP: listen routes use post-GEQ outputs for BUS1-6
+const BUS_MAP = {
+  foh:  masterBus,
+  aux1: null, // set after busGeqOutputs ready
+  aux2: null,
+  fx1:  fx1Bus,
+  fx2:  fx2Bus,
+  bus3: null,
+  bus4: null,
+  bus5: null,
+  bus6: null,
+};
+// Point BUS listen to post-GEQ output
+BUS_MAP.aux1 = busGeqOutputs['BUS 1'];
+BUS_MAP.aux2 = busGeqOutputs['BUS 2'];
+BUS_MAP.bus3 = busGeqOutputs['BUS 3'];
+BUS_MAP.bus4 = busGeqOutputs['BUS 4'];
+BUS_MAP.bus5 = busGeqOutputs['BUS 5'];
+BUS_MAP.bus6 = busGeqOutputs['BUS 6'];
 const ALL_BUSES = [aux1Bus,aux2Bus,aux3Bus,aux4Bus,aux5Bus,aux6Bus];
 const BUS_LABELS = ['BUS 1','BUS 2','BUS 3','BUS 4','BUS 5','BUS 6'];
 const BUS_COLORS = ['#20c8e8','#20c8e8','#20a8ff','#20a8ff','#40e0d0','#40e0d0'];
@@ -3637,11 +3670,13 @@ function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
   const splitter=ctx.createChannelSplitter(2);
   const anL=ctx.createAnalyser();anL.fftSize=1024;const bufL=new Uint8Array(anL.fftSize);
   const anR=ctx.createAnalyser();anR.fftSize=1024;const bufR=new Uint8Array(anR.fftSize);
-  // Insert GEQ filters if this bus has them
+  // Insert GEQ filters: bus → geqFilters → geqOutput → splitter (metering)
   const _geqSet = busGeqFilters[label] || null;
-  if(_geqSet){
+  const _geqOut = busGeqOutputs ? busGeqOutputs[label] : null;
+  if(_geqSet && _geqOut){
     bus.connect(_geqSet[0]);
-    _geqSet[GEQ_BANDS-1].connect(splitter);
+    // _geqFilters last already connected to _geqOut in the setup above
+    _geqOut.connect(splitter);
   } else {
     bus.connect(splitter);
   }
@@ -3691,10 +3726,12 @@ function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
       if(isActive){
         busPflActive.add(label);
         // Connect this bus to pflBus
-        try{ bus.connect(pflBus); }catch(e){}
+        const _pOut = busGeqOutputs?.[label] || bus;
+        try{ _pOut.connect(pflBus); }catch(e){}
       } else {
         busPflActive.delete(label);
-        try{ bus.disconnect(pflBus); }catch(e){}
+        const _pOut2 = busGeqOutputs?.[label] || bus;
+        try{ _pOut2.disconnect(pflBus); }catch(e){}
       }
       updateBusPflStatus();
     });
