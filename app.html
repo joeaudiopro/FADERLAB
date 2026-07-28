@@ -434,6 +434,90 @@ body.analog-mode #analyserDisplay {
 }
 
 
+
+/* ══ GEQ FLOATING PANEL ══ */
+#geqPanelOverlay{
+  display:none;position:fixed;
+  top:80px;right:20px;
+  z-index:8800;
+}
+#geqPanelOverlay.open{display:block;}
+#geqPanel{
+  background:#0a0a12;border:1px solid #2a1a4a;border-radius:6px;
+  width:580px;max-width:96vw;
+  display:flex;flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,.9);
+  overflow:hidden;
+  cursor:default;
+}
+#geqHeader{
+  display:flex;align-items:center;gap:8px;padding:7px 12px;
+  border-bottom:1px solid #1a1a2a;background:#07070f;
+  cursor:move;flex-shrink:0;
+}
+#geqBusName{
+  font-family:'Orbitron',sans-serif;font-size:9px;color:#c080ff;
+  letter-spacing:3px;flex:1;
+}
+#geqBypassBtn{
+  font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;
+  padding:2px 8px;border:1px solid #333;border-radius:2px;
+  background:#111;color:#555;cursor:pointer;transition:all .15s;
+}
+#geqBypassBtn.active{border-color:#c080ff;color:#c080ff;background:#1a0a2a;}
+#geqCloseBtn{
+  font-family:'Share Tech Mono',monospace;font-size:13px;color:#444;
+  background:none;border:none;cursor:pointer;padding:0 3px;transition:color .15s;
+}
+#geqCloseBtn:hover{color:#e82020;}
+#geqCurveCanvas{display:block;width:100%;height:120px;flex-shrink:0;}
+#geqFadersRow{
+  display:flex;gap:0;padding:8px 6px 10px;
+  justify-content:center;border-top:1px solid #0e0e1a;
+}
+.geq-fader-col{
+  display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;
+}
+.geq-fader-track{
+  width:6px;height:80px;background:#0d0d0d;border-radius:3px;
+  border:1px solid #1e1e2a;position:relative;cursor:ns-resize;
+  touch-action:none;
+}
+.geq-fader-center{position:absolute;width:100%;height:1px;background:#222;top:50%;}
+.geq-fader-cap{
+  width:14px;height:8px;background:linear-gradient(180deg,#5a3080,#3a1060);
+  border:1px solid #8060c0;border-radius:1px;
+  position:absolute;left:50%;transform:translateX(-50%);top:50%;margin-top:-4px;
+  cursor:ns-resize;
+}
+.geq-val-lbl{font-family:'Share Tech Mono',monospace;font-size:6px;color:#555;text-align:center;}
+.geq-freq-lbl{font-family:'Share Tech Mono',monospace;font-size:6px;color:#3a2060;text-align:center;}
+/* Master COMP popup */
+#masterCompOverlay{
+  display:none;position:fixed;top:80px;right:620px;z-index:8800;
+}
+#masterCompOverlay.open{display:block;}
+#masterCompPanel{
+  background:#0a0a12;border:1px solid #2a1a00;border-radius:6px;
+  width:340px;display:flex;flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,.9);overflow:hidden;
+}
+#masterCompHeader{
+  display:flex;align-items:center;gap:8px;padding:7px 12px;
+  border-bottom:1px solid #1a1200;background:#07070a;cursor:move;
+}
+#masterCompTitle{font-family:'Orbitron',sans-serif;font-size:9px;color:#e8a060;letter-spacing:3px;flex:1;}
+#masterCompBypass{
+  font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;
+  padding:2px 8px;border:1px solid #333;border-radius:2px;
+  background:#111;color:#555;cursor:pointer;transition:all .15s;
+}
+#masterCompBypass.active{border-color:#e8a060;color:#e8a060;background:#1a0800;}
+#masterCompClose{font-family:'Share Tech Mono',monospace;font-size:13px;color:#444;background:none;border:none;cursor:pointer;padding:0 3px;}
+#masterCompClose:hover{color:#e82020;}
+#masterCompCanvas{display:block;width:100%;height:180px;}
+#masterCompKnobs{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;padding:8px 6px 10px;border-top:1px solid #1a1200;}
+
 /* ══ GATE / COMP FLOATING PANELS ══ */
 .dyn-panel-overlay{
   display:none;position:fixed;inset:0;
@@ -1436,19 +1520,34 @@ async function scanFohOutputs() {
 
 // ── MASTER BUS PROCESSOR (EQ Gráfico 10 bandas + Compresor) ──
 // Cadena: masterBus → masterEQIn → [10 filtros peaking] → masterCompressor → masterProcOut → monitorGain
-const MASTER_EQ_FREQS = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
-const masterEQFilters = MASTER_EQ_FREQS.map(freq => {
-  const f = ctx.createBiquadFilter();
-  f.type = 'peaking';
-  f.frequency.value = freq;
-  f.Q.value = 1.4;
-  f.gain.value = 0;
-  return f;
-});
-// Chain EQ filters in series
-for(let i = 1; i < masterEQFilters.length; i++) {
-  masterEQFilters[i-1].connect(masterEQFilters[i]);
+// 15-band GEQ — standard frequencies
+const GEQ_FREQS = [25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000];
+const GEQ_BANDS = 15;
+
+// Helper: create a chained set of 15 peaking filters
+function createGeqSet() {
+  const filters = GEQ_FREQS.map(freq => {
+    const f = ctx.createBiquadFilter();
+    f.type = 'peaking'; f.frequency.value = freq; f.Q.value = 1.4; f.gain.value = 0;
+    return f;
+  });
+  for(let i = 1; i < filters.length; i++) filters[i-1].connect(filters[i]);
+  return filters;
 }
+
+// Master bus GEQ (replaces old 10-band)
+const MASTER_EQ_FREQS = GEQ_FREQS; // alias for any remaining references
+const masterEQFilters = createGeqSet();
+
+// Per-bus GEQ sets (BUS1-6)
+const busGeqFilters = {
+  'BUS 1': createGeqSet(),
+  'BUS 2': createGeqSet(),
+  'BUS 3': createGeqSet(),
+  'BUS 4': createGeqSet(),
+  'BUS 5': createGeqSet(),
+  'BUS 6': createGeqSet(),
+};
 // Master compressor node
 const masterComp = ctx.createDynamicsCompressor();
 masterComp.threshold.value = -24;
@@ -3538,7 +3637,14 @@ function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
   const splitter=ctx.createChannelSplitter(2);
   const anL=ctx.createAnalyser();anL.fftSize=1024;const bufL=new Uint8Array(anL.fftSize);
   const anR=ctx.createAnalyser();anR.fftSize=1024;const bufR=new Uint8Array(anR.fftSize);
-  bus.connect(splitter);
+  // Insert GEQ filters if this bus has them
+  const _geqSet = busGeqFilters[label] || null;
+  if(_geqSet){
+    bus.connect(_geqSet[0]);
+    _geqSet[GEQ_BANDS-1].connect(splitter);
+  } else {
+    bus.connect(splitter);
+  }
   splitter.connect(anL,0);splitter.connect(anR,1);
 
   const fdr=createFader({min:-60,max:10,value:0,height:120,onChange:v=>{if(mPwrOn)bus.gain.value=dbToGain(v);}});
@@ -3550,7 +3656,30 @@ function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
     mPwrBtn.textContent=mPwrOn?'ON':'OFF';bus.gain.value=mPwrOn?dbToGain(fdr.getValue()):0;
   });
 
+  // GEQ button
+  const geqBtn = document.createElement('button');
+  geqBtn.className = 'bus-pfl-btn';
+  geqBtn.textContent = 'GEQ';
+  geqBtn.style.cssText += ';border-color:#c080ff44;color:#c080ff;';
+  geqBtn.title = 'Ecualizador gráfico 15 bandas — ' + label;
+  geqBtn.addEventListener('click', () => {
+    const geqSet = label === 'MASTER' ? masterEQFilters : (busGeqFilters[label] || null);
+    if(geqSet) openGeqPanel(label, geqSet);
+  });
+
+  // COMP button (only for MASTER)
+  const compMasterBtn = isMain ? document.createElement('button') : null;
+  if(compMasterBtn){
+    compMasterBtn.className = 'bus-pfl-btn';
+    compMasterBtn.textContent = 'COMP';
+    compMasterBtn.style.cssText += ';border-color:#e8a06044;color:#e8a060;';
+    compMasterBtn.title = 'Compresor Master Bus';
+    compMasterBtn.addEventListener('click', openMasterCompPanel);
+  }
+
   mc.appendChild(lbl);mc.appendChild(mPwrBtn);mc.appendChild(vu.el);mc.appendChild(fdr.el);
+  mc.appendChild(geqBtn);
+  if(compMasterBtn) mc.appendChild(compMasterBtn);
 
   // PFL button for bus monitoring
   if(hasPfl){
@@ -3605,235 +3734,7 @@ masterRow.appendChild(pflMc);
 right.appendChild(masterRow);
 
 // ── MASTER BUS PROCESSOR PANEL (ninja-only) ──
-const masterProcPanel = document.createElement('div');
-masterProcPanel.className = 'digital-only';
-masterProcPanel.style.cssText = `
-  background:#0e0e16;
-  border:1px solid #3a2060;
-  border-radius:6px;
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  min-width:340px;
-`;
-
-// Header
-const mpHeader = document.createElement('div');
-mpHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
-const mpTitle = document.createElement('div');
-mpTitle.style.cssText = "font-family:'Orbitron',sans-serif;font-size:9px;color:var(--purple);letter-spacing:3px;";
-mpTitle.textContent = '⚡ MASTER BUS PROCESSOR';
-const mpBypassBtn = document.createElement('button');
-mpBypassBtn.style.cssText = `font-family:'Share Tech Mono',monospace;font-size:8px;padding:2px 8px;border:1px solid #555;border-radius:2px;background:#1a1a1a;color:var(--dim);cursor:pointer;letter-spacing:1px;transition:all .2s;`;
-mpBypassBtn.textContent = 'BYPASS';
-mpBypassBtn.title = 'Activar/desactivar Master Processor';
-mpBypassBtn.addEventListener('click', () => {
-  connectMasterProc(!masterProcActive);
-  mpBypassBtn.textContent = masterProcActive ? 'ACTIVE' : 'BYPASS';
-  mpBypassBtn.style.background = masterProcActive ? '#1a0a2a' : '#1a1a1a';
-  mpBypassBtn.style.borderColor = masterProcActive ? 'var(--purple)' : '#555';
-  mpBypassBtn.style.color = masterProcActive ? 'var(--purple)' : 'var(--dim)';
-  mpBypassBtn.style.boxShadow = masterProcActive ? '0 0 8px #c080ff44' : 'none';
-  showToast(masterProcActive ? '⚡ Master Processor ACTIVO' : '⚡ Master Processor BYPASS');
-});
-mpHeader.appendChild(mpTitle);
-mpHeader.appendChild(mpBypassBtn);
-masterProcPanel.appendChild(mpHeader);
-
-// ── EQ GRÁFICO 10 BANDAS ──
-const eqGfxSection = document.createElement('div');
-eqGfxSection.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
-const eqGfxTitle = document.createElement('div');
-eqGfxTitle.style.cssText = "font-size:8px;color:#888;letter-spacing:2px;text-align:center;font-family:'Share Tech Mono',monospace;";
-eqGfxTitle.textContent = '— EQ GRÁFICO 10 BANDAS —';
-eqGfxSection.appendChild(eqGfxTitle);
-
-const eqGfxBands = document.createElement('div');
-eqGfxBands.style.cssText = 'display:flex;gap:3px;align-items:flex-end;justify-content:center;';
-
-// Canvas for EQ curve
-const eqGfxCanvas = document.createElement('canvas');
-eqGfxCanvas.width = 320; eqGfxCanvas.height = 60;
-eqGfxCanvas.style.cssText = 'width:320px;height:60px;border-radius:3px;border:1px solid #2a2a3a;background:#0a0a12;display:block;margin:0 auto;';
-
-const EQ_FADER_HEIGHT = 80;
-const EQ_FADER_RANGE = 15; // ±15dB for graphic EQ
-const masterEQValues = new Array(10).fill(0);
-
-const eqFaderEls = [];
-
-MASTER_EQ_FREQS.forEach((freq, idx) => {
-  const col = document.createElement('div');
-  col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;';
-
-  // Mini fader track
-  const track = document.createElement('div');
-  track.style.cssText = `width:10px;height:${EQ_FADER_HEIGHT}px;background:#0d0d0d;border-radius:5px;border:1px solid #2a2a3a;position:relative;cursor:ns-resize;user-select:none;touch-action:none;`;
-
-  // 0dB center line
-  const centerLine = document.createElement('div');
-  centerLine.style.cssText = 'position:absolute;width:100%;height:1px;background:#333;top:50%;';
-  track.appendChild(centerLine);
-
-  // Fader cap
-  const cap = document.createElement('div');
-  cap.style.cssText = 'width:18px;height:10px;background:linear-gradient(180deg,#6040a0,#3a2060);border:1px solid #8060c0;border-radius:2px;position:absolute;left:50%;transform:translateX(-50%);top:50%;margin-top:-5px;cursor:ns-resize;box-shadow:0 1px 3px #0008;';
-  track.appendChild(cap);
-
-  // Value label
-  const valLabel = document.createElement('div');
-  valLabel.style.cssText = "font-size:7px;color:var(--dim);text-align:center;font-family:'Share Tech Mono',monospace;min-width:24px;";
-  valLabel.textContent = '0';
-
-  // Freq label
-  const freqLabel = document.createElement('div');
-  freqLabel.style.cssText = "font-size:6px;color:#555;text-align:center;font-family:'Share Tech Mono',monospace;";
-  freqLabel.textContent = freq >= 1000 ? (freq/1000)+'k' : freq;
-
-  function updateFromNorm(norm) {
-    // norm: 0=bottom(-15dB), 1=top(+15dB), 0.5=center(0dB)
-    const db = (norm - 0.5) * 2 * EQ_FADER_RANGE;
-    masterEQValues[idx] = db;
-    masterEQFilters[idx].gain.value = db;
-    const topPct = (1 - norm) * 100;
-    cap.style.top = topPct + '%';
-    cap.style.marginTop = '-5px';
-    valLabel.textContent = db >= 0 ? '+'+db.toFixed(0) : db.toFixed(0);
-    valLabel.style.color = Math.abs(db) > 0.5 ? 'var(--purple)' : 'var(--dim)';
-    drawMasterEQCurve();
-  }
-
-  // Drag logic
-  let dragging = false, startY = 0, startNorm = 0.5;
-  function getNorm() {
-    const db = masterEQValues[idx];
-    return (db / (2 * EQ_FADER_RANGE)) + 0.5;
-  }
-  function onDown(e) {
-    dragging = true; startY = e.clientY ?? e.touches?.[0]?.clientY;
-    startNorm = getNorm();
-    e.preventDefault();
-  }
-  function onMove(e) {
-    if(!dragging) return;
-    const y = e.clientY ?? e.touches?.[0]?.clientY;
-    const dy = (y - startY) / EQ_FADER_HEIGHT;
-    const norm = Math.max(0, Math.min(1, startNorm - dy));
-    updateFromNorm(norm);
-  }
-  function onUp() { dragging = false; }
-  cap.addEventListener('mousedown', onDown);
-  cap.addEventListener('touchstart', onDown, {passive:false});
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('touchmove', onMove, {passive:false});
-  document.addEventListener('mouseup', onUp);
-  document.addEventListener('touchend', onUp);
-  cap.addEventListener('dblclick', () => updateFromNorm(0.5)); // reset
-
-  col.appendChild(track);
-  col.appendChild(valLabel);
-  col.appendChild(freqLabel);
-  eqGfxBands.appendChild(col);
-  eqFaderEls.push({cap, valLabel, updateFromNorm, getNorm});
-});
-
-eqGfxSection.appendChild(eqGfxBands);
-eqGfxSection.appendChild(eqGfxCanvas);
-
-// Draw EQ curve
-function drawMasterEQCurve() {
-  const cvs = eqGfxCanvas;
-  const g = cvs.getContext('2d');
-  g.clearRect(0,0,cvs.width,cvs.height);
-  g.fillStyle='#0a0a12'; g.fillRect(0,0,cvs.width,cvs.height);
-  // Grid
-  g.strokeStyle='#1a1a2a'; g.lineWidth=1;
-  g.beginPath(); g.moveTo(0,cvs.height/2); g.lineTo(cvs.width,cvs.height/2); g.stroke();
-  // Curve approximation through bands
-  const pts = MASTER_EQ_FREQS.map((freq, i) => {
-    const logMin = Math.log10(20), logMax = Math.log10(20000);
-    const x = ((Math.log10(freq) - logMin) / (logMax - logMin)) * cvs.width;
-    const y = cvs.height/2 - (masterEQValues[i] / EQ_FADER_RANGE) * (cvs.height/2 - 4);
-    return {x, y};
-  });
-  g.beginPath();
-  g.moveTo(0, cvs.height/2);
-  pts.forEach((p,i) => {
-    if(i===0) g.lineTo(p.x, p.y);
-    else {
-      const prev = pts[i-1];
-      const cx = (prev.x + p.x)/2;
-      g.bezierCurveTo(cx, prev.y, cx, p.y, p.x, p.y);
-    }
-  });
-  g.lineTo(cvs.width, cvs.height/2);
-  g.strokeStyle='#9060e0'; g.lineWidth=1.5; g.stroke();
-  // Fill
-  g.lineTo(cvs.width, cvs.height/2);
-  g.closePath();
-  g.fillStyle='rgba(144,96,224,0.15)'; g.fill();
-}
-drawMasterEQCurve();
-
-masterProcPanel.appendChild(eqGfxSection);
-
-// Divider
-const mpDivider = document.createElement('div');
-mpDivider.style.cssText = 'height:1px;background:#2a2a3a;';
-masterProcPanel.appendChild(mpDivider);
-
-// ── MASTER COMPRESSOR ──
-const masterCompSection = document.createElement('div');
-masterCompSection.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-const masterCompTitle = document.createElement('div');
-masterCompTitle.style.cssText = "font-size:8px;color:#888;letter-spacing:2px;text-align:center;font-family:'Share Tech Mono',monospace;";
-masterCompTitle.textContent = '— COMPRESOR MASTER —';
-masterCompSection.appendChild(masterCompTitle);
-
-const masterCompKnobs = document.createElement('div');
-masterCompKnobs.style.cssText = 'display:flex;gap:4px;justify-content:center;flex-wrap:wrap;';
-
-// GR meter for master comp
-const masterGRWrap = document.createElement('div');
-masterGRWrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
-const masterGRLabel = document.createElement('div');
-masterGRLabel.style.cssText = "font-size:7px;color:var(--dim);font-family:'Share Tech Mono',monospace;letter-spacing:.5px;";
-masterGRLabel.textContent = 'GR';
-const masterGRTrack = document.createElement('div');
-masterGRTrack.style.cssText = 'flex:1;height:5px;background:#111;border-radius:3px;border:1px solid #2a2a2a;position:relative;overflow:hidden;min-width:120px;';
-const masterGRBar = document.createElement('div');
-masterGRBar.style.cssText = 'position:absolute;right:0;top:0;height:100%;width:0;border-radius:3px;background:linear-gradient(to left,#e87020,#e8c020);transition:width .05s;';
-masterGRTrack.appendChild(masterGRBar);
-masterGRWrap.appendChild(masterGRLabel);
-masterGRWrap.appendChild(masterGRTrack);
-
-// Makeup gain display
-const masterMakeupLabel = document.createElement('div');
-masterMakeupLabel.style.cssText = "font-size:7px;color:#888;font-family:'Share Tech Mono',monospace;text-align:center;";
-masterMakeupLabel.textContent = 'MAKEUP: 0 dB';
-
-[
-  {label:'THR',  min:-60, max:0,   val:-24, unit:'dB', dec:0, fn:v=>{ masterComp.threshold.value=v; }},
-  {label:'RATIO',min:1,   max:20,  val:2,   unit:':1', dec:1, fn:v=>{ masterComp.ratio.value=v; }},
-  {label:'ATK',  min:0,   max:1,   val:0.003,unit:'s', dec:3, fn:v=>{ masterComp.attack.value=v; }},
-  {label:'REL',  min:0,   max:1,   val:0.25, unit:'s', dec:2, fn:v=>{ masterComp.release.value=v; }},
-  {label:'KNEE', min:0,   max:30,  val:6,   unit:'dB', dec:0, fn:v=>{ masterComp.knee.value=v; }},
-  {label:'MKUP', min:0,   max:24,  val:0,   unit:'dB', dec:0, fn:v=>{
-    masterMakeupGain.gain.value = Math.pow(10, v/20);
-    masterMakeupLabel.textContent = 'MAKEUP: ' + (v>=0?'+':'')+v+' dB';
-  }},
-].forEach(p => {
-  const k = createKnob({label:p.label, min:p.min, max:p.max, value:p.val, size:28, color:'#c080ff', unit:p.unit, decimals:p.dec, onChange:p.fn});
-  masterCompKnobs.appendChild(k.el);
-});
-
-masterCompSection.appendChild(masterCompKnobs);
-masterCompSection.appendChild(masterGRWrap);
-masterCompSection.appendChild(masterMakeupLabel);
-masterProcPanel.appendChild(masterCompSection);
-
-right.appendChild(masterProcPanel);
+// masterProcPanel removed — GEQ and COMP moved to floating popups
 
 // Update master GR meter in animation loop
 function updateMasterGR() {
@@ -5990,6 +5891,343 @@ window.addEventListener('beforeunload', e => {
     e.returnValue = ''; // requerido por Chrome
   }
 });
+
+// ══════════════════════════════════════════════════════════════
+//  FLOATING GEQ PANEL (shared, 15 bands)
+// ══════════════════════════════════════════════════════════════
+let geqPanel_filters = null;
+let geqPanel_busName = '';
+let geqPanel_values  = new Array(15).fill(0);
+let geqPanel_raf     = null;
+let geqPanel_active  = false; // bypass state (true = GEQ active)
+
+const GEQ_DB_RANGE = 15; // ±15dB
+
+// DOM refs populated in initGeqPanel
+let geqPanelOverlay, geqPanel, geqHeader, geqBusName, geqBypassBtn,
+    geqCloseBtn, geqCurveCanvas, geqFadersRow;
+
+function initGeqPanel(){
+  geqPanelOverlay = document.getElementById('geqPanelOverlay');
+  geqPanel        = document.getElementById('geqPanel');
+  geqHeader       = document.getElementById('geqHeader');
+  geqBusName      = document.getElementById('geqBusName');
+  geqBypassBtn    = document.getElementById('geqBypassBtn');
+  geqCloseBtn     = document.getElementById('geqCloseBtn');
+  geqCurveCanvas  = document.getElementById('geqCurveCanvas');
+  geqFadersRow    = document.getElementById('geqFadersRow');
+  if(!geqPanelOverlay) return;
+
+  geqCloseBtn.addEventListener('click', closeGeqPanel);
+  geqBypassBtn.addEventListener('click', ()=>{
+    geqPanel_active = !geqPanel_active;
+    geqBypassBtn.textContent = geqPanel_active ? 'ACTIVE' : 'BYPASS';
+    geqBypassBtn.classList.toggle('active', geqPanel_active);
+    // Apply/remove GEQ gains
+    if(geqPanel_filters){
+      geqPanel_filters.forEach((f,i)=>{
+        f.gain.value = geqPanel_active ? geqPanel_values[i] : 0;
+      });
+    }
+  });
+
+  // Make draggable
+  makeDraggable(geqHeader, geqPanelOverlay);
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeGeqPanel(); });
+}
+if(document.readyState!=='loading') initGeqPanel();
+else document.addEventListener('DOMContentLoaded', initGeqPanel);
+
+function makeDraggable(handle, container){
+  let dragging=false, ox=0, oy=0;
+  handle.addEventListener('mousedown', e=>{
+    dragging=true;
+    ox = e.clientX - container.offsetLeft;
+    oy = e.clientY - container.offsetTop;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e=>{
+    if(!dragging) return;
+    container.style.left = (e.clientX-ox)+'px';
+    container.style.top  = (e.clientY-oy)+'px';
+    container.style.right = 'auto';
+  });
+  document.addEventListener('mouseup', ()=>dragging=false);
+}
+
+function openGeqPanel(busName, filters){
+  if(!geqPanelOverlay) return;
+  geqPanel_busName  = busName;
+  geqPanel_filters  = filters;
+  geqPanel_active   = filters.some(f=>f.gain.value!==0);
+  // Load current values from filters
+  geqPanel_values = filters.map(f=>f.gain.value);
+  geqBusName.textContent = 'GEQ — ' + busName;
+  geqBypassBtn.textContent = geqPanel_active ? 'ACTIVE' : 'BYPASS';
+  geqBypassBtn.classList.toggle('active', geqPanel_active);
+  buildGeqFaders();
+  geqPanelOverlay.classList.add('open');
+  geqPanel_raf = requestAnimationFrame(geqLoop);
+}
+
+function closeGeqPanel(){
+  if(geqPanelOverlay) geqPanelOverlay.classList.remove('open');
+  if(geqPanel_raf){ cancelAnimationFrame(geqPanel_raf); geqPanel_raf=null; }
+  geqPanel_filters = null;
+}
+
+function buildGeqFaders(){
+  if(!geqFadersRow) return;
+  geqFadersRow.innerHTML = '';
+  GEQ_FREQS.forEach((freq, idx)=>{
+    const col = document.createElement('div');
+    col.className = 'geq-fader-col';
+
+    const track = document.createElement('div');
+    track.className = 'geq-fader-track';
+    const center = document.createElement('div');
+    center.className = 'geq-fader-center';
+    const cap = document.createElement('div');
+    cap.className = 'geq-fader-cap';
+    track.appendChild(center); track.appendChild(cap);
+
+    const valLbl = document.createElement('div');
+    valLbl.className = 'geq-val-lbl';
+    valLbl.textContent = '0';
+
+    const freqLbl = document.createElement('div');
+    freqLbl.className = 'geq-freq-lbl';
+    freqLbl.textContent = freq>=1000?(freq/1000)+'k':freq+'';
+
+    function setVal(db){
+      db = Math.max(-GEQ_DB_RANGE, Math.min(GEQ_DB_RANGE, db));
+      geqPanel_values[idx] = db;
+      if(geqPanel_filters && geqPanel_filters[idx]) geqPanel_filters[idx].gain.value = db;
+      const pct = (db/GEQ_DB_RANGE+1)/2; // 0=bottom, 1=top
+      const trackH = 80;
+      cap.style.top = ((1-pct)*(trackH-8))+'px';
+      cap.style.marginTop = '0';
+      valLbl.textContent = db>=0?'+'+db.toFixed(0):db.toFixed(0);
+      valLbl.style.color = Math.abs(db)>0.5?'#9060e0':'#333';
+    }
+    setVal(geqPanel_values[idx]);
+
+    let drag=false, startY=0, startVal=0;
+    function onDown(e){ drag=true; startY=e.clientY??(e.touches?.[0]?.clientY); startVal=geqPanel_values[idx]; e.preventDefault(); }
+    function onMove(e){
+      if(!drag) return;
+      const y=e.clientY??(e.touches?.[0]?.clientY);
+      const dy=(y-startY)/80*GEQ_DB_RANGE*2;
+      setVal(startVal-dy);
+    }
+    function onUp(){ drag=false; }
+    cap.addEventListener('mousedown',  onDown);
+    cap.addEventListener('touchstart', onDown, {passive:false});
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchend', onUp);
+    cap.addEventListener('dblclick', ()=>setVal(0)); // reset
+
+    col.appendChild(track); col.appendChild(valLbl); col.appendChild(freqLbl);
+    geqFadersRow.appendChild(col);
+  });
+}
+
+function drawGeqCurve(){
+  if(!geqCurveCanvas || !geqPanel_filters) return;
+  const W=geqCurveCanvas.width, H=geqCurveCanvas.height;
+  const g=geqCurveCanvas.getContext('2d');
+  g.clearRect(0,0,W,H);
+  g.fillStyle='#050508'; g.fillRect(0,0,W,H);
+
+  // Fine grid
+  const freqLines=[25,50,100,200,500,1000,2000,5000,10000,16000];
+  freqLines.forEach(f=>{
+    const x=(Math.log10(f/20)/Math.log10(20000/20))*W;
+    g.strokeStyle=f===1000?'#1e1e2a':'#0e0e16';
+    g.lineWidth=f===1000?1:0.5;
+    g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();
+  });
+  // dB grid
+  [-12,-6,0,6,12].forEach(db=>{
+    const y=H/2-(db/GEQ_DB_RANGE)*(H/2-4);
+    g.strokeStyle=db===0?'#1a1a2a':'#0e0e16';
+    g.lineWidth=db===0?1:0.5;
+    g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();
+  });
+  // Labels
+  g.font="8px 'Share Tech Mono',monospace"; g.textAlign='right';
+  g.fillStyle='#2a1a4a';
+  [-12,-6,0,6,12].forEach(db=>{
+    const y=H/2-(db/GEQ_DB_RANGE)*(H/2-4);
+    g.fillText((db>0?'+':'')+db, 20, y+3);
+  });
+
+  // EQ curve
+  g.beginPath();
+  for(let px=0;px<W;px++){
+    const f=20*Math.pow(20000/20,px/(W-1));
+    let db=0;
+    geqPanel_filters.forEach(filt=>{ db+=biquadMagnitude(filt,f); });
+    const y=H/2-(db/GEQ_DB_RANGE)*(H/2-4);
+    px===0?g.moveTo(px,Math.max(2,Math.min(H-2,y))):g.lineTo(px,Math.max(2,Math.min(H-2,y)));
+  }
+  g.strokeStyle='#c080ffcc'; g.lineWidth=1.5; g.stroke();
+  // Fill
+  g.lineTo(W,H/2); g.lineTo(0,H/2); g.closePath();
+  g.fillStyle='rgba(192,128,255,0.06)'; g.fill();
+
+  // Band markers (dots at each band frequency)
+  GEQ_FREQS.forEach((freq,i)=>{
+    const x=(Math.log10(freq/20)/Math.log10(20000/20))*W;
+    const db=geqPanel_values[i];
+    const y=H/2-(db/GEQ_DB_RANGE)*(H/2-4);
+    g.fillStyle=Math.abs(db)>0.5?'#c080ff':'#3a1060';
+    g.shadowColor='#c080ff'; g.shadowBlur=Math.abs(db)>0.5?6:0;
+    g.beginPath();g.arc(x,y,2.5,0,Math.PI*2);g.fill();
+    g.shadowBlur=0;
+  });
+}
+
+function geqLoop(){
+  if(!geqPanelOverlay?.classList.contains('open')){ geqPanel_raf=null; return; }
+  drawGeqCurve();
+  geqPanel_raf=requestAnimationFrame(geqLoop);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MASTER COMP FLOATING PANEL
+// ══════════════════════════════════════════════════════════════
+let masterCompPanel_raf=null;
+let mcOverlay, mcCanvas, mcBypass, mcClose, mcKnobs;
+
+function initMasterCompPanel(){
+  mcOverlay = document.getElementById('masterCompOverlay');
+  mcCanvas  = document.getElementById('masterCompCanvas');
+  mcBypass  = document.getElementById('masterCompBypass');
+  mcClose   = document.getElementById('masterCompClose');
+  mcKnobs   = document.getElementById('masterCompKnobs');
+  if(!mcOverlay) return;
+  mcClose.addEventListener('click', closeMasterCompPanel);
+  mcBypass.addEventListener('click', ()=>{
+    connectMasterProc(!masterProcActive);
+    mcBypass.textContent = masterProcActive ? 'ACTIVE' : 'BYPASS';
+    mcBypass.classList.toggle('active', masterProcActive);
+  });
+  makeDraggable(document.getElementById('masterCompHeader'), mcOverlay);
+  buildMasterCompKnobs();
+}
+if(document.readyState!=='loading') initMasterCompPanel();
+else document.addEventListener('DOMContentLoaded', initMasterCompPanel);
+
+function buildMasterCompKnobs(){
+  if(!mcKnobs) return;
+  mcKnobs.innerHTML='';
+  [
+    {label:'THR', min:-60,max:0,   val:masterComp.threshold.value, unit:'dB',dec:0, fn:v=>{ masterComp.threshold.value=v; }},
+    {label:'RATIO',min:1, max:20,  val:masterComp.ratio.value,     unit:':1',dec:1, fn:v=>{ masterComp.ratio.value=v; }},
+    {label:'ATK', min:0,  max:1,   val:masterComp.attack.value,    unit:'s', dec:3, fn:v=>{ masterComp.attack.value=v; }},
+    {label:'REL', min:0,  max:1,   val:masterComp.release.value,   unit:'s', dec:2, fn:v=>{ masterComp.release.value=v; }},
+    {label:'KNEE',min:0,  max:30,  val:masterComp.knee.value,      unit:'dB',dec:0, fn:v=>{ masterComp.knee.value=v; }},
+    {label:'MKUP',min:0,  max:24,  val:0,                          unit:'dB',dec:0, fn:v=>{ masterMakeupGain.gain.value=Math.pow(10,v/20); }},
+  ].forEach(p=>{
+    const k=createKnob({label:p.label,min:p.min,max:p.max,value:p.val,
+      size:32,color:'#e8a060',unit:p.unit,decimals:p.dec,onChange:p.fn});
+    mcKnobs.appendChild(k.el);
+  });
+}
+
+function openMasterCompPanel(){
+  if(!mcOverlay) return;
+  mcBypass.textContent = masterProcActive ? 'ACTIVE' : 'BYPASS';
+  mcBypass.classList.toggle('active', masterProcActive);
+  mcOverlay.classList.add('open');
+  masterCompPanel_raf = requestAnimationFrame(masterCompLoop);
+}
+
+function closeMasterCompPanel(){
+  if(mcOverlay) mcOverlay.classList.remove('open');
+  if(masterCompPanel_raf){ cancelAnimationFrame(masterCompPanel_raf); masterCompPanel_raf=null; }
+}
+
+function drawMasterCompPanel(){
+  if(!mcCanvas) return;
+  const W=mcCanvas.width, H=mcCanvas.height;
+  const g=mcCanvas.getContext('2d');
+  g.clearRect(0,0,W,H);
+  g.fillStyle='#050508'; g.fillRect(0,0,W,H);
+
+  const dbMin=-60, dbRange=60;
+  const dbToX=db=>(db-dbMin)/dbRange*W;
+  const dbToY=db=>H-(db-dbMin)/dbRange*H;
+
+  // Grid
+  g.strokeStyle='#0e0e16'; g.lineWidth=0.5;
+  [-40,-20,0].forEach(db=>{
+    const x=dbToX(db),y=dbToY(db);
+    g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();
+    g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();
+  });
+  g.strokeStyle='#1a1a2a'; g.lineWidth=1;
+  g.beginPath();g.moveTo(0,H);g.lineTo(W,0);g.stroke(); // unity
+
+  // Labels
+  g.font="8px 'Share Tech Mono',monospace"; g.fillStyle='#2a1800';
+  g.textAlign='left'; g.fillText('IN →',W-36,H-4);
+  g.fillText('↑ OUT',4,12);
+
+  const thr=masterComp.threshold.value;
+  const rat=masterComp.ratio.value;
+  const kne=masterComp.knee.value;
+  const halfKne=kne/2;
+  function compOut(inDb){
+    if(inDb<thr-halfKne) return inDb;
+    if(inDb>thr+halfKne) return thr+(inDb-thr)/rat;
+    const x2=inDb-thr+halfKne;
+    return inDb+((1/rat-1)*x2*x2)/(2*Math.max(kne,0.001));
+  }
+
+  // Transfer curve
+  g.beginPath(); let first=true;
+  for(let px=0;px<W;px++){
+    const inDb=dbMin+(px/W)*dbRange;
+    const y=dbToY(Math.max(dbMin,compOut(inDb)));
+    first?(g.moveTo(px,y),first=false):g.lineTo(px,y);
+  }
+  g.strokeStyle=masterProcActive?'#e8a060cc':'#e8a06044';
+  g.lineWidth=masterProcActive?2:1; g.stroke();
+
+  // Threshold line
+  const tx=dbToX(thr);
+  g.strokeStyle='#e8a02055'; g.lineWidth=1; g.setLineDash([3,3]);
+  g.beginPath();g.moveTo(tx,0);g.lineTo(tx,H);g.stroke();
+  g.setLineDash([]);
+  g.fillStyle='#e8a020aa'; g.font="8px 'Share Tech Mono',monospace";
+  g.textAlign='left'; g.fillText(thr+'dB',tx+3,14);
+  g.fillText(rat.toFixed(1)+':1',tx+3,24);
+
+  // Live GR ball
+  if(masterProcActive){
+    const gr=Math.abs(masterComp.reduction);
+    const inDbEst=thr+gr*rat/(rat-1||1);
+    const inDb=Math.max(dbMin,Math.min(0,inDbEst));
+    const outDb=compOut(inDb);
+    const bx=dbToX(inDb), by=dbToY(Math.max(dbMin,outDb));
+    const col=gr>6?'#e82020':gr>2?'#e8e020':'#20e880';
+    g.fillStyle=col; g.shadowColor=col; g.shadowBlur=8;
+    g.beginPath();g.arc(bx,by,5,0,Math.PI*2);g.fill();
+    g.shadowBlur=0;
+    if(gr>0.3){g.fillStyle=col+'cc';g.fillText('GR -'+gr.toFixed(1)+'dB',bx+8,by-3);}
+  }
+}
+
+function masterCompLoop(){
+  if(!mcOverlay?.classList.contains('open')){ masterCompPanel_raf=null; return; }
+  drawMasterCompPanel();
+  masterCompPanel_raf=requestAnimationFrame(masterCompLoop);
+}
+
 </script>
 
 <!-- ══ PARAMETRIC EQ PANEL (NINJA ONLY) ══ -->
@@ -6036,6 +6274,32 @@ window.addEventListener('beforeunload', e => {
     </div>
     <canvas class="dyn-panel-canvas" id="compCanvas" width="560" height="200"></canvas>
     <div class="dyn-panel-knobs" id="compKnobsRow"></div>
+  </div>
+</div>
+
+<!-- ══ GEQ FLOATING PANEL ══ -->
+<div id="geqPanelOverlay">
+  <div id="geqPanel">
+    <div id="geqHeader">
+      <div id="geqBusName">GEQ — MASTER</div>
+      <button id="geqBypassBtn">BYPASS</button>
+      <button id="geqCloseBtn">✕</button>
+    </div>
+    <canvas id="geqCurveCanvas" width="580" height="120"></canvas>
+    <div id="geqFadersRow"></div>
+  </div>
+</div>
+
+<!-- ══ MASTER COMP FLOATING PANEL ══ -->
+<div id="masterCompOverlay">
+  <div id="masterCompPanel">
+    <div id="masterCompHeader">
+      <div id="masterCompTitle">COMP — MASTER</div>
+      <button id="masterCompBypass">BYPASS</button>
+      <button id="masterCompClose">✕</button>
+    </div>
+    <canvas id="masterCompCanvas" width="340" height="180"></canvas>
+    <div id="masterCompKnobs"></div>
   </div>
 </div>
 </div><!-- #appRoot -->
