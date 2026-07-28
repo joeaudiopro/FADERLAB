@@ -3738,13 +3738,7 @@ right.appendChild(masterRow);
 
 // Update master GR meter in animation loop
 function updateMasterGR() {
-  if(masterProcActive) {
-    const gr = masterComp.reduction; // negative dB
-    const pct = Math.min(100, Math.abs(gr) / 30 * 100);
-    masterGRBar.style.width = pct + '%';
-  } else {
-    masterGRBar.style.width = '0%';
-  }
+  // GR meter moved to floating COMP panel — no-op here
 }
 // Will be called from main animation loop below
 const fxSec=document.createElement('div');fxSec.className='fx-section digital-only';
