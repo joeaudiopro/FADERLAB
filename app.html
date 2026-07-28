@@ -3815,6 +3815,32 @@ async function loadStemSet(setId, btn, statusEl){
     statusEl.textContent = `${info.name} — cargando stems...`;
     const total = info.stems.length;
 
+    // ── Limpiar TODOS los canales antes de cargar el nuevo set ──
+    // Evita que canales del set anterior queden mezclados con el nuevo
+    channels.forEach((ch, idx) => {
+      // Solo limpiar canales que no serán cubiertos por el nuevo set
+      if(idx >= total){
+        ch.buffer = null;
+        ch.clearLocalFile();
+        // Reset label
+        const chLabelEl = ch.el ? ch.el.querySelector('.ch-label') : null;
+        if(chLabelEl) chLabelEl.textContent = 'CH ' + (idx + 1);
+        // Reset color bars
+        if(ch.el){
+          ch.el.querySelectorAll('.ch-color-bar').forEach(bar => {
+            bar.style.background = '#2a2a2a';
+            bar.style.boxShadow  = 'none';
+          });
+        }
+        // Reset file label
+        const fileLabel = ch.el ? ch.el.querySelector('.file-label') : null;
+        if(fileLabel){ fileLabel.textContent = 'FILE'; fileLabel.classList.remove('loaded'); }
+        const cb = ch.el ? ch.el.querySelector('.clear-btn') : null;
+        if(cb) cb.style.display = 'none';
+      }
+    });
+    stemList.innerHTML = '';
+
     for(let i = 0; i < total; i++){
       const stem = info.stems[i];
       // Encode filename — replace spaces with %20
