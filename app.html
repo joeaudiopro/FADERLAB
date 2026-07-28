@@ -1583,7 +1583,7 @@ masterEQFilters[0].connect(masterEQFilters.length > 1 ? masterEQFilters[1] : mas
 masterEQFilters[masterEQFilters.length-1].connect(masterComp);
 masterComp.connect(masterMakeupGain);
 masterMakeupGain.connect(masterProcBypassGain);
-masterProcBypassGain.connect(monitorGain);
+// masterProcBypassGain → monitorGain handled via monitorSwitches.foh
 
 function connectMasterProc(active) {
   masterProcActive = active;
