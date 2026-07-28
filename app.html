@@ -3584,13 +3584,14 @@ function updateBusPflStatus(){
 makeMasterCh('MASTER',masterBus,'#e8a020',true,  false);
 makeMasterCh('BUS 1', aux1Bus, '#20c8e8',false, true);
 makeMasterCh('BUS 2', aux2Bus, '#20c8e8',false, true);
-makeMasterCh('FX 1',  fx1Bus,  '#c080ff',false, false);
-makeMasterCh('FX 2',  fx2Bus,  '#c080ff',false, false);
 // BUS3-6 (ninja only)
 makeMasterCh('BUS 3', aux3Bus, '#20a8ff',false, true, true);
 makeMasterCh('BUS 4', aux4Bus, '#20a8ff',false, true, true);
 makeMasterCh('BUS 5', aux5Bus, '#40e0d0',false, true, true);
 makeMasterCh('BUS 6', aux6Bus, '#40e0d0',false, true, true);
+// FX always visible
+makeMasterCh('FX 1',  fx1Bus,  '#c080ff',false, false);
+makeMasterCh('FX 2',  fx2Bus,  '#c080ff',false, false);
 
 // PFL master
 const pflAnalyser=ctx.createAnalyser();pflAnalyser.fftSize=1024;const pflBuf2=new Uint8Array(pflAnalyser.fftSize);
