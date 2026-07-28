@@ -1652,7 +1652,10 @@ function updateSofFader(channelIdx, db){
     const busIdx = parseInt(sofMode.replace('BUS','')) - 1; // 0-5
     const busSend = ch.busSends ? ch.busSends[busIdx] : null;
     if(busSend){
-      busSend.sendG.gain.value = sendDbToGain(db);
+      const gain = sendDbToGain(db);
+      busSend.desiredGain = gain;      // ← fix: updateMix() lee desiredGain
+      busSend.sendG.gain.value = gain;
+      busSend._knobVal = db;
       // Update knob visually
       if(busSend._knob && busSend._knob.setValue) busSend._knob.setValue(db);
     }
