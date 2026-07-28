@@ -3060,6 +3060,23 @@ function createChannel(i){
   [sR3,sR4].forEach(r=>sendsSec.appendChild(r.row));
   el.appendChild(sendsSec);
 
+  // sR1/sR2 wrappers — point to BUS1/BUS2 send knobs in the grid
+  // (needed for getState/setState scene recall)
+  const busKnobs = busGrid.querySelectorAll('.bus-send-cell');
+  // Collect knob setValue functions from allBusSends
+  const sR1 = {
+    knob: { getValue: ()=>{ const v=allBusSends[0]._knobVal??-60; return v; }, setValue: v=>allBusSends[0]._knob&&allBusSends[0]._knob.setValue(v) },
+    ppBtn: busKnobs[0]&&busKnobs[0].querySelector('.bus-pp-btn'),
+    get isPost(){ return allBusSends[0].preG&&allBusSends[0].preG.gain.value===0; },
+    set isPost(v){ allBusSends[0].preG.gain.value=v?0:1; allBusSends[0].postG.gain.value=v?1:0; }
+  };
+  const sR2 = {
+    knob: { getValue: ()=>{ const v=allBusSends[1]._knobVal??-60; return v; }, setValue: v=>allBusSends[1]._knob&&allBusSends[1]._knob.setValue(v) },
+    ppBtn: busKnobs[1]&&busKnobs[1].querySelector('.bus-pp-btn'),
+    get isPost(){ return allBusSends[1].preG&&allBusSends[1].preG.gain.value===0; },
+    set isPost(v){ allBusSends[1].preG.gain.value=v?0:1; allBusSends[1].postG.gain.value=v?1:0; }
+  };
+
   // BOTTOM
   const chBottom=document.createElement('div');chBottom.className='ch-bottom';
   const msPflRow=document.createElement('div');msPflRow.className='ms-pfl-row';
