@@ -138,6 +138,46 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .dyn-knobs{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;}
 
 /* SENDS */
+
+/* ══ BUS SENDS 2-COLUMN LAYOUT ══ */
+.bus-sends-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:3px 2px;
+  padding:3px 2px;
+}
+.bus-send-cell{
+  display:flex;flex-direction:row;align-items:center;gap:2px;
+}
+/* odd cells: PRE/POST left, knob right */
+.bus-send-cell.odd{ flex-direction:row; }
+/* even cells: knob left, PRE/POST right */
+.bus-send-cell.even{ flex-direction:row-reverse; }
+.bus-pp-btn{
+  font-family:'Share Tech Mono',monospace;font-size:6px;letter-spacing:.5px;
+  padding:2px 3px;border:1px solid #333;border-radius:2px;
+  background:#0a0a0a;color:#555;cursor:pointer;transition:all .15s;
+  writing-mode:vertical-rl;text-orientation:mixed;height:28px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.bus-pp-btn.pre{ border-color:#20a8ff;color:#20a8ff;background:#001220; }
+.bus-pp-btn.post{ border-color:#ff60a0;color:#ff60a0;background:#1a0010; }
+/* SOF buttons in topbar */
+.sof-btn{
+  font-family:'Share Tech Mono',monospace;font-size:9px;
+  padding:4px 8px;border:1px solid #333;border-radius:2px;
+  background:#111;color:#555;cursor:pointer;letter-spacing:1px;transition:all .15s;
+}
+.sof-btn.active{background:#1a1a00;color:var(--accent);border-color:var(--accent);
+  box-shadow:0 0 8px var(--accent)44;}
+.sof-btn.foh-active{background:#001a1a;color:var(--accent2);border-color:var(--accent2);}
+/* Bus PFL buttons in master panel */
+.bus-pfl-btn{
+  font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:1px;
+  padding:2px 6px;border:1px solid #333;border-radius:2px;
+  background:#0a0a0a;color:#555;cursor:pointer;transition:all .15s;margin-top:2px;
+}
+.bus-pfl-btn.active{border-color:var(--yellow);color:var(--yellow);background:#1a1a00;}
+
 .sends-section{width:102px;border:1px solid #2a2a2a;border-radius:4px;padding:4px;background:#1a1a1a;}
 .send-row{display:flex;align-items:center;justify-content:space-between;gap:2px;margin-bottom:3px;}
 .send-row:last-child{margin-bottom:0;}
@@ -1148,11 +1188,25 @@ body.splash-active #appRoot{
     <button class="btn stop" id="stopAll">■ STOP</button>
   </div>
   <div style="display:flex;gap:3px;">
+    <!-- Listen buttons (always visible) -->
     <button class="listen-btn active" data-bus="foh">FOH</button>
-    <button class="listen-btn" data-bus="aux1">AUX 1</button>
-    <button class="listen-btn" data-bus="aux2">AUX 2</button>
+    <button class="listen-btn" data-bus="aux1">BUS 1</button>
+    <button class="listen-btn" data-bus="aux2">BUS 2</button>
     <button class="listen-btn" data-bus="fx1">FX 1</button>
     <button class="listen-btn" data-bus="fx2">FX 2</button>
+    <button class="listen-btn digital-only" data-bus="bus3">BUS 3</button>
+    <button class="listen-btn digital-only" data-bus="bus4">BUS 4</button>
+    <button class="listen-btn digital-only" data-bus="bus5">BUS 5</button>
+    <button class="listen-btn digital-only" data-bus="bus6">BUS 6</button>
+    <!-- SOF buttons (ninja only) -->
+    <span class="digital-only" style="color:#333;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;margin:0 4px;">│</span>
+    <button class="sof-btn digital-only active" data-sof="FOH">FOH</button>
+    <button class="sof-btn digital-only" data-sof="BUS1">BUS1</button>
+    <button class="sof-btn digital-only" data-sof="BUS2">BUS2</button>
+    <button class="sof-btn digital-only" data-sof="BUS3">BUS3</button>
+    <button class="sof-btn digital-only" data-sof="BUS4">BUS4</button>
+    <button class="sof-btn digital-only" data-sof="BUS5">BUS5</button>
+    <button class="sof-btn digital-only" data-sof="BUS6">BUS6</button>
   </div>
   <!-- PFL -->
   <div class="pfl-indicator">
@@ -1428,11 +1482,94 @@ function connectMasterProc(active) {
   }
 }
 
+
+function sendDbToGain(v){
+  const SMIN=-60,SMAX=10,SC=1/3;
+  if(v<=SMIN)return 0;
+  const norm=Math.pow((v-SMIN)/(SMAX-SMIN),SC);
+  const db=SMIN+norm*(SMAX-SMIN);
+  return db<=-60?0:Math.pow(10,db/20);
+}
+// ══ SENDS ON FADER (SOF) STATE ══
+let sofMode = 'FOH'; // 'FOH' | 'BUS1'..'BUS6'
+// Memory: busMemory[busKey][channelIdx] = dB value (-60..+10)
+const busMemory = {
+  BUS1: new Array(16).fill(-60),
+  BUS2: new Array(16).fill(-60),
+  BUS3: new Array(16).fill(-60),
+  BUS4: new Array(16).fill(-60),
+  BUS5: new Array(16).fill(-60),
+  BUS6: new Array(16).fill(-60),
+};
+const fohMemory = new Array(16).fill(-60); // FOH fader positions
+
+function setSofMode(newMode){
+  sofMode = newMode;
+  // Update SOF button highlights
+  document.querySelectorAll('.sof-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.sof===newMode);
+  });
+  // Animate faders to new positions
+  const isSOF = newMode !== 'FOH';
+  channels.forEach((ch, idx) => {
+    const targetDb = isSOF ? (busMemory[newMode][idx] ?? -60) : (fohMemory[idx] ?? -60);
+    ch.fader.setValue(targetDb);
+    // onChange is NOT called by setValue — update audio manually
+    if(newMode === 'FOH'){
+      ch.faderNode.gain.value = dbToGain(targetDb);
+    }
+    // Bus sends are updated by their own sync in updateSofFader
+  });
+  showToast(newMode === 'FOH' ? '🎛 Faders → FOH' : `🎚 Faders → ${newMode}`);
+}
+
+function updateSofFader(channelIdx, db){
+  // Called when user moves a fader in SOF mode
+  const ch = channels[channelIdx];
+  if(!ch) return;
+  if(sofMode === 'FOH'){
+    fohMemory[channelIdx] = db;
+    ch.faderNode.gain.value = dbToGain(db);
+  } else {
+    busMemory[sofMode][channelIdx] = db;
+    // Update the corresponding bus send knob and gain
+    const busIdx = parseInt(sofMode.replace('BUS','')) - 1; // 0-5
+    const busSend = ch.busSends ? ch.busSends[busIdx] : null;
+    if(busSend){
+      busSend.sendG.gain.value = sendDbToGain(db);
+      // Update knob visually
+      if(busSend._knob && busSend._knob.setValue) busSend._knob.setValue(db);
+    }
+  }
+}
+
 // Por defecto escuchamos FOH (masterBus)
 let listenBus = masterBus;
 masterBus.connect(monitorGain);
 
-const BUS_MAP = {foh:masterBus,aux1:aux1Bus,aux2:aux2Bus,fx1:fx1Bus,fx2:fx2Bus};
+const BUS_MAP = {foh:masterBus,aux1:aux1Bus,aux2:aux2Bus,fx1:fx1Bus,fx2:fx2Bus,
+  bus3:aux3Bus,bus4:aux4Bus,bus5:aux5Bus,bus6:aux6Bus};
+const ALL_BUSES = [aux1Bus,aux2Bus,aux3Bus,aux4Bus,aux5Bus,aux6Bus];
+const BUS_LABELS = ['BUS 1','BUS 2','BUS 3','BUS 4','BUS 5','BUS 6'];
+const BUS_COLORS = ['#20c8e8','#20c8e8','#20a8ff','#20a8ff','#40e0d0','#40e0d0'];
+
+
+// ── SOF BUTTONS ──
+document.querySelectorAll('.sof-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const newMode = b.dataset.sof; // 'FOH' | 'BUS1'..'BUS6'
+    if(sofMode === newMode){
+      // Click on active SOF → return to FOH
+      setSofMode('FOH');
+    } else {
+      // Save current FOH fader positions before leaving
+      if(sofMode === 'FOH'){
+        channels.forEach((ch,i)=>{ fohMemory[i] = ch.fader ? ch.fader.getValue() : -60; });
+      }
+      setSofMode(newMode);
+    }
+  });
+});
 
 document.querySelectorAll('.listen-btn').forEach(b=>{
   b.addEventListener('click',()=>{
@@ -2640,6 +2777,13 @@ function createChannel(i){
   const s_aux2=makeSend(aux2Bus);
   const s_fx1 =makeSend(fx1Bus);
   const s_fx2 =makeSend(fx2Bus);
+  // BUS3-6 sends (ninja)
+  const s_bus3=makeSend(aux3Bus);
+  const s_bus4=makeSend(aux4Bus);
+  const s_bus5=makeSend(aux5Bus);
+  const s_bus6=makeSend(aux6Bus);
+  // All bus sends array (index 0=BUS1 .. 5=BUS6)
+  const allBusSends=[s_aux1,s_aux2,s_bus3,s_bus4,s_bus5,s_bus6];
 
   const dyn=createDynamics(dynIn,dynOut);
 
@@ -2846,45 +2990,74 @@ function createChannel(i){
   // Remove active state when panel closes
   const _origClose = closePEqPanel;
 
-  // SENDS  -60 to +12 dB
+  // SENDS — BUS 1-6 (2-column grid) + FX1/FX2
   const sendsSec=document.createElement('div');sendsSec.className='sends-section';
   sendsSec.appendChild(Object.assign(document.createElement('div'),{className:'section-title',textContent:'SENDS'}));
 
-  // Each send stores its desired gain so updateMix can mute/restore them
-  // Los sends usan una curva exponencial norm^(1/3): sube rápido al inicio
-  // (sentís el efecto enseguida) y se suaviza hacia el máximo.
-  // Opuesto al fader que usa norm^3.
   const SEND_CURVE = 1/3;
-  const SEND_MIN = -60, SEND_MAX = 12;
+  const SEND_MIN = -60, SEND_MAX = 10; // match fader range
 
-  function sendDbToGain(v) {
-    if (v <= SEND_MIN) return 0;
-    const norm   = (v - SEND_MIN) / (SEND_MAX - SEND_MIN); // 0..1 lineal
-    const curved = Math.pow(norm, SEND_CURVE);              // sube rápido
-    const db     = SEND_MIN + curved * (SEND_MAX - SEND_MIN);
-    return db <= -60 ? 0 : Math.pow(10, db / 20);
-  }
+  // ── BUS SENDS GRID ──
+  const busGrid=document.createElement('div');busGrid.className='bus-sends-grid';
 
-  const sendKnobs=[];
+  const BUS_COLORS_CH=['#20c8e8','#20c8e8','#20a8ff','#20a8ff','#40e0d0','#40e0d0'];
+
+  allBusSends.forEach((audioSend, bi)=>{
+    const isOdd = bi%2===0; // 0,2,4 = left column (odd visual position)
+    const cell=document.createElement('div');
+    cell.className='bus-send-cell '+(isOdd?'odd':'even');
+    if(bi>=2) cell.classList.add('digital-only'); // BUS3-6 ninja only
+
+    // PRE/POST button
+    const ppBtn=document.createElement('button');
+    ppBtn.className='bus-pp-btn pre';ppBtn.textContent='PRE';
+    let isPost=false;
+    ppBtn.addEventListener('click',()=>{
+      isPost=!isPost;
+      ppBtn.classList.toggle('pre',!isPost);
+      ppBtn.classList.toggle('post',isPost);
+      ppBtn.textContent=isPost?'POST':'PRE';
+      audioSend.preG.gain.value=isPost?0:1;
+      audioSend.postG.gain.value=isPost?1:0;
+    });
+
+    // Knob
+    const knob=createKnob({
+      label:'B'+(bi+1), min:SEND_MIN, max:SEND_MAX, value:SEND_MIN,
+      size:24, color:BUS_COLORS_CH[bi], unit:'dB', decimals:0, unipolar:true,
+      onChange:v=>{
+        audioSend.desiredGain=sendDbToGain(v);
+        audioSend._knobVal=v;
+        updateMix();
+        // If in SOF mode for this bus, update fader
+        const busKey='BUS'+(bi+1);
+        if(sofMode===busKey){
+          busMemory[busKey][chIdx]=v;
+          channels[chIdx]&&channels[chIdx].fader&&channels[chIdx].fader.setValue(v);
+        }
+      }
+    });
+    audioSend._knob={setValue:v=>{knob.setValue(v);}};
+
+    cell.appendChild(ppBtn);cell.appendChild(knob.el);
+    busGrid.appendChild(cell);
+  });
+  sendsSec.appendChild(busGrid);
+
+  // ── FX SENDS (keep existing, small) ──
   function makeSendRow(lbl,color,audioSend){
     const row=document.createElement('div');row.className='send-row';
-    const knob=createKnob({label:lbl,min:SEND_MIN,max:SEND_MAX,value:SEND_MIN,size:28,color,unit:'dB',decimals:0,unipolar:true,
-      onChange:v=>{
-        audioSend.desiredGain = sendDbToGain(v); // curva exponencial
-        updateMix();
-      }});
-    sendKnobs.push({knob,send:audioSend});
+    const knob=createKnob({label:lbl,min:SEND_MIN,max:SEND_MAX,value:SEND_MIN,size:24,color,unit:'dB',decimals:0,unipolar:true,
+      onChange:v=>{audioSend.desiredGain=sendDbToGain(v);updateMix();}});
     const ppBtn=document.createElement('button');ppBtn.className='prepost-btn';ppBtn.textContent='PRE';
     let isPost=false;
     ppBtn.addEventListener('click',()=>{isPost=!isPost;ppBtn.classList.toggle('post',isPost);ppBtn.textContent=isPost?'POST':'PRE';audioSend.preG.gain.value=isPost?0:1;audioSend.postG.gain.value=isPost?1:0;});
     row.appendChild(knob.el);row.appendChild(ppBtn);
     return{row,knob,ppBtn,get isPost(){return isPost;},set isPost(v){isPost=v;}};
   }
-  const sR1=makeSendRow('AUX1','#20c8e8',s_aux1);
-  const sR2=makeSendRow('AUX2','#20c8e8',s_aux2);
-  const sR3=makeSendRow('FX1', '#c080ff',s_fx1);
-  const sR4=makeSendRow('FX2', '#c080ff',s_fx2);
-  [sR1,sR2,sR3,sR4].forEach(r=>sendsSec.appendChild(r.row));
+  const sR3=makeSendRow('FX1','#c080ff',s_fx1);
+  const sR4=makeSendRow('FX2','#c080ff',s_fx2);
+  [sR3,sR4].forEach(r=>sendsSec.appendChild(r.row));
   el.appendChild(sendsSec);
 
   // BOTTOM
@@ -2913,7 +3086,11 @@ function createChannel(i){
   chBottom.appendChild(Object.assign(document.createElement('div'),{style:'font-size:8px;color:var(--dim);letter-spacing:1px;',textContent:'FADER'}));
 
   const faderDcaRow=document.createElement('div');faderDcaRow.className='fader-dca-row';
-  const fader=createFader({min:-60,max:10,value:-60,height:100,onChange:()=>updateMix()});
+  const chIdx = channels.length; // capture current index
+  const fader=createFader({min:-60,max:10,value:-60,height:100,onChange:v=>{
+    updateSofFader(chIdx, v);
+    updateMix();
+  }});
   faderDcaRow.appendChild(fader.el);
 
   const dcaVert=document.createElement('div');dcaVert.className='dca-vertical';
@@ -3235,12 +3412,14 @@ function createChannel(i){
       const keys=['aux1','aux2','fx1','fx2'];const postKeys=['aux1Post','aux2Post','fx1Post','fx2Post'];
       const v=s[keys[idx]];if(v!==undefined)r.knob.setValue(v);
       const gain = sendDbToGain(v??-60); // usa la misma curva exponencial
-      [s_aux1,s_aux2,s_fx1,s_fx2][idx].desiredGain = gain;
-      [s_aux1,s_aux2,s_fx1,s_fx2][idx].sendG.gain.value = gain;
+      const allS=[s_aux1,s_aux2,s_fx1,s_fx2,s_bus3,s_bus4,s_bus5,s_bus6];
+      if(allS[idx]) allS[idx].desiredGain = gain;
+      if(allS[idx]) allS[idx].sendG.gain.value = gain;
       const isP=s[postKeys[idx]]||false;r.isPost=isP;
       r.ppBtn.classList.toggle('post',isP);r.ppBtn.textContent=isP?'POST':'PRE';
-      [s_aux1,s_aux2,s_fx1,s_fx2][idx].preG.gain.value=isP?0:1;
-      [s_aux1,s_aux2,s_fx1,s_fx2][idx].postG.gain.value=isP?1:0;
+      const allS2=[s_aux1,s_aux2,s_fx1,s_fx2,s_bus3,s_bus4,s_bus5,s_bus6];
+      if(allS2[idx]) allS2[idx].preG.gain.value=isP?0:1;
+      if(allS2[idx]) allS2[idx].postG.gain.value=isP?1:0;
     });
     if(s.muted!==ch.isMuted)muteBtn.click();
     if(s.hpf!==hpfActive)hpfBtn.click();
@@ -3260,8 +3439,9 @@ function createChannel(i){
   dynOut.connect(sigAnalyser); // post-dynamics, pre-fader
 
   // Initialize desiredGain on each send (starts at 0 = knob at -60)
-  s_aux1.desiredGain = 0;
-  s_aux2.desiredGain = 0;
+  s_aux1.desiredGain=0; s_aux2.desiredGain=0;
+  s_bus3.desiredGain=0; s_bus4.desiredGain=0;
+  s_bus5.desiredGain=0; s_bus6.desiredGain=0;
   s_fx1.desiredGain  = 0;
   s_fx2.desiredGain  = 0;
 
@@ -3272,7 +3452,9 @@ function createChannel(i){
     dyn,gateGRBar:gateGR.bar,compGRBar:compGR.bar,
     gateOn:gateH.isOn, compOn:compH.isOn,
     isMuted:false,isSolo:false,
-    sends:[s_aux1,s_aux2,s_fx1,s_fx2],
+    sends:[s_aux1,s_aux2,s_fx1,s_fx2,s_bus3,s_bus4,s_bus5,s_bus6],
+    busSends: allBusSends,
+    fader: fader,
     inputSrcIdx:            null,
     _inputTapGain:          null,
     _inputSrcGain:          inputSrcGain,
@@ -3302,7 +3484,7 @@ function updateMix(){
     const audible = !ch.isMuted;
     ch.faderNode.gain.value = audible ? ch.volume : 0;
     ch.sends.forEach(s => {
-      s.sendG.gain.value = audible ? s.desiredGain : 0;
+      s.sendG.gain.value = (audible && !isNaN(s.desiredGain)) ? s.desiredGain : 0;
     });
   });
 }
@@ -3317,43 +3499,72 @@ const right=document.getElementById('rightSection');
 const masterRow=document.createElement('div');masterRow.className='master-row';
 const masterAnalysers=[];
 
-function makeMasterCh(label,bus,color,isMain){
-  const mc=document.createElement('div');mc.className='master-ch'+(isMain?' main':'');
+// busPflActive tracks which buses are in PFL
+const busPflActive = new Set();
+
+function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
+  const mc=document.createElement('div');
+  mc.className='master-ch'+(isMain?' main':'');
+  if(isNinja) mc.classList.add('digital-only');
   const lbl=document.createElement('div');lbl.className='master-label';lbl.style.cssText=`color:${color};`;lbl.textContent=label;
   const vu=createVUMeter();
 
-  // For stereo L/R metering, use a ChannelSplitter
-  // This lets us measure L and R independently so panning shows on the VU
-  const splitter = ctx.createChannelSplitter(2);
+  const splitter=ctx.createChannelSplitter(2);
   const anL=ctx.createAnalyser();anL.fftSize=1024;const bufL=new Uint8Array(anL.fftSize);
   const anR=ctx.createAnalyser();anR.fftSize=1024;const bufR=new Uint8Array(anR.fftSize);
   bus.connect(splitter);
-  splitter.connect(anL,0); // L channel
-  splitter.connect(anR,1); // R channel
+  splitter.connect(anL,0);splitter.connect(anR,1);
 
   const fdr=createFader({min:-60,max:10,value:0,height:120,onChange:v=>{if(mPwrOn)bus.gain.value=dbToGain(v);}});
 
-  // Master power button
   const mPwrBtn=document.createElement('button');mPwrBtn.className='master-power-btn on';mPwrBtn.textContent='ON';
   let mPwrOn=true;
   mPwrBtn.addEventListener('click',()=>{
-    mPwrOn=!mPwrOn;
-    mPwrBtn.classList.toggle('on', mPwrOn);
-    mPwrBtn.classList.toggle('off',!mPwrOn);
-    mPwrBtn.textContent=mPwrOn?'ON':'OFF';
-    bus.gain.value = mPwrOn ? dbToGain(fdr.getValue()) : 0;
+    mPwrOn=!mPwrOn;mPwrBtn.classList.toggle('on',mPwrOn);mPwrBtn.classList.toggle('off',!mPwrOn);
+    mPwrBtn.textContent=mPwrOn?'ON':'OFF';bus.gain.value=mPwrOn?dbToGain(fdr.getValue()):0;
   });
 
   mc.appendChild(lbl);mc.appendChild(mPwrBtn);mc.appendChild(vu.el);mc.appendChild(fdr.el);
+
+  // PFL button for bus monitoring
+  if(hasPfl){
+    const pflBtn=document.createElement('button');
+    pflBtn.className='bus-pfl-btn';pflBtn.textContent='PFL';
+    pflBtn.title='Escuchar '+label+' por salida PFL';
+    pflBtn.addEventListener('click',()=>{
+      const isActive=pflBtn.classList.toggle('active');
+      if(isActive){
+        busPflActive.add(label);
+        // Connect this bus to pflBus
+        try{ bus.connect(pflBus); }catch(e){}
+      } else {
+        busPflActive.delete(label);
+        try{ bus.disconnect(pflBus); }catch(e){}
+      }
+      updateBusPflStatus();
+    });
+    mc.appendChild(pflBtn);
+  }
+
   masterRow.appendChild(mc);
-  // Store both L and R analysers for stereo metering
-  masterAnalysers.push({vu, anL, anR, bufL, bufR, stereo:true});
+  masterAnalysers.push({vu,anL,anR,bufL,bufR,stereo:true});
 }
-makeMasterCh('MASTER',masterBus,'#e8a020',true);
-makeMasterCh('AUX 1', aux1Bus, '#20c8e8',false);
-makeMasterCh('AUX 2', aux2Bus, '#20c8e8',false);
-makeMasterCh('FX 1',  fx1Bus,  '#c080ff',false);
-makeMasterCh('FX 2',  fx2Bus,  '#c080ff',false);
+
+function updateBusPflStatus(){
+  // Visual feedback if any bus PFL is active
+  const anyActive = busPflActive.size > 0;
+  // Could show a global indicator — for now toast
+}
+makeMasterCh('MASTER',masterBus,'#e8a020',true,  false);
+makeMasterCh('BUS 1', aux1Bus, '#20c8e8',false, true);
+makeMasterCh('BUS 2', aux2Bus, '#20c8e8',false, true);
+makeMasterCh('FX 1',  fx1Bus,  '#c080ff',false, false);
+makeMasterCh('FX 2',  fx2Bus,  '#c080ff',false, false);
+// BUS3-6 (ninja only)
+makeMasterCh('BUS 3', aux3Bus, '#20a8ff',false, true, true);
+makeMasterCh('BUS 4', aux4Bus, '#20a8ff',false, true, true);
+makeMasterCh('BUS 5', aux5Bus, '#40e0d0',false, true, true);
+makeMasterCh('BUS 6', aux6Bus, '#40e0d0',false, true, true);
 
 // PFL master
 const pflAnalyser=ctx.createAnalyser();pflAnalyser.fftSize=1024;const pflBuf2=new Uint8Array(pflAnalyser.fftSize);
@@ -4430,7 +4641,8 @@ document.getElementById('initDataBtn').addEventListener('click', () => {
   // reset master faders — re-query them from DOM (fader caps) is complex;
   // simplest: just reset gain nodes directly
   masterBus.gain.value = 1;
-  aux1Bus.gain.value   = 1;
+  aux1Bus.gain.value=1; aux2Bus.gain.value=1; aux3Bus.gain.value=1;
+  aux4Bus.gain.value=1; aux5Bus.gain.value=1; aux6Bus.gain.value=1;
   aux2Bus.gain.value   = 1;
   fx1Bus.gain.value    = 1;
   fx2Bus.gain.value    = 1;
