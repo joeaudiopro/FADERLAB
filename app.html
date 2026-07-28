@@ -137,6 +137,31 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .gr-bar.gate{background:linear-gradient(to left,#2060e8,#20a8e8);}
 .dyn-knobs{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;}
 
+
+/* ══ TOPBAR PILL CONTAINERS ══ */
+.topbar-pill{
+  display:flex;align-items:center;gap:3px;
+  border-radius:4px;padding:3px 6px 3px 4px;
+  position:relative;
+}
+.topbar-pill-label{
+  font-family:'Share Tech Mono',monospace;
+  font-size:7px;letter-spacing:2px;
+  padding:0 4px 0 2px;
+  white-space:nowrap;flex-shrink:0;
+  opacity:.7;
+}
+.pill-escucha{
+  border:1px solid #20c8e855;
+  background:rgba(32,200,232,0.04);
+}
+.pill-escucha .topbar-pill-label{ color:#20c8e8; }
+.pill-sof{
+  border:1px solid #e8a02055;
+  background:rgba(232,160,32,0.04);
+}
+.pill-sof .topbar-pill-label{ color:#e8a020; }
+
 /* SENDS */
 
 /* ══ BUS SENDS 2-COLUMN LAYOUT ══ */
@@ -1271,26 +1296,31 @@ body.splash-active #appRoot{
     <button class="btn play" id="playAll">▶ PLAY</button>
     <button class="btn stop" id="stopAll">■ STOP</button>
   </div>
-  <div style="display:flex;gap:3px;">
-    <!-- Listen buttons (always visible) -->
-    <button class="listen-btn active" data-bus="foh">FOH</button>
-    <button class="listen-btn" data-bus="aux1">BUS 1</button>
-    <button class="listen-btn" data-bus="aux2">BUS 2</button>
-    <button class="listen-btn" data-bus="fx1">FX 1</button>
-    <button class="listen-btn" data-bus="fx2">FX 2</button>
-    <button class="listen-btn digital-only" data-bus="bus3">BUS 3</button>
-    <button class="listen-btn digital-only" data-bus="bus4">BUS 4</button>
-    <button class="listen-btn digital-only" data-bus="bus5">BUS 5</button>
-    <button class="listen-btn digital-only" data-bus="bus6">BUS 6</button>
-    <!-- SOF buttons (ninja only) -->
-    <span class="digital-only" style="color:#333;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;margin:0 4px;">│</span>
-    <button class="sof-btn digital-only active" data-sof="FOH">FOH</button>
-    <button class="sof-btn digital-only" data-sof="BUS1">BUS1</button>
-    <button class="sof-btn digital-only" data-sof="BUS2">BUS2</button>
-    <button class="sof-btn digital-only" data-sof="BUS3">BUS3</button>
-    <button class="sof-btn digital-only" data-sof="BUS4">BUS4</button>
-    <button class="sof-btn digital-only" data-sof="BUS5">BUS5</button>
-    <button class="sof-btn digital-only" data-sof="BUS6">BUS6</button>
+  <div style="display:flex;gap:6px;align-items:center;">
+    <!-- ── ESCUCHA pill ── -->
+    <div class="topbar-pill pill-escucha">
+      <span class="topbar-pill-label">ESCUCHA</span>
+      <button class="listen-btn active" data-bus="foh">FOH</button>
+      <button class="listen-btn" data-bus="aux1">BUS 1</button>
+      <button class="listen-btn" data-bus="aux2">BUS 2</button>
+      <button class="listen-btn digital-only" data-bus="bus3">BUS 3</button>
+      <button class="listen-btn digital-only" data-bus="bus4">BUS 4</button>
+      <button class="listen-btn digital-only" data-bus="bus5">BUS 5</button>
+      <button class="listen-btn digital-only" data-bus="bus6">BUS 6</button>
+      <button class="listen-btn" data-bus="fx1">FX 1</button>
+      <button class="listen-btn" data-bus="fx2">FX 2</button>
+    </div>
+    <!-- ── SENDS ON FADER pill (ninja only) ── -->
+    <div class="topbar-pill pill-sof digital-only">
+      <span class="topbar-pill-label">SENDS ON FADER</span>
+      <button class="sof-btn active" data-sof="FOH">FOH</button>
+      <button class="sof-btn" data-sof="BUS1">BUS1</button>
+      <button class="sof-btn" data-sof="BUS2">BUS2</button>
+      <button class="sof-btn" data-sof="BUS3">BUS3</button>
+      <button class="sof-btn" data-sof="BUS4">BUS4</button>
+      <button class="sof-btn" data-sof="BUS5">BUS5</button>
+      <button class="sof-btn" data-sof="BUS6">BUS6</button>
+    </div>
   </div>
   <!-- PFL -->
   <div class="pfl-indicator">
@@ -4889,8 +4919,9 @@ const TOUR_STEPS = [
     title: '③ Modos de escucha',
     body: `Aquí puedes seleccionar <strong>qué bus de audio escuchas</strong> a través de tus monitores:<br><br>
       <strong>FOH</strong> — mezcla principal (Front of House)<br>
-      <strong>AUX 1 / AUX 2</strong> — monitores de piso o retornos<br>
-      <strong>FX 1 / FX 2</strong> — escucha del bus de efectos<br><br>
+      <strong>BUS 1 / BUS 2</strong> — monitores de piso o retornos<br>
+      <strong>FX 1 / FX 2</strong> — escucha del bus de efectos<br>
+      <strong>BUS 3–6</strong> — buses adicionales disponibles en Modo Ninja 🥷<br><br>
       Solo cambia el monitor de referencia, no afecta la mezcla.`,
     cardPos: (r, cw, ch) => ({
       top:  r.bottom + 20,
