@@ -1659,12 +1659,33 @@ function updateSofFader(channelIdx, db){
   }
 }
 
-// Por defecto escuchamos FOH
-let listenBus = masterBus;
-// Master GEQ always active — connect permanently through processor chain
-// (connectMasterProc handles switching between bypass and active)
-// Force active on load so GEQ is heard:
-connectMasterProc(true);
+// ── MONITOR SWITCH SYSTEM ──
+// Each listen source has a GainNode switch — no connect/disconnect, just gain changes
+// This avoids glitches and residual connections entirely
+connectMasterProc(true); // Master GEQ always active
+
+const monitorSwitches = {
+  foh:  ctx.createGain(),
+  aux1: ctx.createGain(),
+  aux2: ctx.createGain(),
+  fx1:  ctx.createGain(),
+  fx2:  ctx.createGain(),
+  bus3: ctx.createGain(),
+  bus4: ctx.createGain(),
+  bus5: ctx.createGain(),
+  bus6: ctx.createGain(),
+};
+// FOH starts at 1, all others at 0
+monitorSwitches.foh.gain.value  = 1;
+Object.entries(monitorSwitches).forEach(([k,g]) => {
+  if(k !== 'foh') g.gain.value = 0;
+  g.connect(monitorGain);
+});
+
+// Connect sources to their switches
+masterProcBypassGain.connect(monitorSwitches.foh);
+// Buses connected after busGeqOutputs are created (see below — deferred)
+let listenBus = masterBus; // kept for legacy compatibility
 
 // BUS_MAP: listen routes use post-GEQ outputs for BUS1-6
 const BUS_MAP = {
@@ -1685,6 +1706,16 @@ BUS_MAP.bus3 = busGeqOutputs['BUS 3'];
 BUS_MAP.bus4 = busGeqOutputs['BUS 4'];
 BUS_MAP.bus5 = busGeqOutputs['BUS 5'];
 BUS_MAP.bus6 = busGeqOutputs['BUS 6'];
+
+// Connect buses to their monitor switches
+busGeqOutputs['BUS 1'].connect(monitorSwitches.aux1);
+busGeqOutputs['BUS 2'].connect(monitorSwitches.aux2);
+busGeqOutputs['BUS 3'].connect(monitorSwitches.bus3);
+busGeqOutputs['BUS 4'].connect(monitorSwitches.bus4);
+busGeqOutputs['BUS 5'].connect(monitorSwitches.bus5);
+busGeqOutputs['BUS 6'].connect(monitorSwitches.bus6);
+fx1Bus.connect(monitorSwitches.fx1);
+fx2Bus.connect(monitorSwitches.fx2);
 const ALL_BUSES = [aux1Bus,aux2Bus,aux3Bus,aux4Bus,aux5Bus,aux6Bus];
 const BUS_LABELS = ['BUS 1','BUS 2','BUS 3','BUS 4','BUS 5','BUS 6'];
 const BUS_COLORS = ['#20c8e8','#20c8e8','#20a8ff','#20a8ff','#40e0d0','#40e0d0'];
@@ -1707,22 +1738,22 @@ document.querySelectorAll('.sof-btn').forEach(b=>{
   });
 });
 
+let currentListenKey = 'foh';
 document.querySelectorAll('.listen-btn').forEach(b=>{
   b.addEventListener('click',()=>{
-    // Disconnect current listen path
-    try { listenBus.disconnect(monitorGain); } catch(e){}
-    // Also disconnect master processor output when leaving FOH
-    try { masterProcBypassGain.disconnect(monitorGain); } catch(e){}
+    const newKey = b.dataset.bus;
+    if(newKey === currentListenKey) return;
+    // Fade out current, fade in new — no connect/disconnect, no glitches
+    if(monitorSwitches[currentListenKey]){
+      monitorSwitches[currentListenKey].gain.setTargetAtTime(0, ctx.currentTime, 0.01);
+    }
+    if(monitorSwitches[newKey]){
+      monitorSwitches[newKey].gain.setTargetAtTime(1, ctx.currentTime, 0.01);
+    }
+    currentListenKey = newKey;
+    listenBus = BUS_MAP[newKey] || masterBus;
     document.querySelectorAll('.listen-btn').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
-    listenBus = BUS_MAP[b.dataset.bus];
-    if(b.dataset.bus === 'foh'){
-      // FOH: route through master processor chain
-      masterProcBypassGain.connect(monitorGain);
-    } else {
-      // Bus/FX: connect directly to monitorGain
-      listenBus.connect(monitorGain);
-    }
   });
 });
 
