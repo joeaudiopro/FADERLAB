@@ -1709,12 +1709,20 @@ document.querySelectorAll('.sof-btn').forEach(b=>{
 
 document.querySelectorAll('.listen-btn').forEach(b=>{
   b.addEventListener('click',()=>{
-    // disconnect solo del monitorGain, no de destination
+    // Disconnect current listen path
     try { listenBus.disconnect(monitorGain); } catch(e){}
+    // Also disconnect master processor output when leaving FOH
+    try { masterProcBypassGain.disconnect(monitorGain); } catch(e){}
     document.querySelectorAll('.listen-btn').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     listenBus = BUS_MAP[b.dataset.bus];
-    listenBus.connect(monitorGain);
+    if(b.dataset.bus === 'foh'){
+      // FOH: route through master processor chain
+      masterProcBypassGain.connect(monitorGain);
+    } else {
+      // Bus/FX: connect directly to monitorGain
+      listenBus.connect(monitorGain);
+    }
   });
 });
 
