@@ -3767,13 +3767,14 @@ function updateBusPflStatus(){
 makeMasterCh('MASTER',masterBus,'#e8a020',true,  false);
 makeMasterCh('BUS 1', aux1Bus, '#20c8e8',false, true);
 makeMasterCh('BUS 2', aux2Bus, '#20c8e8',false, true);
-makeMasterCh('FX 1',  fx1Bus,  '#c080ff',false, false);
-makeMasterCh('FX 2',  fx2Bus,  '#c080ff',false, false);
 // BUS3-6 (ninja only)
 makeMasterCh('BUS 3', aux3Bus, '#20a8ff',false, true, true);
 makeMasterCh('BUS 4', aux4Bus, '#20a8ff',false, true, true);
 makeMasterCh('BUS 5', aux5Bus, '#40e0d0',false, true, true);
 makeMasterCh('BUS 6', aux6Bus, '#40e0d0',false, true, true);
+// FX always visible
+makeMasterCh('FX 1',  fx1Bus,  '#c080ff',false, false);
+makeMasterCh('FX 2',  fx2Bus,  '#c080ff',false, false);
 
 // PFL master
 const pflAnalyser=ctx.createAnalyser();pflAnalyser.fftSize=1024;const pflBuf2=new Uint8Array(pflAnalyser.fftSize);
@@ -3842,7 +3843,7 @@ const sgGeqValues=Array.from({length:SG_COUNT},()=>new Array(GEQ_BANDS).fill(0))
 
 SG_DEFAULTS.forEach((defName,si)=>{
   const mc=document.createElement('div');
-  mc.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px;min-width:54px;padding:5px 3px;border:1px solid #1a3a1a;border-radius:4px;background:#0a0e0a;'+(si>=2?'display:none;':'')+';';
+  mc.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px;min-width:54px;padding:5px 3px;border:1px solid #1a3a1a;border-radius:4px;background:#0a0e0a;';
   if(si>=2) mc.classList.add('digital-only');
 
   const lbl=document.createElement('div');
@@ -3868,7 +3869,7 @@ SG_DEFAULTS.forEach((defName,si)=>{
   masterAnalysers.push({vu:sgVU,anL:sgAnL,anR:sgAnR,bufL:sgBufL,bufR:sgBufR,stereo:true});
   mc.appendChild(sgVU.el);
 
-  const sgFdr=createFader({min:-60,max:10,value:0,height:80,onChange:v=>{
+  const sgFdr=createFader({min:-60,max:10,value:0,height:100,onChange:v=>{
     if(!sgMuted) sgBus[si].gain.value=dbToGain(v);
   }});
   mc.appendChild(sgFdr.el);
@@ -3923,7 +3924,7 @@ DCA_DEFAULTS.forEach((defName,di)=>{
   });
   dc.appendChild(muteBtn);
 
-  const dcaFdr=createFader({min:-60,max:10,value:0,height:70,onChange:v=>{
+  const dcaFdr=createFader({min:-60,max:10,value:0,height:90,onChange:v=>{
     dcaFaderDb[di]=v;
     channels.forEach((_,ci)=>{if(chDcaAssign[ci].has(di))applyDcaGain(ci);});
   }});
@@ -3936,36 +3937,7 @@ right.appendChild(dcaRealSec);
 right.appendChild(fxSec);
 
 // DCA Masters
-const dcaMasterSec=document.createElement('div');dcaMasterSec.className='dca-master-section';
-dcaMasterSec.appendChild(Object.assign(document.createElement('div'),{style:"font-family:'Orbitron',sans-serif;font-size:9px;color:var(--dim);letter-spacing:2px;writing-mode:vertical-lr;text-align:center;padding:4px;",textContent:'DCA'}));
-[{g:'A',color:'#60a0ff'},{g:'B',color:'#a060ff'},{g:'C',color:'#20e880'}].forEach(({g,color})=>{
-  const dm=document.createElement('div');dm.className='dca-master';
-  dm.appendChild(Object.assign(document.createElement('div'),{style:`font-size:9px;letter-spacing:2px;color:${color};font-family:'Orbitron',sans-serif;`,textContent:'GRP '+g}));
-
-  // Highlight button
-  const hlBtn=document.createElement('button');
-  hlBtn.style.cssText=`font-family:'Share Tech Mono',monospace;font-size:7px;padding:2px 6px;border:1px solid #333;border-radius:2px;background:#1a1a1a;color:${color};cursor:pointer;letter-spacing:.5px;opacity:.6;transition:all .2s;width:100%;margin-bottom:2px;`;
-  hlBtn.textContent='SHOW';
-  hlBtn.title=`Mostrar canales del grupo ${g}`;
-  let hlActive=false;
-  hlBtn.addEventListener('click',()=>{
-    hlActive=!hlActive;
-    hlBtn.style.opacity=hlActive?'1':'0.6';
-    hlBtn.style.background=hlActive?color+'33':'#1a1a1a';
-    // Highlight/unhighlight all channels in this group
-    const strips=document.getElementById('channelStrips').children;
-    Array.from(strips).forEach(strip=>{
-      const inGroup=Array.from(strip.querySelectorAll('.dca-btn'))
-        .some(b=>b.textContent===g&&b.classList.contains('active'));
-      strip.classList.toggle(`dca-highlight-${g}`, hlActive && inGroup);
-    });
-  });
-  dm.appendChild(hlBtn);
-
-  const fdr=createFader({min:-60,max:10,value:0,height:80,onChange:v=>{const gv=dbToGain(v);channels.forEach((ch,idx)=>{const strip=document.getElementById('channelStrips').children[idx];if(!strip)return;strip.querySelectorAll('.dca-btn').forEach(b=>{if(b.textContent===g&&b.classList.contains('active'))ch.faderNode.gain.value=gv*ch.volume;});});}});
-  dm.appendChild(fdr.el);dcaMasterSec.appendChild(dm);
-});
-right.appendChild(dcaMasterSec);
+// Old DCA A/B/C master removed — replaced by real DCA system
 
 // ══════════════════════════════════════════════════
 //  CHANNEL ANALYSER DISPLAY  (digital-only)
