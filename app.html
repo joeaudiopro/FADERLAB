@@ -137,31 +137,6 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .gr-bar.gate{background:linear-gradient(to left,#2060e8,#20a8e8);}
 .dyn-knobs{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;}
 
-
-/* ══ TOPBAR PILL CONTAINERS ══ */
-.topbar-pill{
-  display:flex;align-items:center;gap:3px;
-  border-radius:4px;padding:3px 6px 3px 4px;
-  position:relative;
-}
-.topbar-pill-label{
-  font-family:'Share Tech Mono',monospace;
-  font-size:7px;letter-spacing:2px;
-  padding:0 4px 0 2px;
-  white-space:nowrap;flex-shrink:0;
-  opacity:.7;
-}
-.pill-escucha{
-  border:1px solid #20c8e855;
-  background:rgba(32,200,232,0.04);
-}
-.pill-escucha .topbar-pill-label{ color:#20c8e8; }
-.pill-sof{
-  border:1px solid #e8a02055;
-  background:rgba(232,160,32,0.04);
-}
-.pill-sof .topbar-pill-label{ color:#e8a020; }
-
 /* SENDS */
 
 /* ══ BUS SENDS 2-COLUMN LAYOUT ══ */
@@ -458,90 +433,6 @@ body.analog-mode #analyserDisplay {
   display: none !important;
 }
 
-
-
-/* ══ GEQ FLOATING PANEL ══ */
-#geqPanelOverlay{
-  display:none;position:fixed;
-  top:80px;right:20px;
-  z-index:8800;
-}
-#geqPanelOverlay.open{display:block;}
-#geqPanel{
-  background:#0a0a12;border:1px solid #2a1a4a;border-radius:6px;
-  width:580px;max-width:96vw;
-  display:flex;flex-direction:column;
-  box-shadow:0 8px 40px rgba(0,0,0,.9);
-  overflow:hidden;
-  cursor:default;
-}
-#geqHeader{
-  display:flex;align-items:center;gap:8px;padding:7px 12px;
-  border-bottom:1px solid #1a1a2a;background:#07070f;
-  cursor:move;flex-shrink:0;
-}
-#geqBusName{
-  font-family:'Orbitron',sans-serif;font-size:9px;color:#c080ff;
-  letter-spacing:3px;flex:1;
-}
-#geqBypassBtn{
-  font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;
-  padding:2px 8px;border:1px solid #333;border-radius:2px;
-  background:#111;color:#555;cursor:pointer;transition:all .15s;
-}
-#geqBypassBtn.active{border-color:#c080ff;color:#c080ff;background:#1a0a2a;}
-#geqCloseBtn{
-  font-family:'Share Tech Mono',monospace;font-size:13px;color:#444;
-  background:none;border:none;cursor:pointer;padding:0 3px;transition:color .15s;
-}
-#geqCloseBtn:hover{color:#e82020;}
-#geqCurveCanvas{display:block;width:100%;height:120px;flex-shrink:0;}
-#geqFadersRow{
-  display:flex;gap:0;padding:8px 6px 10px;
-  justify-content:center;border-top:1px solid #0e0e1a;
-}
-.geq-fader-col{
-  display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;
-}
-.geq-fader-track{
-  width:6px;height:80px;background:#0d0d0d;border-radius:3px;
-  border:1px solid #1e1e2a;position:relative;cursor:ns-resize;
-  touch-action:none;
-}
-.geq-fader-center{position:absolute;width:100%;height:1px;background:#222;top:50%;}
-.geq-fader-cap{
-  width:14px;height:8px;background:linear-gradient(180deg,#5a3080,#3a1060);
-  border:1px solid #8060c0;border-radius:1px;
-  position:absolute;left:50%;transform:translateX(-50%);top:50%;margin-top:-4px;
-  cursor:ns-resize;
-}
-.geq-val-lbl{font-family:'Share Tech Mono',monospace;font-size:6px;color:#555;text-align:center;}
-.geq-freq-lbl{font-family:'Share Tech Mono',monospace;font-size:6px;color:#3a2060;text-align:center;}
-/* Master COMP popup */
-#masterCompOverlay{
-  display:none;position:fixed;top:80px;right:620px;z-index:8800;
-}
-#masterCompOverlay.open{display:block;}
-#masterCompPanel{
-  background:#0a0a12;border:1px solid #2a1a00;border-radius:6px;
-  width:340px;display:flex;flex-direction:column;
-  box-shadow:0 8px 40px rgba(0,0,0,.9);overflow:hidden;
-}
-#masterCompHeader{
-  display:flex;align-items:center;gap:8px;padding:7px 12px;
-  border-bottom:1px solid #1a1200;background:#07070a;cursor:move;
-}
-#masterCompTitle{font-family:'Orbitron',sans-serif;font-size:9px;color:#e8a060;letter-spacing:3px;flex:1;}
-#masterCompBypass{
-  font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;
-  padding:2px 8px;border:1px solid #333;border-radius:2px;
-  background:#111;color:#555;cursor:pointer;transition:all .15s;
-}
-#masterCompBypass.active{border-color:#e8a060;color:#e8a060;background:#1a0800;}
-#masterCompClose{font-family:'Share Tech Mono',monospace;font-size:13px;color:#444;background:none;border:none;cursor:pointer;padding:0 3px;}
-#masterCompClose:hover{color:#e82020;}
-#masterCompCanvas{display:block;width:100%;height:180px;}
-#masterCompKnobs{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;padding:8px 6px 10px;border-top:1px solid #1a1200;}
 
 /* ══ GATE / COMP FLOATING PANELS ══ */
 .dyn-panel-overlay{
@@ -1296,31 +1187,26 @@ body.splash-active #appRoot{
     <button class="btn play" id="playAll">▶ PLAY</button>
     <button class="btn stop" id="stopAll">■ STOP</button>
   </div>
-  <div style="display:flex;gap:6px;align-items:center;">
-    <!-- ── ESCUCHA pill ── -->
-    <div class="topbar-pill pill-escucha">
-      <span class="topbar-pill-label">ESCUCHA</span>
-      <button class="listen-btn active" data-bus="foh">FOH</button>
-      <button class="listen-btn" data-bus="aux1">BUS 1</button>
-      <button class="listen-btn" data-bus="aux2">BUS 2</button>
-      <button class="listen-btn digital-only" data-bus="bus3">BUS 3</button>
-      <button class="listen-btn digital-only" data-bus="bus4">BUS 4</button>
-      <button class="listen-btn digital-only" data-bus="bus5">BUS 5</button>
-      <button class="listen-btn digital-only" data-bus="bus6">BUS 6</button>
-      <button class="listen-btn" data-bus="fx1">FX 1</button>
-      <button class="listen-btn" data-bus="fx2">FX 2</button>
-    </div>
-    <!-- ── SENDS ON FADER pill (ninja only) ── -->
-    <div class="topbar-pill pill-sof digital-only">
-      <span class="topbar-pill-label">SENDS ON FADER</span>
-      <button class="sof-btn active" data-sof="FOH">FOH</button>
-      <button class="sof-btn" data-sof="BUS1">BUS1</button>
-      <button class="sof-btn" data-sof="BUS2">BUS2</button>
-      <button class="sof-btn" data-sof="BUS3">BUS3</button>
-      <button class="sof-btn" data-sof="BUS4">BUS4</button>
-      <button class="sof-btn" data-sof="BUS5">BUS5</button>
-      <button class="sof-btn" data-sof="BUS6">BUS6</button>
-    </div>
+  <div style="display:flex;gap:3px;">
+    <!-- Listen buttons (always visible) -->
+    <button class="listen-btn active" data-bus="foh">FOH</button>
+    <button class="listen-btn" data-bus="aux1">BUS 1</button>
+    <button class="listen-btn" data-bus="aux2">BUS 2</button>
+    <button class="listen-btn" data-bus="fx1">FX 1</button>
+    <button class="listen-btn" data-bus="fx2">FX 2</button>
+    <button class="listen-btn digital-only" data-bus="bus3">BUS 3</button>
+    <button class="listen-btn digital-only" data-bus="bus4">BUS 4</button>
+    <button class="listen-btn digital-only" data-bus="bus5">BUS 5</button>
+    <button class="listen-btn digital-only" data-bus="bus6">BUS 6</button>
+    <!-- SOF buttons (ninja only) -->
+    <span class="digital-only" style="color:#333;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;margin:0 4px;">│</span>
+    <button class="sof-btn digital-only active" data-sof="FOH">FOH</button>
+    <button class="sof-btn digital-only" data-sof="BUS1">BUS1</button>
+    <button class="sof-btn digital-only" data-sof="BUS2">BUS2</button>
+    <button class="sof-btn digital-only" data-sof="BUS3">BUS3</button>
+    <button class="sof-btn digital-only" data-sof="BUS4">BUS4</button>
+    <button class="sof-btn digital-only" data-sof="BUS5">BUS5</button>
+    <button class="sof-btn digital-only" data-sof="BUS6">BUS6</button>
   </div>
   <!-- PFL -->
   <div class="pfl-indicator">
@@ -1495,14 +1381,14 @@ function buildIR(sec){
   return ir;
 }
 reverbNode.buffer=buildIR(2.5);
-fx1Bus.connect(reverbNode); reverbNode.connect(reverbRetGain); reverbRetGain.connect(masterBus);
+fx1Bus.connect(reverbNode); reverbNode.connect(reverbRetGain); reverbRetGain.connect(masterBus); // FOH return
 
 // DELAY
 const delayNode    =ctx.createDelay(5.0); delayNode.delayTime.value=0.3;
 const delayFB      =ctx.createGain();     delayFB.gain.value=0.4;
 const delayRetGain =ctx.createGain();     delayRetGain.gain.value=0.8;
 delayNode.connect(delayFB); delayFB.connect(delayNode);
-fx2Bus.connect(delayNode); delayNode.connect(delayRetGain); delayRetGain.connect(masterBus);
+fx2Bus.connect(delayNode); delayNode.connect(delayRetGain); delayRetGain.connect(masterBus); // FOH return
 // OUTPUT: todo el audio sale por monitorGain → destination
 // monitorGain es el único nodo conectado al destination.
 // masterBus NO se conecta directamente al destination.
@@ -1550,47 +1436,19 @@ async function scanFohOutputs() {
 
 // ── MASTER BUS PROCESSOR (EQ Gráfico 10 bandas + Compresor) ──
 // Cadena: masterBus → masterEQIn → [10 filtros peaking] → masterCompressor → masterProcOut → monitorGain
-// 15-band GEQ — standard frequencies
-const GEQ_FREQS = [25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000];
-const GEQ_BANDS = 15;
-
-// Helper: create a chained set of 15 peaking filters
-function createGeqSet() {
-  const filters = GEQ_FREQS.map(freq => {
-    const f = ctx.createBiquadFilter();
-    f.type = 'peaking'; f.frequency.value = freq; f.Q.value = 1.4; f.gain.value = 0;
-    return f;
-  });
-  for(let i = 1; i < filters.length; i++) filters[i-1].connect(filters[i]);
-  return filters;
-}
-
-// Master bus GEQ (replaces old 10-band)
-const MASTER_EQ_FREQS = GEQ_FREQS; // alias for any remaining references
-const masterEQFilters = createGeqSet();
-
-// Per-bus GEQ sets (BUS1-6)
-const busGeqFilters = {
-  'BUS 1': createGeqSet(),
-  'BUS 2': createGeqSet(),
-  'BUS 3': createGeqSet(),
-  'BUS 4': createGeqSet(),
-  'BUS 5': createGeqSet(),
-  'BUS 6': createGeqSet(),
-};
-// Post-GEQ output nodes — listen/PFL routes through these so GEQ affects sound
-const busGeqOutputs = {
-  'BUS 1': ctx.createGain(),
-  'BUS 2': ctx.createGain(),
-  'BUS 3': ctx.createGain(),
-  'BUS 4': ctx.createGain(),
-  'BUS 5': ctx.createGain(),
-  'BUS 6': ctx.createGain(),
-};
-// Connect: busGeqFilters[last] → busGeqOutputs
-Object.keys(busGeqFilters).forEach(key => {
-  busGeqFilters[key][GEQ_BANDS-1].connect(busGeqOutputs[key]);
+const MASTER_EQ_FREQS = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+const masterEQFilters = MASTER_EQ_FREQS.map(freq => {
+  const f = ctx.createBiquadFilter();
+  f.type = 'peaking';
+  f.frequency.value = freq;
+  f.Q.value = 1.4;
+  f.gain.value = 0;
+  return f;
 });
+// Chain EQ filters in series
+for(let i = 1; i < masterEQFilters.length; i++) {
+  masterEQFilters[i-1].connect(masterEQFilters[i]);
+}
 // Master compressor node
 const masterComp = ctx.createDynamicsCompressor();
 masterComp.threshold.value = -24;
@@ -1613,7 +1471,11 @@ masterEQFilters[0].connect(masterEQFilters.length > 1 ? masterEQFilters[1] : mas
 masterEQFilters[masterEQFilters.length-1].connect(masterComp);
 masterComp.connect(masterMakeupGain);
 masterMakeupGain.connect(masterProcBypassGain);
-// masterProcBypassGain → monitorGain handled via monitorSwitches.foh
+// masterListenGain: single switch point for ALL FOH audio (direct + processor chain)
+const masterListenGain = ctx.createGain();
+masterListenGain.gain.value = 1; // starts active (FOH)
+masterListenGain.connect(monitorGain);
+masterProcBypassGain.connect(masterListenGain);
 
 function connectMasterProc(active) {
   masterProcActive = active;
@@ -1624,7 +1486,7 @@ function connectMasterProc(active) {
     masterBus.connect(masterEQFilters[0]);
   } else {
     try { masterBus.disconnect(masterEQFilters[0]); } catch(e){}
-    try { masterBus.connect(monitorGain); } catch(e){}
+    try { masterBus.connect(masterListenGain); } catch(e){}
   }
 }
 
@@ -1682,73 +1544,19 @@ function updateSofFader(channelIdx, db){
     const busIdx = parseInt(sofMode.replace('BUS','')) - 1; // 0-5
     const busSend = ch.busSends ? ch.busSends[busIdx] : null;
     if(busSend){
-      const gain = sendDbToGain(db);
-      busSend.desiredGain = gain;      // ← fix: updateMix() lee desiredGain
-      busSend.sendG.gain.value = gain;
-      busSend._knobVal = db;
+      busSend.sendG.gain.value = sendDbToGain(db);
       // Update knob visually
       if(busSend._knob && busSend._knob.setValue) busSend._knob.setValue(db);
     }
   }
 }
 
-// ── MONITOR SWITCH SYSTEM ──
-// Each listen source has a GainNode switch — no connect/disconnect, just gain changes
-// This avoids glitches and residual connections entirely
-connectMasterProc(true); // Master GEQ always active
+// Por defecto escuchamos FOH (masterBus)
+let listenBus = masterBus;
+masterBus.connect(masterListenGain); // via masterListenGain switch
 
-const monitorSwitches = {
-  foh:  ctx.createGain(),
-  aux1: ctx.createGain(),
-  aux2: ctx.createGain(),
-  fx1:  ctx.createGain(),
-  fx2:  ctx.createGain(),
-  bus3: ctx.createGain(),
-  bus4: ctx.createGain(),
-  bus5: ctx.createGain(),
-  bus6: ctx.createGain(),
-};
-// FOH starts at 1, all others at 0
-monitorSwitches.foh.gain.value  = 1;
-Object.entries(monitorSwitches).forEach(([k,g]) => {
-  if(k !== 'foh') g.gain.value = 0;
-  g.connect(monitorGain);
-});
-
-// Connect sources to their switches
-masterProcBypassGain.connect(monitorSwitches.foh);
-// Buses connected after busGeqOutputs are created (see below — deferred)
-let listenBus = masterBus; // kept for legacy compatibility
-
-// BUS_MAP: listen routes use post-GEQ outputs for BUS1-6
-const BUS_MAP = {
-  foh:  masterBus,
-  aux1: null, // set after busGeqOutputs ready
-  aux2: null,
-  fx1:  fx1Bus,
-  fx2:  fx2Bus,
-  bus3: null,
-  bus4: null,
-  bus5: null,
-  bus6: null,
-};
-// Point BUS listen to post-GEQ output
-BUS_MAP.aux1 = busGeqOutputs['BUS 1'];
-BUS_MAP.aux2 = busGeqOutputs['BUS 2'];
-BUS_MAP.bus3 = busGeqOutputs['BUS 3'];
-BUS_MAP.bus4 = busGeqOutputs['BUS 4'];
-BUS_MAP.bus5 = busGeqOutputs['BUS 5'];
-BUS_MAP.bus6 = busGeqOutputs['BUS 6'];
-
-// Connect buses to their monitor switches
-busGeqOutputs['BUS 1'].connect(monitorSwitches.aux1);
-busGeqOutputs['BUS 2'].connect(monitorSwitches.aux2);
-busGeqOutputs['BUS 3'].connect(monitorSwitches.bus3);
-busGeqOutputs['BUS 4'].connect(monitorSwitches.bus4);
-busGeqOutputs['BUS 5'].connect(monitorSwitches.bus5);
-busGeqOutputs['BUS 6'].connect(monitorSwitches.bus6);
-fx1Bus.connect(monitorSwitches.fx1);
-fx2Bus.connect(monitorSwitches.fx2);
+const BUS_MAP = {foh:masterBus,aux1:aux1Bus,aux2:aux2Bus,fx1:fx1Bus,fx2:fx2Bus,
+  bus3:aux3Bus,bus4:aux4Bus,bus5:aux5Bus,bus6:aux6Bus};
 const ALL_BUSES = [aux1Bus,aux2Bus,aux3Bus,aux4Bus,aux5Bus,aux6Bus];
 const BUS_LABELS = ['BUS 1','BUS 2','BUS 3','BUS 4','BUS 5','BUS 6'];
 const BUS_COLORS = ['#20c8e8','#20c8e8','#20a8ff','#20a8ff','#40e0d0','#40e0d0'];
@@ -1776,15 +1584,21 @@ document.querySelectorAll('.listen-btn').forEach(b=>{
   b.addEventListener('click',()=>{
     const newKey = b.dataset.bus;
     if(newKey === currentListenKey) return;
-    // Fade out current, fade in new — no connect/disconnect, no glitches
-    if(monitorSwitches[currentListenKey]){
-      monitorSwitches[currentListenKey].gain.setTargetAtTime(0, ctx.currentTime, 0.01);
+    const goingToFoh = newKey === 'foh';
+
+    // Disconnect current non-FOH bus
+    if(currentListenKey !== 'foh'){
+      try { listenBus.disconnect(monitorGain); } catch(e){}
     }
-    if(monitorSwitches[newKey]){
-      monitorSwitches[newKey].gain.setTargetAtTime(1, ctx.currentTime, 0.01);
-    }
+    // Mute/unmute masterListenGain (controls ALL master audio incl. reverb/delay returns)
+    masterListenGain.gain.setTargetAtTime(goingToFoh ? 1 : 0, ctx.currentTime, 0.015);
+
     currentListenKey = newKey;
     listenBus = BUS_MAP[newKey] || masterBus;
+
+    if(!goingToFoh){
+      listenBus.connect(monitorGain);
+    }
     document.querySelectorAll('.listen-btn').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
   });
@@ -3742,16 +3556,7 @@ function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
   const splitter=ctx.createChannelSplitter(2);
   const anL=ctx.createAnalyser();anL.fftSize=1024;const bufL=new Uint8Array(anL.fftSize);
   const anR=ctx.createAnalyser();anR.fftSize=1024;const bufR=new Uint8Array(anR.fftSize);
-  // Insert GEQ filters: bus → geqFilters → geqOutput → splitter (metering)
-  const _geqSet = busGeqFilters[label] || null;
-  const _geqOut = busGeqOutputs ? busGeqOutputs[label] : null;
-  if(_geqSet && _geqOut){
-    bus.connect(_geqSet[0]);
-    // _geqFilters last already connected to _geqOut in the setup above
-    _geqOut.connect(splitter);
-  } else {
-    bus.connect(splitter);
-  }
+  bus.connect(splitter);
   splitter.connect(anL,0);splitter.connect(anR,1);
 
   const fdr=createFader({min:-60,max:10,value:0,height:120,onChange:v=>{if(mPwrOn)bus.gain.value=dbToGain(v);}});
@@ -3763,30 +3568,7 @@ function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
     mPwrBtn.textContent=mPwrOn?'ON':'OFF';bus.gain.value=mPwrOn?dbToGain(fdr.getValue()):0;
   });
 
-  // GEQ button
-  const geqBtn = document.createElement('button');
-  geqBtn.className = 'bus-pfl-btn';
-  geqBtn.textContent = 'GEQ';
-  geqBtn.style.cssText += ';border-color:#c080ff44;color:#c080ff;';
-  geqBtn.title = 'Ecualizador gráfico 15 bandas — ' + label;
-  geqBtn.addEventListener('click', () => {
-    const geqSet = label === 'MASTER' ? masterEQFilters : (busGeqFilters[label] || null);
-    if(geqSet) openGeqPanel(label, geqSet);
-  });
-
-  // COMP button (only for MASTER)
-  const compMasterBtn = isMain ? document.createElement('button') : null;
-  if(compMasterBtn){
-    compMasterBtn.className = 'bus-pfl-btn';
-    compMasterBtn.textContent = 'COMP';
-    compMasterBtn.style.cssText += ';border-color:#e8a06044;color:#e8a060;';
-    compMasterBtn.title = 'Compresor Master Bus';
-    compMasterBtn.addEventListener('click', openMasterCompPanel);
-  }
-
   mc.appendChild(lbl);mc.appendChild(mPwrBtn);mc.appendChild(vu.el);mc.appendChild(fdr.el);
-  mc.appendChild(geqBtn);
-  if(compMasterBtn) mc.appendChild(compMasterBtn);
 
   // PFL button for bus monitoring
   if(hasPfl){
@@ -3798,12 +3580,10 @@ function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
       if(isActive){
         busPflActive.add(label);
         // Connect this bus to pflBus
-        const _pOut = busGeqOutputs?.[label] || bus;
-        try{ _pOut.connect(pflBus); }catch(e){}
+        try{ bus.connect(pflBus); }catch(e){}
       } else {
         busPflActive.delete(label);
-        const _pOut2 = busGeqOutputs?.[label] || bus;
-        try{ _pOut2.disconnect(pflBus); }catch(e){}
+        try{ bus.disconnect(pflBus); }catch(e){}
       }
       updateBusPflStatus();
     });
@@ -3822,14 +3602,13 @@ function updateBusPflStatus(){
 makeMasterCh('MASTER',masterBus,'#e8a020',true,  false);
 makeMasterCh('BUS 1', aux1Bus, '#20c8e8',false, true);
 makeMasterCh('BUS 2', aux2Bus, '#20c8e8',false, true);
+makeMasterCh('FX 1',  fx1Bus,  '#c080ff',false, false);
+makeMasterCh('FX 2',  fx2Bus,  '#c080ff',false, false);
 // BUS3-6 (ninja only)
 makeMasterCh('BUS 3', aux3Bus, '#20a8ff',false, true, true);
 makeMasterCh('BUS 4', aux4Bus, '#20a8ff',false, true, true);
 makeMasterCh('BUS 5', aux5Bus, '#40e0d0',false, true, true);
 makeMasterCh('BUS 6', aux6Bus, '#40e0d0',false, true, true);
-// FX always visible
-makeMasterCh('FX 1',  fx1Bus,  '#c080ff',false, false);
-makeMasterCh('FX 2',  fx2Bus,  '#c080ff',false, false);
 
 // PFL master
 const pflAnalyser=ctx.createAnalyser();pflAnalyser.fftSize=1024;const pflBuf2=new Uint8Array(pflAnalyser.fftSize);
@@ -3843,11 +3622,245 @@ masterRow.appendChild(pflMc);
 right.appendChild(masterRow);
 
 // ── MASTER BUS PROCESSOR PANEL (ninja-only) ──
-// masterProcPanel removed — GEQ and COMP moved to floating popups
+const masterProcPanel = document.createElement('div');
+masterProcPanel.className = 'digital-only';
+masterProcPanel.style.cssText = `
+  background:#0e0e16;
+  border:1px solid #3a2060;
+  border-radius:6px;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:340px;
+`;
+
+// Header
+const mpHeader = document.createElement('div');
+mpHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
+const mpTitle = document.createElement('div');
+mpTitle.style.cssText = "font-family:'Orbitron',sans-serif;font-size:9px;color:var(--purple);letter-spacing:3px;";
+mpTitle.textContent = '⚡ MASTER BUS PROCESSOR';
+const mpBypassBtn = document.createElement('button');
+mpBypassBtn.style.cssText = `font-family:'Share Tech Mono',monospace;font-size:8px;padding:2px 8px;border:1px solid #555;border-radius:2px;background:#1a1a1a;color:var(--dim);cursor:pointer;letter-spacing:1px;transition:all .2s;`;
+mpBypassBtn.textContent = 'BYPASS';
+mpBypassBtn.title = 'Activar/desactivar Master Processor';
+mpBypassBtn.addEventListener('click', () => {
+  connectMasterProc(!masterProcActive);
+  mpBypassBtn.textContent = masterProcActive ? 'ACTIVE' : 'BYPASS';
+  mpBypassBtn.style.background = masterProcActive ? '#1a0a2a' : '#1a1a1a';
+  mpBypassBtn.style.borderColor = masterProcActive ? 'var(--purple)' : '#555';
+  mpBypassBtn.style.color = masterProcActive ? 'var(--purple)' : 'var(--dim)';
+  mpBypassBtn.style.boxShadow = masterProcActive ? '0 0 8px #c080ff44' : 'none';
+  showToast(masterProcActive ? '⚡ Master Processor ACTIVO' : '⚡ Master Processor BYPASS');
+});
+mpHeader.appendChild(mpTitle);
+mpHeader.appendChild(mpBypassBtn);
+masterProcPanel.appendChild(mpHeader);
+
+// ── EQ GRÁFICO 10 BANDAS ──
+const eqGfxSection = document.createElement('div');
+eqGfxSection.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+const eqGfxTitle = document.createElement('div');
+eqGfxTitle.style.cssText = "font-size:8px;color:#888;letter-spacing:2px;text-align:center;font-family:'Share Tech Mono',monospace;";
+eqGfxTitle.textContent = '— EQ GRÁFICO 10 BANDAS —';
+eqGfxSection.appendChild(eqGfxTitle);
+
+const eqGfxBands = document.createElement('div');
+eqGfxBands.style.cssText = 'display:flex;gap:3px;align-items:flex-end;justify-content:center;';
+
+// Canvas for EQ curve
+const eqGfxCanvas = document.createElement('canvas');
+eqGfxCanvas.width = 320; eqGfxCanvas.height = 60;
+eqGfxCanvas.style.cssText = 'width:320px;height:60px;border-radius:3px;border:1px solid #2a2a3a;background:#0a0a12;display:block;margin:0 auto;';
+
+const EQ_FADER_HEIGHT = 80;
+const EQ_FADER_RANGE = 15; // ±15dB for graphic EQ
+const masterEQValues = new Array(10).fill(0);
+
+const eqFaderEls = [];
+
+MASTER_EQ_FREQS.forEach((freq, idx) => {
+  const col = document.createElement('div');
+  col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;';
+
+  // Mini fader track
+  const track = document.createElement('div');
+  track.style.cssText = `width:10px;height:${EQ_FADER_HEIGHT}px;background:#0d0d0d;border-radius:5px;border:1px solid #2a2a3a;position:relative;cursor:ns-resize;user-select:none;touch-action:none;`;
+
+  // 0dB center line
+  const centerLine = document.createElement('div');
+  centerLine.style.cssText = 'position:absolute;width:100%;height:1px;background:#333;top:50%;';
+  track.appendChild(centerLine);
+
+  // Fader cap
+  const cap = document.createElement('div');
+  cap.style.cssText = 'width:18px;height:10px;background:linear-gradient(180deg,#6040a0,#3a2060);border:1px solid #8060c0;border-radius:2px;position:absolute;left:50%;transform:translateX(-50%);top:50%;margin-top:-5px;cursor:ns-resize;box-shadow:0 1px 3px #0008;';
+  track.appendChild(cap);
+
+  // Value label
+  const valLabel = document.createElement('div');
+  valLabel.style.cssText = "font-size:7px;color:var(--dim);text-align:center;font-family:'Share Tech Mono',monospace;min-width:24px;";
+  valLabel.textContent = '0';
+
+  // Freq label
+  const freqLabel = document.createElement('div');
+  freqLabel.style.cssText = "font-size:6px;color:#555;text-align:center;font-family:'Share Tech Mono',monospace;";
+  freqLabel.textContent = freq >= 1000 ? (freq/1000)+'k' : freq;
+
+  function updateFromNorm(norm) {
+    // norm: 0=bottom(-15dB), 1=top(+15dB), 0.5=center(0dB)
+    const db = (norm - 0.5) * 2 * EQ_FADER_RANGE;
+    masterEQValues[idx] = db;
+    masterEQFilters[idx].gain.value = db;
+    const topPct = (1 - norm) * 100;
+    cap.style.top = topPct + '%';
+    cap.style.marginTop = '-5px';
+    valLabel.textContent = db >= 0 ? '+'+db.toFixed(0) : db.toFixed(0);
+    valLabel.style.color = Math.abs(db) > 0.5 ? 'var(--purple)' : 'var(--dim)';
+    drawMasterEQCurve();
+  }
+
+  // Drag logic
+  let dragging = false, startY = 0, startNorm = 0.5;
+  function getNorm() {
+    const db = masterEQValues[idx];
+    return (db / (2 * EQ_FADER_RANGE)) + 0.5;
+  }
+  function onDown(e) {
+    dragging = true; startY = e.clientY ?? e.touches?.[0]?.clientY;
+    startNorm = getNorm();
+    e.preventDefault();
+  }
+  function onMove(e) {
+    if(!dragging) return;
+    const y = e.clientY ?? e.touches?.[0]?.clientY;
+    const dy = (y - startY) / EQ_FADER_HEIGHT;
+    const norm = Math.max(0, Math.min(1, startNorm - dy));
+    updateFromNorm(norm);
+  }
+  function onUp() { dragging = false; }
+  cap.addEventListener('mousedown', onDown);
+  cap.addEventListener('touchstart', onDown, {passive:false});
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchend', onUp);
+  cap.addEventListener('dblclick', () => updateFromNorm(0.5)); // reset
+
+  col.appendChild(track);
+  col.appendChild(valLabel);
+  col.appendChild(freqLabel);
+  eqGfxBands.appendChild(col);
+  eqFaderEls.push({cap, valLabel, updateFromNorm, getNorm});
+});
+
+eqGfxSection.appendChild(eqGfxBands);
+eqGfxSection.appendChild(eqGfxCanvas);
+
+// Draw EQ curve
+function drawMasterEQCurve() {
+  const cvs = eqGfxCanvas;
+  const g = cvs.getContext('2d');
+  g.clearRect(0,0,cvs.width,cvs.height);
+  g.fillStyle='#0a0a12'; g.fillRect(0,0,cvs.width,cvs.height);
+  // Grid
+  g.strokeStyle='#1a1a2a'; g.lineWidth=1;
+  g.beginPath(); g.moveTo(0,cvs.height/2); g.lineTo(cvs.width,cvs.height/2); g.stroke();
+  // Curve approximation through bands
+  const pts = MASTER_EQ_FREQS.map((freq, i) => {
+    const logMin = Math.log10(20), logMax = Math.log10(20000);
+    const x = ((Math.log10(freq) - logMin) / (logMax - logMin)) * cvs.width;
+    const y = cvs.height/2 - (masterEQValues[i] / EQ_FADER_RANGE) * (cvs.height/2 - 4);
+    return {x, y};
+  });
+  g.beginPath();
+  g.moveTo(0, cvs.height/2);
+  pts.forEach((p,i) => {
+    if(i===0) g.lineTo(p.x, p.y);
+    else {
+      const prev = pts[i-1];
+      const cx = (prev.x + p.x)/2;
+      g.bezierCurveTo(cx, prev.y, cx, p.y, p.x, p.y);
+    }
+  });
+  g.lineTo(cvs.width, cvs.height/2);
+  g.strokeStyle='#9060e0'; g.lineWidth=1.5; g.stroke();
+  // Fill
+  g.lineTo(cvs.width, cvs.height/2);
+  g.closePath();
+  g.fillStyle='rgba(144,96,224,0.15)'; g.fill();
+}
+drawMasterEQCurve();
+
+masterProcPanel.appendChild(eqGfxSection);
+
+// Divider
+const mpDivider = document.createElement('div');
+mpDivider.style.cssText = 'height:1px;background:#2a2a3a;';
+masterProcPanel.appendChild(mpDivider);
+
+// ── MASTER COMPRESSOR ──
+const masterCompSection = document.createElement('div');
+masterCompSection.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+const masterCompTitle = document.createElement('div');
+masterCompTitle.style.cssText = "font-size:8px;color:#888;letter-spacing:2px;text-align:center;font-family:'Share Tech Mono',monospace;";
+masterCompTitle.textContent = '— COMPRESOR MASTER —';
+masterCompSection.appendChild(masterCompTitle);
+
+const masterCompKnobs = document.createElement('div');
+masterCompKnobs.style.cssText = 'display:flex;gap:4px;justify-content:center;flex-wrap:wrap;';
+
+// GR meter for master comp
+const masterGRWrap = document.createElement('div');
+masterGRWrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
+const masterGRLabel = document.createElement('div');
+masterGRLabel.style.cssText = "font-size:7px;color:var(--dim);font-family:'Share Tech Mono',monospace;letter-spacing:.5px;";
+masterGRLabel.textContent = 'GR';
+const masterGRTrack = document.createElement('div');
+masterGRTrack.style.cssText = 'flex:1;height:5px;background:#111;border-radius:3px;border:1px solid #2a2a2a;position:relative;overflow:hidden;min-width:120px;';
+const masterGRBar = document.createElement('div');
+masterGRBar.style.cssText = 'position:absolute;right:0;top:0;height:100%;width:0;border-radius:3px;background:linear-gradient(to left,#e87020,#e8c020);transition:width .05s;';
+masterGRTrack.appendChild(masterGRBar);
+masterGRWrap.appendChild(masterGRLabel);
+masterGRWrap.appendChild(masterGRTrack);
+
+// Makeup gain display
+const masterMakeupLabel = document.createElement('div');
+masterMakeupLabel.style.cssText = "font-size:7px;color:#888;font-family:'Share Tech Mono',monospace;text-align:center;";
+masterMakeupLabel.textContent = 'MAKEUP: 0 dB';
+
+[
+  {label:'THR',  min:-60, max:0,   val:-24, unit:'dB', dec:0, fn:v=>{ masterComp.threshold.value=v; }},
+  {label:'RATIO',min:1,   max:20,  val:2,   unit:':1', dec:1, fn:v=>{ masterComp.ratio.value=v; }},
+  {label:'ATK',  min:0,   max:1,   val:0.003,unit:'s', dec:3, fn:v=>{ masterComp.attack.value=v; }},
+  {label:'REL',  min:0,   max:1,   val:0.25, unit:'s', dec:2, fn:v=>{ masterComp.release.value=v; }},
+  {label:'KNEE', min:0,   max:30,  val:6,   unit:'dB', dec:0, fn:v=>{ masterComp.knee.value=v; }},
+  {label:'MKUP', min:0,   max:24,  val:0,   unit:'dB', dec:0, fn:v=>{
+    masterMakeupGain.gain.value = Math.pow(10, v/20);
+    masterMakeupLabel.textContent = 'MAKEUP: ' + (v>=0?'+':'')+v+' dB';
+  }},
+].forEach(p => {
+  const k = createKnob({label:p.label, min:p.min, max:p.max, value:p.val, size:28, color:'#c080ff', unit:p.unit, decimals:p.dec, onChange:p.fn});
+  masterCompKnobs.appendChild(k.el);
+});
+
+masterCompSection.appendChild(masterCompKnobs);
+masterCompSection.appendChild(masterGRWrap);
+masterCompSection.appendChild(masterMakeupLabel);
+masterProcPanel.appendChild(masterCompSection);
+
+right.appendChild(masterProcPanel);
 
 // Update master GR meter in animation loop
 function updateMasterGR() {
-  // GR meter moved to floating COMP panel — no-op here
+  if(masterProcActive) {
+    const gr = masterComp.reduction; // negative dB
+    const pct = Math.min(100, Math.abs(gr) / 30 * 100);
+    masterGRBar.style.width = pct + '%';
+  } else {
+    masterGRBar.style.width = '0%';
+  }
 }
 // Will be called from main animation loop below
 const fxSec=document.createElement('div');fxSec.className='fx-section digital-only';
@@ -4919,9 +4932,8 @@ const TOUR_STEPS = [
     title: '③ Modos de escucha',
     body: `Aquí puedes seleccionar <strong>qué bus de audio escuchas</strong> a través de tus monitores:<br><br>
       <strong>FOH</strong> — mezcla principal (Front of House)<br>
-      <strong>BUS 1 / BUS 2</strong> — monitores de piso o retornos<br>
-      <strong>FX 1 / FX 2</strong> — escucha del bus de efectos<br>
-      <strong>BUS 3–6</strong> — buses adicionales disponibles en Modo Ninja 🥷<br><br>
+      <strong>AUX 1 / AUX 2</strong> — monitores de piso o retornos<br>
+      <strong>FX 1 / FX 2</strong> — escucha del bus de efectos<br><br>
       Solo cambia el monitor de referencia, no afecta la mezcla.`,
     cardPos: (r, cw, ch) => ({
       top:  r.bottom + 20,
@@ -5992,345 +6004,80 @@ document.addEventListener('mousedown', () => {
 window.addEventListener('beforeunload', e => {
   if(flHasAudio || flHasChanges){
     e.preventDefault();
-    e.returnValue = ''; // requerido por Chrome
+    e.returnValue = '';
   }
 });
 
-// ══════════════════════════════════════════════════════════════
-//  FLOATING GEQ PANEL (shared, 15 bands)
-// ══════════════════════════════════════════════════════════════
-let geqPanel_filters = null;
-let geqPanel_busName = '';
-let geqPanel_values  = new Array(15).fill(0);
-let geqPanel_raf     = null;
-let geqPanel_active  = false; // bypass state (true = GEQ active)
+// Prevent trackpad swipe-back gesture (Mac) from losing session
+// Push a dummy history entry so back-gesture hits it first
+history.pushState(null, '', location.href);
+window.addEventListener('popstate', () => {
+  if(flHasAudio || flHasChanges){
+    // Push again to block the back navigation
+    history.pushState(null, '', location.href);
+    // Show native confirm dialog
+    const leave = window.confirm('¿Salir de FaderLab? Perderás tu avance actual.');
+    if(leave){
+      // Allow navigation by removing the listener temporarily
+      window.removeEventListener('popstate', arguments.callee);
+      history.back();
+    }
+  } else {
+    history.back();
+  }
+});
 
-const GEQ_DB_RANGE = 15; // ±15dB
+// ── EDITABLE SOF BUS NAMES ──
+// Bus name storage (persists in localStorage)
+const sofBusNames = JSON.parse(localStorage.getItem('fl_sofBusNames') || '{}');
+const SOF_DEFAULTS = {FOH:'FOH',BUS1:'BUS 1',BUS2:'BUS 2',BUS3:'BUS 3',BUS4:'BUS 4',BUS5:'BUS 5',BUS6:'BUS 6'};
 
-// DOM refs populated in initGeqPanel
-let geqPanelOverlay, geqPanel, geqHeader, geqBusName, geqBypassBtn,
-    geqCloseBtn, geqCurveCanvas, geqFadersRow;
+function initSofEditableNames(){
+  document.querySelectorAll('.sof-btn').forEach(btn=>{
+    const key = btn.dataset.sof;
+    if(!key) return;
+    // Set stored name or default
+    const name = sofBusNames[key] || SOF_DEFAULTS[key] || key;
+    btn.textContent = name;
+    btn.dataset.name = name;
 
-function initGeqPanel(){
-  geqPanelOverlay = document.getElementById('geqPanelOverlay');
-  geqPanel        = document.getElementById('geqPanel');
-  geqHeader       = document.getElementById('geqHeader');
-  geqBusName      = document.getElementById('geqBusName');
-  geqBypassBtn    = document.getElementById('geqBypassBtn');
-  geqCloseBtn     = document.getElementById('geqCloseBtn');
-  geqCurveCanvas  = document.getElementById('geqCurveCanvas');
-  geqFadersRow    = document.getElementById('geqFadersRow');
-  if(!geqPanelOverlay) return;
+    // Double click to edit
+    btn.addEventListener('dblclick', e=>{
+      e.stopPropagation();
+      const current = btn.dataset.name || btn.textContent;
+      btn.classList.add('editing');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'sof-name-input';
+      input.value = current;
+      input.maxLength = 10;
+      btn.textContent = '';
+      btn.appendChild(input);
+      input.focus(); input.select();
 
-  geqCloseBtn.addEventListener('click', closeGeqPanel);
-  geqBypassBtn.addEventListener('click', ()=>{
-    geqPanel_active = !geqPanel_active;
-    geqBypassBtn.textContent = geqPanel_active ? 'ACTIVE' : 'BYPASS';
-    geqBypassBtn.classList.toggle('active', geqPanel_active);
-    // Apply/remove GEQ gains
-    if(geqPanel_filters){
-      geqPanel_filters.forEach((f,i)=>{
-        f.gain.value = geqPanel_active ? geqPanel_values[i] : 0;
+      function save(){
+        const newName = input.value.trim() || SOF_DEFAULTS[key] || key;
+        btn.textContent = newName;
+        btn.dataset.name = newName;
+        sofBusNames[key] = newName;
+        localStorage.setItem('fl_sofBusNames', JSON.stringify(sofBusNames));
+        btn.classList.remove('editing');
+        // Also update ESCUCHA listen button label if it corresponds
+        const listenKey = key.replace('BUS','bus').toLowerCase();
+        const listenBtn = document.querySelector(`.listen-btn[data-bus="${listenKey}"]`);
+        if(listenBtn && listenKey !== 'foh') listenBtn.textContent = newName;
+      }
+
+      input.addEventListener('keydown', e=>{
+        if(e.key==='Enter'){ save(); e.preventDefault(); }
+        if(e.key==='Escape'){ btn.textContent=current; btn.dataset.name=current; btn.classList.remove('editing'); }
       });
-    }
-  });
-
-  // Make draggable
-  makeDraggable(geqHeader, geqPanelOverlay);
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeGeqPanel(); });
-}
-if(document.readyState!=='loading') initGeqPanel();
-else document.addEventListener('DOMContentLoaded', initGeqPanel);
-
-function makeDraggable(handle, container){
-  let dragging=false, ox=0, oy=0;
-  handle.addEventListener('mousedown', e=>{
-    dragging=true;
-    ox = e.clientX - container.offsetLeft;
-    oy = e.clientY - container.offsetTop;
-    e.preventDefault();
-  });
-  document.addEventListener('mousemove', e=>{
-    if(!dragging) return;
-    container.style.left = (e.clientX-ox)+'px';
-    container.style.top  = (e.clientY-oy)+'px';
-    container.style.right = 'auto';
-  });
-  document.addEventListener('mouseup', ()=>dragging=false);
-}
-
-function openGeqPanel(busName, filters){
-  if(!geqPanelOverlay) return;
-  geqPanel_busName  = busName;
-  geqPanel_filters  = filters;
-  geqPanel_active   = filters.some(f=>f.gain.value!==0);
-  // Load current values from filters
-  geqPanel_values = filters.map(f=>f.gain.value);
-  geqBusName.textContent = 'GEQ — ' + busName;
-  geqBypassBtn.textContent = geqPanel_active ? 'ACTIVE' : 'BYPASS';
-  geqBypassBtn.classList.toggle('active', geqPanel_active);
-  buildGeqFaders();
-  geqPanelOverlay.classList.add('open');
-  geqPanel_raf = requestAnimationFrame(geqLoop);
-}
-
-function closeGeqPanel(){
-  if(geqPanelOverlay) geqPanelOverlay.classList.remove('open');
-  if(geqPanel_raf){ cancelAnimationFrame(geqPanel_raf); geqPanel_raf=null; }
-  geqPanel_filters = null;
-}
-
-function buildGeqFaders(){
-  if(!geqFadersRow) return;
-  geqFadersRow.innerHTML = '';
-  GEQ_FREQS.forEach((freq, idx)=>{
-    const col = document.createElement('div');
-    col.className = 'geq-fader-col';
-
-    const track = document.createElement('div');
-    track.className = 'geq-fader-track';
-    const center = document.createElement('div');
-    center.className = 'geq-fader-center';
-    const cap = document.createElement('div');
-    cap.className = 'geq-fader-cap';
-    track.appendChild(center); track.appendChild(cap);
-
-    const valLbl = document.createElement('div');
-    valLbl.className = 'geq-val-lbl';
-    valLbl.textContent = '0';
-
-    const freqLbl = document.createElement('div');
-    freqLbl.className = 'geq-freq-lbl';
-    freqLbl.textContent = freq>=1000?(freq/1000)+'k':freq+'';
-
-    function setVal(db){
-      db = Math.max(-GEQ_DB_RANGE, Math.min(GEQ_DB_RANGE, db));
-      geqPanel_values[idx] = db;
-      if(geqPanel_filters && geqPanel_filters[idx]) geqPanel_filters[idx].gain.value = db;
-      const pct = (db/GEQ_DB_RANGE+1)/2; // 0=bottom, 1=top
-      const trackH = 80;
-      cap.style.top = ((1-pct)*(trackH-8))+'px';
-      cap.style.marginTop = '0';
-      valLbl.textContent = db>=0?'+'+db.toFixed(0):db.toFixed(0);
-      valLbl.style.color = Math.abs(db)>0.5?'#9060e0':'#333';
-    }
-    setVal(geqPanel_values[idx]);
-
-    let drag=false, startY=0, startVal=0;
-    function onDown(e){ drag=true; startY=e.clientY??(e.touches?.[0]?.clientY); startVal=geqPanel_values[idx]; e.preventDefault(); }
-    function onMove(e){
-      if(!drag) return;
-      const y=e.clientY??(e.touches?.[0]?.clientY);
-      const dy=(y-startY)/80*GEQ_DB_RANGE*2;
-      setVal(startVal-dy);
-    }
-    function onUp(){ drag=false; }
-    cap.addEventListener('mousedown',  onDown);
-    cap.addEventListener('touchstart', onDown, {passive:false});
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('touchmove', onMove, {passive:false});
-    document.addEventListener('mouseup', onUp);
-    document.addEventListener('touchend', onUp);
-    cap.addEventListener('dblclick', ()=>setVal(0)); // reset
-
-    col.appendChild(track); col.appendChild(valLbl); col.appendChild(freqLbl);
-    geqFadersRow.appendChild(col);
+      input.addEventListener('blur', save);
+    });
   });
 }
-
-function drawGeqCurve(){
-  if(!geqCurveCanvas || !geqPanel_filters) return;
-  const W=geqCurveCanvas.width, H=geqCurveCanvas.height;
-  const g=geqCurveCanvas.getContext('2d');
-  g.clearRect(0,0,W,H);
-  g.fillStyle='#050508'; g.fillRect(0,0,W,H);
-
-  // Fine grid
-  const freqLines=[25,50,100,200,500,1000,2000,5000,10000,16000];
-  freqLines.forEach(f=>{
-    const x=(Math.log10(f/20)/Math.log10(20000/20))*W;
-    g.strokeStyle=f===1000?'#1e1e2a':'#0e0e16';
-    g.lineWidth=f===1000?1:0.5;
-    g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();
-  });
-  // dB grid
-  [-12,-6,0,6,12].forEach(db=>{
-    const y=H/2-(db/GEQ_DB_RANGE)*(H/2-4);
-    g.strokeStyle=db===0?'#1a1a2a':'#0e0e16';
-    g.lineWidth=db===0?1:0.5;
-    g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();
-  });
-  // Labels
-  g.font="8px 'Share Tech Mono',monospace"; g.textAlign='right';
-  g.fillStyle='#2a1a4a';
-  [-12,-6,0,6,12].forEach(db=>{
-    const y=H/2-(db/GEQ_DB_RANGE)*(H/2-4);
-    g.fillText((db>0?'+':'')+db, 20, y+3);
-  });
-
-  // EQ curve
-  g.beginPath();
-  for(let px=0;px<W;px++){
-    const f=20*Math.pow(20000/20,px/(W-1));
-    let db=0;
-    geqPanel_filters.forEach(filt=>{ db+=biquadMagnitude(filt,f); });
-    const y=H/2-(db/GEQ_DB_RANGE)*(H/2-4);
-    px===0?g.moveTo(px,Math.max(2,Math.min(H-2,y))):g.lineTo(px,Math.max(2,Math.min(H-2,y)));
-  }
-  g.strokeStyle='#c080ffcc'; g.lineWidth=1.5; g.stroke();
-  // Fill
-  g.lineTo(W,H/2); g.lineTo(0,H/2); g.closePath();
-  g.fillStyle='rgba(192,128,255,0.06)'; g.fill();
-
-  // Band markers (dots at each band frequency)
-  GEQ_FREQS.forEach((freq,i)=>{
-    const x=(Math.log10(freq/20)/Math.log10(20000/20))*W;
-    const db=geqPanel_values[i];
-    const y=H/2-(db/GEQ_DB_RANGE)*(H/2-4);
-    g.fillStyle=Math.abs(db)>0.5?'#c080ff':'#3a1060';
-    g.shadowColor='#c080ff'; g.shadowBlur=Math.abs(db)>0.5?6:0;
-    g.beginPath();g.arc(x,y,2.5,0,Math.PI*2);g.fill();
-    g.shadowBlur=0;
-  });
-}
-
-function geqLoop(){
-  if(!geqPanelOverlay?.classList.contains('open')){ geqPanel_raf=null; return; }
-  drawGeqCurve();
-  geqPanel_raf=requestAnimationFrame(geqLoop);
-}
-
-// ══════════════════════════════════════════════════════════════
-//  MASTER COMP FLOATING PANEL
-// ══════════════════════════════════════════════════════════════
-let masterCompPanel_raf=null;
-let mcOverlay, mcCanvas, mcBypass, mcClose, mcKnobs;
-
-function initMasterCompPanel(){
-  mcOverlay = document.getElementById('masterCompOverlay');
-  mcCanvas  = document.getElementById('masterCompCanvas');
-  mcBypass  = document.getElementById('masterCompBypass');
-  mcClose   = document.getElementById('masterCompClose');
-  mcKnobs   = document.getElementById('masterCompKnobs');
-  if(!mcOverlay) return;
-  mcClose.addEventListener('click', closeMasterCompPanel);
-  mcBypass.addEventListener('click', ()=>{
-    connectMasterProc(!masterProcActive);
-    mcBypass.textContent = masterProcActive ? 'ACTIVE' : 'BYPASS';
-    mcBypass.classList.toggle('active', masterProcActive);
-  });
-  makeDraggable(document.getElementById('masterCompHeader'), mcOverlay);
-  buildMasterCompKnobs();
-}
-if(document.readyState!=='loading') initMasterCompPanel();
-else document.addEventListener('DOMContentLoaded', initMasterCompPanel);
-
-function buildMasterCompKnobs(){
-  if(!mcKnobs) return;
-  mcKnobs.innerHTML='';
-  [
-    {label:'THR', min:-60,max:0,   val:masterComp.threshold.value, unit:'dB',dec:0, fn:v=>{ masterComp.threshold.value=v; }},
-    {label:'RATIO',min:1, max:20,  val:masterComp.ratio.value,     unit:':1',dec:1, fn:v=>{ masterComp.ratio.value=v; }},
-    {label:'ATK', min:0,  max:1,   val:masterComp.attack.value,    unit:'s', dec:3, fn:v=>{ masterComp.attack.value=v; }},
-    {label:'REL', min:0,  max:1,   val:masterComp.release.value,   unit:'s', dec:2, fn:v=>{ masterComp.release.value=v; }},
-    {label:'KNEE',min:0,  max:30,  val:masterComp.knee.value,      unit:'dB',dec:0, fn:v=>{ masterComp.knee.value=v; }},
-    {label:'MKUP',min:0,  max:24,  val:0,                          unit:'dB',dec:0, fn:v=>{ masterMakeupGain.gain.value=Math.pow(10,v/20); }},
-  ].forEach(p=>{
-    const k=createKnob({label:p.label,min:p.min,max:p.max,value:p.val,
-      size:32,color:'#e8a060',unit:p.unit,decimals:p.dec,onChange:p.fn});
-    mcKnobs.appendChild(k.el);
-  });
-}
-
-function openMasterCompPanel(){
-  if(!mcOverlay) return;
-  mcBypass.textContent = masterProcActive ? 'ACTIVE' : 'BYPASS';
-  mcBypass.classList.toggle('active', masterProcActive);
-  mcOverlay.classList.add('open');
-  masterCompPanel_raf = requestAnimationFrame(masterCompLoop);
-}
-
-function closeMasterCompPanel(){
-  if(mcOverlay) mcOverlay.classList.remove('open');
-  if(masterCompPanel_raf){ cancelAnimationFrame(masterCompPanel_raf); masterCompPanel_raf=null; }
-}
-
-function drawMasterCompPanel(){
-  if(!mcCanvas) return;
-  const W=mcCanvas.width, H=mcCanvas.height;
-  const g=mcCanvas.getContext('2d');
-  g.clearRect(0,0,W,H);
-  g.fillStyle='#050508'; g.fillRect(0,0,W,H);
-
-  const dbMin=-60, dbRange=60;
-  const dbToX=db=>(db-dbMin)/dbRange*W;
-  const dbToY=db=>H-(db-dbMin)/dbRange*H;
-
-  // Grid
-  g.strokeStyle='#0e0e16'; g.lineWidth=0.5;
-  [-40,-20,0].forEach(db=>{
-    const x=dbToX(db),y=dbToY(db);
-    g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();
-    g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();
-  });
-  g.strokeStyle='#1a1a2a'; g.lineWidth=1;
-  g.beginPath();g.moveTo(0,H);g.lineTo(W,0);g.stroke(); // unity
-
-  // Labels
-  g.font="8px 'Share Tech Mono',monospace"; g.fillStyle='#2a1800';
-  g.textAlign='left'; g.fillText('IN →',W-36,H-4);
-  g.fillText('↑ OUT',4,12);
-
-  const thr=masterComp.threshold.value;
-  const rat=masterComp.ratio.value;
-  const kne=masterComp.knee.value;
-  const halfKne=kne/2;
-  function compOut(inDb){
-    if(inDb<thr-halfKne) return inDb;
-    if(inDb>thr+halfKne) return thr+(inDb-thr)/rat;
-    const x2=inDb-thr+halfKne;
-    return inDb+((1/rat-1)*x2*x2)/(2*Math.max(kne,0.001));
-  }
-
-  // Transfer curve
-  g.beginPath(); let first=true;
-  for(let px=0;px<W;px++){
-    const inDb=dbMin+(px/W)*dbRange;
-    const y=dbToY(Math.max(dbMin,compOut(inDb)));
-    first?(g.moveTo(px,y),first=false):g.lineTo(px,y);
-  }
-  g.strokeStyle=masterProcActive?'#e8a060cc':'#e8a06044';
-  g.lineWidth=masterProcActive?2:1; g.stroke();
-
-  // Threshold line
-  const tx=dbToX(thr);
-  g.strokeStyle='#e8a02055'; g.lineWidth=1; g.setLineDash([3,3]);
-  g.beginPath();g.moveTo(tx,0);g.lineTo(tx,H);g.stroke();
-  g.setLineDash([]);
-  g.fillStyle='#e8a020aa'; g.font="8px 'Share Tech Mono',monospace";
-  g.textAlign='left'; g.fillText(thr+'dB',tx+3,14);
-  g.fillText(rat.toFixed(1)+':1',tx+3,24);
-
-  // Live GR ball
-  if(masterProcActive){
-    const gr=Math.abs(masterComp.reduction);
-    const inDbEst=thr+gr*rat/(rat-1||1);
-    const inDb=Math.max(dbMin,Math.min(0,inDbEst));
-    const outDb=compOut(inDb);
-    const bx=dbToX(inDb), by=dbToY(Math.max(dbMin,outDb));
-    const col=gr>6?'#e82020':gr>2?'#e8e020':'#20e880';
-    g.fillStyle=col; g.shadowColor=col; g.shadowBlur=8;
-    g.beginPath();g.arc(bx,by,5,0,Math.PI*2);g.fill();
-    g.shadowBlur=0;
-    if(gr>0.3){g.fillStyle=col+'cc';g.fillText('GR -'+gr.toFixed(1)+'dB',bx+8,by-3);}
-  }
-}
-
-function masterCompLoop(){
-  if(!mcOverlay?.classList.contains('open')){ masterCompPanel_raf=null; return; }
-  drawMasterCompPanel();
-  masterCompPanel_raf=requestAnimationFrame(masterCompLoop);
-}
+if(document.readyState!=='loading') initSofEditableNames();
+else document.addEventListener('DOMContentLoaded', initSofEditableNames);
 
 </script>
 
@@ -6378,32 +6125,6 @@ function masterCompLoop(){
     </div>
     <canvas class="dyn-panel-canvas" id="compCanvas" width="560" height="200"></canvas>
     <div class="dyn-panel-knobs" id="compKnobsRow"></div>
-  </div>
-</div>
-
-<!-- ══ GEQ FLOATING PANEL ══ -->
-<div id="geqPanelOverlay">
-  <div id="geqPanel">
-    <div id="geqHeader">
-      <div id="geqBusName">GEQ — MASTER</div>
-      <button id="geqBypassBtn">BYPASS</button>
-      <button id="geqCloseBtn">✕</button>
-    </div>
-    <canvas id="geqCurveCanvas" width="580" height="120"></canvas>
-    <div id="geqFadersRow"></div>
-  </div>
-</div>
-
-<!-- ══ MASTER COMP FLOATING PANEL ══ -->
-<div id="masterCompOverlay">
-  <div id="masterCompPanel">
-    <div id="masterCompHeader">
-      <div id="masterCompTitle">COMP — MASTER</div>
-      <button id="masterCompBypass">BYPASS</button>
-      <button id="masterCompClose">✕</button>
-    </div>
-    <canvas id="masterCompCanvas" width="340" height="180"></canvas>
-    <div id="masterCompKnobs"></div>
   </div>
 </div>
 </div><!-- #appRoot -->
