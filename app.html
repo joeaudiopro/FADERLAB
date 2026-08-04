@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
-<title>FaderLab — Joe Mendoza</title>
+<title>FaderLab v3.1 — Joe Mendoza</title>
 <!-- Paint black BEFORE anything else — eliminates white/chrome flash -->
 <style>
   html{background:#141414;}
@@ -1109,7 +1109,7 @@ body.splash-active #appRoot{
     <div class="splash-rule"></div>
     <div class="splash-credit">by <span>Joe Mendoza</span></div>
     <div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#333;letter-spacing:2px;margin-top:6px;">© 2026 Joe Mendoza · FaderLab · Todos los derechos reservados</div>
-    <div class="splash-version">v3.0 · Web Audio Engine</div>
+    <div class="splash-version">v3.1 · Web Audio Engine</div>
 
     <!-- Social links -->
     <div class="splash-social">
@@ -3634,6 +3634,28 @@ function createChannel(i){
     get volume(){return dbToGain(fader.getValue());},
     getState,setState,
   };
+
+  // ── Channel name at bottom — editable, synced with top label ──
+  const chLblBot = document.createElement('div');
+  chLblBot.className = 'ch-label-bottom';
+  chLblBot.textContent = lEl.textContent;
+  chLblBot.title = 'Doble clic para editar nombre';
+  chLblBot.addEventListener('dblclick', ()=>{
+    lEl.contentEditable = true;
+    lEl.classList.add('editing');
+    lEl.focus();
+    const r = document.createRange();
+    r.selectNodeContents(lEl);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(r);
+  });
+  lEl.addEventListener('blur', ()=>{ chLblBot.textContent = lEl.textContent; });
+  lEl.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key==='Escape') setTimeout(()=>chLblBot.textContent=lEl.textContent,50); });
+  // Also sync when stem library sets the label
+  const _lblObserver = new MutationObserver(()=>{ chLblBot.textContent = lEl.textContent; });
+  _lblObserver.observe(lEl, {childList:true, characterData:true, subtree:true});
+  el.appendChild(chLblBot);
+
   channels.push(ch);
 }
 
@@ -3784,6 +3806,8 @@ pflMc.appendChild(Object.assign(document.createElement('div'),{className:'master
 pflMc.appendChild(pflVU.el);
 pflMc.appendChild(Object.assign(document.createElement('div'),{style:'font-size:7px;color:#555;letter-spacing:.5px;text-align:center;',textContent:'pre-fader'}));
 masterRow.appendChild(pflMc);
+// MASTER appended last so it appears after PFL
+makeMasterCh('MASTER',masterBus,'#e8a020',true,false);
 right.appendChild(masterRow);
 
 // masterProcPanel → replaced by GEQ/COMP popup buttons on MASTER
