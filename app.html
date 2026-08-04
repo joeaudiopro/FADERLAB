@@ -153,6 +153,17 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .pill-sof{border:1px solid #e8a02055;background:rgba(232,160,32,0.04);}
 .pill-sof .topbar-pill-label{color:#e8a020;}
 
+
+/* Channel name at bottom */
+.ch-label-bottom{
+  font-family:'Share Tech Mono',monospace;
+  font-size:8px;color:var(--dim);
+  text-align:center;letter-spacing:.5px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  width:100%;padding:2px 0;
+  background:rgba(0,0,0,0.5);
+}
+
 /* SENDS */
 
 /* ══ BUS SENDS 2-COLUMN LAYOUT ══ */
@@ -1469,19 +1480,9 @@ async function scanFohOutputs() {
 
 // ── MASTER BUS PROCESSOR (EQ Gráfico 10 bandas + Compresor) ──
 // Cadena: masterBus → masterEQIn → [10 filtros peaking] → masterCompressor → masterProcOut → monitorGain
-const MASTER_EQ_FREQS = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
-const masterEQFilters = MASTER_EQ_FREQS.map(freq => {
-  const f = ctx.createBiquadFilter();
-  f.type = 'peaking';
-  f.frequency.value = freq;
-  f.Q.value = 1.4;
-  f.gain.value = 0;
-  return f;
-});
-// Chain EQ filters in series
-for(let i = 1; i < masterEQFilters.length; i++) {
-  masterEQFilters[i-1].connect(masterEQFilters[i]);
-}
+// Master EQ: 15 bands using same GEQ_FREQS as buses and subgroups
+const MASTER_EQ_FREQS = GEQ_FREQS; // alias for compatibility
+const masterEQFilters = createGeqSet(); // 15 peaking filters, already chained internally
 // Master compressor node
 const masterComp = ctx.createDynamicsCompressor();
 masterComp.threshold.value = -24;
@@ -1500,7 +1501,6 @@ const masterProcBypassGain = ctx.createGain();
 masterProcBypassGain.gain.value = 0; // off by default
 
 // Connect chain: masterBus splits to direct (existing monitorGain) and proc chain
-masterEQFilters[0].connect(masterEQFilters.length > 1 ? masterEQFilters[1] : masterComp); // already chained above
 masterEQFilters[masterEQFilters.length-1].connect(masterComp);
 masterComp.connect(masterMakeupGain);
 masterMakeupGain.connect(masterProcBypassGain);
@@ -3220,7 +3220,7 @@ function createChannel(i){
 
   const faderDcaRow=document.createElement('div');faderDcaRow.className='fader-dca-row';
   const chIdx = channels.length; // capture current index
-  const fader=createFader({min:-60,max:10,value:-60,height:100,onChange:v=>{
+  const fader=createFader({min:-60,max:10,value:-60,height:180,onChange:v=>{
     updateSofFader(chIdx, v);
     updateMix();
   }});
@@ -3689,7 +3689,7 @@ const busPflActive = new Set();
 
 function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
   const mc=document.createElement('div');
-  mc.className='master-ch'+(isMain?' main':'');
+  mc.className='master-ch'; // no special border for main
   if(isNinja) mc.classList.add('digital-only');
   const lbl=document.createElement('div');lbl.className='master-label';lbl.style.cssText=`color:${color};`;lbl.textContent=label;
   const vu=createVUMeter();
@@ -3764,7 +3764,6 @@ function updateBusPflStatus(){
   const anyActive = busPflActive.size > 0;
   // Could show a global indicator — for now toast
 }
-makeMasterCh('MASTER',masterBus,'#e8a020',true,  false);
 makeMasterCh('BUS 1', aux1Bus, '#20c8e8',false, true);
 makeMasterCh('BUS 2', aux2Bus, '#20c8e8',false, true);
 // BUS3-6 (ninja only)
