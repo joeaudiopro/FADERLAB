@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
-<title>FaderLab v3.1 — Joe Mendoza</title>
+<title>FaderLab v3.11 — Joe Mendoza</title>
 <!-- Paint black BEFORE anything else — eliminates white/chrome flash -->
 <style>
   html{background:#141414;}
@@ -1109,7 +1109,7 @@ body.splash-active #appRoot{
     <div class="splash-rule"></div>
     <div class="splash-credit">by <span>Joe Mendoza</span></div>
     <div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#333;letter-spacing:2px;margin-top:6px;">© 2026 Joe Mendoza · FaderLab · Todos los derechos reservados</div>
-    <div class="splash-version">v3.1 · Web Audio Engine</div>
+    <div class="splash-version">v3.11 · Web Audio Engine</div>
 
     <!-- Social links -->
     <div class="splash-social">
@@ -1577,7 +1577,8 @@ function updateSofFader(channelIdx, db){
     const busIdx = parseInt(sofMode.replace('BUS','')) - 1; // 0-5
     const busSend = ch.busSends ? ch.busSends[busIdx] : null;
     if(busSend){
-      busSend.sendG.gain.value = sendDbToGain(db);
+      busSend.desiredGain = sendDbToGain(db); // updateMix() (llamado justo después) usa este valor — antes solo se tocaba sendG.gain.value y updateMix() lo revertía
+      busSend.sendG.gain.value = busSend.desiredGain;
       // Update knob visually
       if(busSend._knob && busSend._knob.setValue) busSend._knob.setValue(db);
     }
@@ -1596,13 +1597,27 @@ const sgComp   = Array.from({length:SG_COUNT},()=>{
 });
 const sgMakeup = Array.from({length:SG_COUNT},()=>{const g=ctx.createGain();g.gain.value=1;return g;});
 const sgOut    = Array.from({length:SG_COUNT},()=>{const g=ctx.createGain();g.gain.value=1;return g;});
-// Chain: sgBus → GEQ → Comp → Makeup → sgOut → masterBus
+// Chain: sgBus → GEQ → [Comp → Makeup] (toggleable) → sgOut → masterBus
+// Comp/Makeup start OUT of the signal path (bypassed) — sgCompActiveArr starts all false
 for(let s=0;s<SG_COUNT;s++){
   sgBus[s].connect(sgGEQ[s][0]);
-  sgGEQ[s][GEQ_BANDS-1].connect(sgComp[s]);
+  sgGEQ[s][GEQ_BANDS-1].connect(sgOut[s]); // bypass by default
   sgComp[s].connect(sgMakeup[s]);
   sgMakeup[s].connect(sgOut[s]);
   sgOut[s].connect(masterBus);
+}
+// True audio bypass: routes GEQ output either straight to sgOut (bypass)
+// or through sgComp→sgMakeup→sgOut (active). Mirrors connectMasterProc().
+function connectSgComp(si, active){
+  sgCompActiveArr[si] = active;
+  const geqOut = sgGEQ[si][GEQ_BANDS-1];
+  if(active){
+    try{ geqOut.disconnect(sgOut[si]); }catch(e){}
+    try{ geqOut.connect(sgComp[si]); }catch(e){}
+  } else {
+    try{ geqOut.disconnect(sgComp[si]); }catch(e){}
+    try{ geqOut.connect(sgOut[si]); }catch(e){}
+  }
 }
 // PFL taps (post-comp)
 const sgPflGain=Array.from({length:SG_COUNT},()=>{const g=ctx.createGain();g.gain.value=0;g.connect(pflBus);return g;});
@@ -2874,7 +2889,7 @@ function createChannel(i){
   dynOut.connect(faderNode); faderNode.connect(chPowerGain); chPowerGain.connect(panNode); panNode.connect(analyser); analyser.connect(masterBus);
 
   const pflGain=ctx.createGain(); pflGain.gain.value=0;
-  hpfNode.connect(pflGain); pflGain.connect(pflBus); // PFL tap: post-HPF, pre-processing (estructura de ganancias)
+  dynOut.connect(pflGain); pflGain.connect(pflBus); // PFL tap: post-EQ/Gate/Comp, pre-fader — se escuchan los cambios de EQ/dinámica
 
   function makeSend(bus){
     const preG=ctx.createGain();preG.gain.value=1;
@@ -3613,6 +3628,7 @@ function createChannel(i){
     dyn,gateGRBar:gateGR.bar,compGRBar:compGR.bar,
     gateOn:gateH.isOn, compOn:compH.isOn,
     isMuted:false,isSolo:false,
+    soloBtn, pflGain,
     sends:[s_aux1,s_aux2,s_fx1,s_fx2,s_bus3,s_bus4,s_bus5,s_bus6],
     busSends: allBusSends,
     fader: fader,
@@ -3708,6 +3724,7 @@ const masterAnalysers=[];
 
 // busPflActive tracks which buses are in PFL
 const busPflActive = new Set();
+const busPflResetFns=[]; // populated per-bus below, used by clearAllPFL()
 
 function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
   const mc=document.createElement('div');
@@ -3775,6 +3792,13 @@ function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
       updateBusPflStatus();
     });
     mc.appendChild(pflBtn);
+    busPflResetFns.push(()=>{
+      if(pflBtn.classList.contains('active')){
+        pflBtn.classList.remove('active');
+        busPflActive.delete(label);
+        try{ bus.disconnect(pflBus); }catch(e){}
+      }
+    });
   }
 
   masterRow.appendChild(mc);
@@ -3805,7 +3829,28 @@ const pflMc=document.createElement('div');pflMc.className='master-ch pfl-ch';
 pflMc.appendChild(Object.assign(document.createElement('div'),{className:'master-label',style:'color:var(--yellow);',textContent:'PFL'}));
 pflMc.appendChild(pflVU.el);
 pflMc.appendChild(Object.assign(document.createElement('div'),{style:'font-size:7px;color:#555;letter-spacing:.5px;text-align:center;',textContent:'pre-fader'}));
+const pflClearBtn=document.createElement('button');
+pflClearBtn.className='bus-pfl-btn';pflClearBtn.textContent='CLEAR';
+pflClearBtn.title='Apagar todos los envíos a PFL';
+pflClearBtn.style.cssText+='border-color:#e8404444;color:#e84040;';
+pflClearBtn.addEventListener('click',clearAllPFL);
+pflMc.appendChild(pflClearBtn);
 masterRow.appendChild(pflMc);
+function clearAllPFL(){
+  channels.forEach(c=>{
+    if(c.isSolo){
+      c.isSolo=false;
+      c.soloBtn.classList.remove('active');
+      c.el.classList.remove('soloed','pfl-on');
+      c.pflGain.gain.value=0;
+    }
+  });
+  activePFLs.clear();
+  updatePFLStatus();
+  sgPflResetFns.forEach(fn=>fn());
+  busPflResetFns.forEach(fn=>fn());
+  showToast('🔇 PFL limpio');
+}
 // MASTER appended last so it appears after PFL
 makeMasterCh('MASTER',masterBus,'#e8a020',true,false);
 right.appendChild(masterRow);
@@ -3862,6 +3907,7 @@ sgMasterSec.appendChild(Object.assign(document.createElement('div'),{
   textContent:'SUBGRUPOS'}));
 const sgMasterRow=document.createElement('div');sgMasterRow.style.cssText='display:flex;gap:4px;';
 const sgCompActiveArr=Array(SG_COUNT).fill(false);
+const sgPflResetFns=[]; // populated per-subgroup below, used by clearAllPFL()
 const sgGeqValues=Array.from({length:SG_COUNT},()=>new Array(GEQ_BANDS).fill(0));
 
 SG_DEFAULTS.forEach((defName,si)=>{
@@ -3911,6 +3957,12 @@ SG_DEFAULTS.forEach((defName,si)=>{
     b.addEventListener('click',fn);bRow.appendChild(b);
   });
   mc.appendChild(bRow);
+  sgPflResetFns.push(()=>{
+    if(sgPflGain[si].gain.value!==0){
+      sgPflGain[si].gain.value=0;
+      bRow.children[2].style.background='#0a0a0a';
+    }
+  });
   sgMasterRow.appendChild(mc);
 });
 sgMasterSec.appendChild(sgMasterRow);
@@ -6175,8 +6227,8 @@ function buildGeqFaders(){
     const center=document.createElement('div');center.style.cssText='position:absolute;width:100%;height:1px;background:#222;top:50%;';
     const cap=document.createElement('div');cap.style.cssText='width:14px;height:8px;background:linear-gradient(180deg,#5a3080,#3a1060);border:1px solid #8060c0;border-radius:1px;position:absolute;left:50%;transform:translateX(-50%);top:50%;margin-top:-4px;cursor:ns-resize;';
     track.appendChild(center);track.appendChild(cap);
-    const valLbl=document.createElement('div');valLbl.style.cssText='font-family:"Share Tech Mono",monospace;font-size:6px;color:#333;text-align:center;';valLbl.textContent='0';
-    const fLbl=document.createElement('div');fLbl.style.cssText='font-family:"Share Tech Mono",monospace;font-size:6px;color:#2a1a4a;text-align:center;';
+    const valLbl=document.createElement('div');valLbl.style.cssText='font-family:"Share Tech Mono",monospace;font-size:6px;color:#666;text-align:center;';valLbl.textContent='0';
+    const fLbl=document.createElement('div');fLbl.style.cssText='font-family:"Share Tech Mono",monospace;font-size:6px;color:#8868c8;text-align:center;';
     fLbl.textContent=freq>=1000?(freq/1000)+'k':freq+'';
     const GDB=15;
     function setVal(db){
@@ -6186,7 +6238,7 @@ function buildGeqFaders(){
       const pct=(db/GDB+1)/2;
       cap.style.top=((1-pct)*(80-8))+'px';cap.style.marginTop='0';
       valLbl.textContent=db>=0?'+'+db.toFixed(0):db.toFixed(0);
-      valLbl.style.color=Math.abs(db)>0.5?'#9060e0':'#333';
+      valLbl.style.color=Math.abs(db)>0.5?'#c8a8ff':'#666';
     }
     setVal(geqPanel_values[idx]);
     let drag=false,startY=0,startVal=0;
@@ -6280,7 +6332,7 @@ function initSgCompPanel(){
   sgCompKnobsRow2=document.getElementById('sgCompKnobsRow');
   if(!sgCompOverlay)return;
   sgCompClose2.addEventListener('click',closeSgCompPanel);
-  sgCompBypass2.addEventListener('click',()=>{if(sgCompPanel_idx<0)return;sgCompActiveArr[sgCompPanel_idx]=!sgCompActiveArr[sgCompPanel_idx];sgCompBypass2.textContent=sgCompActiveArr[sgCompPanel_idx]?'ACTIVE':'BYPASS';sgCompBypass2.style.borderColor=sgCompActiveArr[sgCompPanel_idx]?'#20e880':'#333';sgCompBypass2.style.color=sgCompActiveArr[sgCompPanel_idx]?'#20e880':'#555';});
+  sgCompBypass2.addEventListener('click',()=>{if(sgCompPanel_idx<0)return;connectSgComp(sgCompPanel_idx,!sgCompActiveArr[sgCompPanel_idx]);sgCompBypass2.textContent=sgCompActiveArr[sgCompPanel_idx]?'ACTIVE':'BYPASS';sgCompBypass2.style.borderColor=sgCompActiveArr[sgCompPanel_idx]?'#20e880':'#333';sgCompBypass2.style.color=sgCompActiveArr[sgCompPanel_idx]?'#20e880':'#555';});
   makeDraggable(document.getElementById('sgCompHeader'),sgCompOverlay);
 }
 if(document.readyState!=='loading') initSgCompPanel();
