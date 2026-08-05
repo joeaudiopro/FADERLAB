@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
-<title>FaderLab v3.11 — Joe Mendoza</title>
+<title>FaderLab v3.12 — Joe Mendoza</title>
 <!-- Paint black BEFORE anything else — eliminates white/chrome flash -->
 <style>
   html{background:#141414;}
@@ -1109,7 +1109,7 @@ body.splash-active #appRoot{
     <div class="splash-rule"></div>
     <div class="splash-credit">by <span>Joe Mendoza</span></div>
     <div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#333;letter-spacing:2px;margin-top:6px;">© 2026 Joe Mendoza · FaderLab · Todos los derechos reservados</div>
-    <div class="splash-version">v3.11 · Web Audio Engine</div>
+    <div class="splash-version">v3.12 · Web Audio Engine</div>
 
     <!-- Social links -->
     <div class="splash-social">
@@ -1478,9 +1478,8 @@ async function scanFohOutputs() {
   }
 }
 
-// ── MASTER BUS PROCESSOR (EQ Gráfico 10 bandas + Compresor) ──
-// Cadena: masterBus → masterEQIn → [10 filtros peaking] → masterCompressor → masterProcOut → monitorGain
-// Master EQ: 15 bands using same GEQ_FREQS as buses and subgroups
+// ── MASTER BUS PROCESSOR (EQ Gráfico 15 bandas + Compresor) ──
+// Cadena: masterBus → [15 filtros GEQ, SIEMPRE en la ruta] → (Compresor+Makeup, activable) → masterListenGain → monitorGain
 const MASTER_EQ_FREQS = GEQ_FREQS; // alias for compatibility
 const masterEQFilters = createGeqSet(); // 15 peaking filters, already chained internally
 // Master compressor node
@@ -1494,34 +1493,33 @@ masterComp.release.value = 0.25;
 // Master makeup gain
 const masterMakeupGain = ctx.createGain();
 masterMakeupGain.gain.value = 1;
-
-// Master proc bypass gain (1=active, 0=bypass)
-let masterProcActive = false; // starts bypassed
-const masterProcBypassGain = ctx.createGain();
-masterProcBypassGain.gain.value = 0; // off by default
-
-// Connect chain: masterBus splits to direct (existing monitorGain) and proc chain
-masterEQFilters[masterEQFilters.length-1].connect(masterComp);
 masterComp.connect(masterMakeupGain);
-masterMakeupGain.connect(masterProcBypassGain);
-// masterListenGain: single switch point for ALL FOH audio (direct + processor chain)
+
+// masterListenGain: single switch point for ALL FOH audio
 const masterListenGain = ctx.createGain();
 masterListenGain.gain.value = 1; // starts active (FOH)
 masterListenGain.connect(monitorGain);
-masterProcBypassGain.connect(masterListenGain);
+
+// El GEQ del master queda SIEMPRE conectado (igual que en buses/subgrupos).
+// El toggle del panel COMP solo mete/saca el compresor — mismo patrón que connectSgComp().
+let masterProcActive = false; // compresor arranca en bypass; el EQ funciona desde el inicio
+masterBus.connect(masterEQFilters[0]);
+masterEQFilters[masterEQFilters.length-1].connect(masterListenGain); // comp bypassed por defecto
 
 function connectMasterProc(active) {
   masterProcActive = active;
-  masterProcBypassGain.gain.setTargetAtTime(active ? 1 : 0, ctx.currentTime, 0.01);
-  // When proc is active, remove direct masterBus → monitorGain to avoid parallel
+  const eqOut = masterEQFilters[masterEQFilters.length-1];
   if(active) {
-    try { masterBus.disconnect(monitorGain); } catch(e){}
-    masterBus.connect(masterEQFilters[0]);
+    try { eqOut.disconnect(masterListenGain); } catch(e){}
+    try { eqOut.connect(masterComp); } catch(e){}
+    try { masterMakeupGain.connect(masterListenGain); } catch(e){}
   } else {
-    try { masterBus.disconnect(masterEQFilters[0]); } catch(e){}
-    try { masterBus.connect(masterListenGain); } catch(e){}
+    try { eqOut.disconnect(masterComp); } catch(e){}
+    try { masterMakeupGain.disconnect(masterListenGain); } catch(e){}
+    try { eqOut.connect(masterListenGain); } catch(e){}
   }
 }
+
 
 
 function sendDbToGain(v){
@@ -1633,7 +1631,7 @@ const dcaMuted=new Array(DCA_COUNT).fill(false);
 
 // Por defecto escuchamos FOH (masterBus)
 let listenBus = masterBus;
-masterBus.connect(masterListenGain); // via masterListenGain switch
+// (masterBus ya está conectado a masterEQFilters[0] más arriba — sin conexión directa paralela)
 
 // Bus GEQ filters (15 bands each) + output nodes
 const busGeqFilters = {
@@ -2637,15 +2635,31 @@ for(let s=1;s<=NUM_SCENES;s++){
   const b=document.createElement('button');
   b.className='scene-btn';b.textContent=s;
   b.dataset.slot=s;
+  b.title='Clic: seleccionar/guardar · Doble clic: borrar escena guardada';
   b.addEventListener('click',()=>{
     selectedScene=parseInt(b.dataset.slot);
     if(saveMode){
+      const slotKey='mixerScene_'+selectedScene;
+      const hasSave=!!localStorage.getItem(slotKey);
+      if(hasSave && !window.confirm('El slot '+selectedScene+' ya tiene una escena guardada. ¿Sobrescribir?')){
+        saveMode=false;
+        saveBtnEl.classList.remove('save-mode');
+        saveBtnEl.textContent='SAVE';
+        updateSceneBtns();
+        return;
+      }
       saveScene(selectedScene);
       saveMode=false;
       saveBtnEl.classList.remove('save-mode');
       saveBtnEl.textContent='SAVE';
     }
     updateSceneBtns();
+  });
+  b.addEventListener('dblclick', e=>{
+    e.stopPropagation();
+    const slot=parseInt(b.dataset.slot);
+    if(!localStorage.getItem('mixerScene_'+slot)){ showToast('Slot '+slot+' ya está vacío'); return; }
+    if(window.confirm('¿Borrar la escena guardada en el slot '+slot+'?')) deleteScene(slot);
   });
   slotsEl.appendChild(b);
   sceneBtns.push(b);
@@ -2658,6 +2672,11 @@ function saveScene(slot){
   localStorage.setItem('mixerScene_'+slot,JSON.stringify(state));
   updateSceneBtns();
   showToast('✔ Escena '+slot+' guardada');
+}
+function deleteScene(slot){
+  localStorage.removeItem('mixerScene_'+slot);
+  updateSceneBtns();
+  showToast('🗑 Escena '+slot+' borrada');
 }
 function recallScene(slot){
   const raw=localStorage.getItem('mixerScene_'+slot);
@@ -3018,6 +3037,30 @@ function createChannel(i){
   const eqSec=document.createElement('div');eqSec.className='eq-section';
   eqSec.appendChild(Object.assign(document.createElement('div'),{className:'section-title',textContent:'EQ'}));
 
+  // ── EQ ON/OFF state (paramétrico: lowEQ/midEQ/highEQ/pEq3) ──
+  // eqCache guarda el valor "deseado" de cada banda aunque el EQ esté apagado (bypass = gain 0 real, sin tocar lo que muestran los knobs)
+  let eqOn = true;
+  const eqCache = {lo:0, mid:0, hi:0, p3:0};
+  function applyEqGain(key, node, v){
+    eqCache[key] = v;
+    if(eqOn) node.gain.value = v;
+  }
+  function setEqOn(active){
+    eqOn = active;
+    if(active){
+      lowEQ.gain.value = eqCache.lo;
+      midEQ.gain.value = eqCache.mid;
+      highEQ.gain.value = eqCache.hi;
+      pEq3.gain.value = eqCache.p3;
+    } else {
+      lowEQ.gain.value = 0;
+      midEQ.gain.value = 0;
+      highEQ.gain.value = 0;
+      pEq3.gain.value = 0;
+    }
+    pEqBtn.classList.toggle('peq-active', active);
+  }
+
   const hiBand=document.createElement('div');hiBand.className='eq-band';
   // Helper to focus this channel in the analyser display
   // Called whenever any EQ or dynamics knob is touched
@@ -3045,13 +3088,13 @@ function createChannel(i){
   // Also focus on channel click
   el.addEventListener('mousedown', focusThisChannel, { capture:true });
 
-  const hiK=createKnob({label:'HI',min:-32,max:32,value:0,size:32,color:'#60c0ff',unit:'dB',decimals:0,freqLabel:fmtFreq(8000),onChange:v=>{highEQ.gain.value=eqCurve(v);updateSaturation();focusThisChannel();}});
+  const hiK=createKnob({label:'HI',min:-32,max:32,value:0,size:32,color:'#60c0ff',unit:'dB',decimals:0,freqLabel:fmtFreq(8000),onChange:v=>{applyEqGain('hi',highEQ,eqCurve(v));updateSaturation();focusThisChannel();}});
   hiBand.appendChild(hiK.el);eqSec.appendChild(hiBand);
 
   const MID_FREQS=[200,300,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000];
   let midFreqIdx=6;
   const midBand=document.createElement('div');midBand.className='eq-band';
-  const midK=createKnob({label:'MID',min:-32,max:32,value:0,size:32,color:'#e8e020',unit:'dB',decimals:0,freqLabel:fmtFreq(MID_FREQS[midFreqIdx]),onChange:v=>{midEQ.gain.value=eqCurve(v);updateSaturation();focusThisChannel();}});
+  const midK=createKnob({label:'MID',min:-32,max:32,value:0,size:32,color:'#e8e020',unit:'dB',decimals:0,freqLabel:fmtFreq(MID_FREQS[midFreqIdx]),onChange:v=>{applyEqGain('mid',midEQ,eqCurve(v));updateSaturation();focusThisChannel();}});
   midBand.appendChild(midK.el);
   const swRow=document.createElement('div');swRow.style.cssText='display:flex;align-items:center;gap:3px;margin-top:2px;';
   swRow.appendChild(Object.assign(document.createElement('div'),{style:'font-size:7px;color:#444;letter-spacing:.5px;',textContent:'FREQ'}));
@@ -3060,7 +3103,7 @@ function createChannel(i){
   swRow.appendChild(swK.el);midBand.appendChild(swRow);eqSec.appendChild(midBand);
 
   const loBand=document.createElement('div');loBand.className='eq-band';
-  const loK=createKnob({label:'LO',min:-32,max:32,value:0,size:32,color:'#e87020',unit:'dB',decimals:0,freqLabel:fmtFreq(120),onChange:v=>{lowEQ.gain.value=eqCurve(v);updateSaturation();focusThisChannel();}});
+  const loK=createKnob({label:'LO',min:-32,max:32,value:0,size:32,color:'#e87020',unit:'dB',decimals:0,freqLabel:fmtFreq(120),onChange:v=>{applyEqGain('lo',lowEQ,eqCurve(v));updateSaturation();focusThisChannel();}});
   loBand.appendChild(loK.el);eqSec.appendChild(loBand);
   el.appendChild(eqSec);
 
@@ -3069,6 +3112,7 @@ function createChannel(i){
   pEqBtn.className = 'peq-open-btn digital-only';
   pEqBtn.textContent = '⚡ EQ PARAM';
   pEqBtn.title = 'Abrir ecualizador paramétrico (Ninja)';
+  pEqBtn.classList.toggle('peq-active', eqOn);
   pEqBtn.addEventListener('click', e => {
     e.stopPropagation();
     // B1=lowEQ, B2=midEQ, B3=pEq3 (full param), B4=highEQ
@@ -3081,16 +3125,20 @@ function createChannel(i){
       { node: lowEQ,  gainOnly:true,  freqLabel:'120Hz',  bandName:'B1 — LO',
         gainKnob:loK,  freqRange:B1_FREQ, showQ: ()=> lowEQ.type==='peaking',
         setFreq: v=>{ lowEQ.frequency.value=v; if(B1_FREQ.syncLabel) B1_FREQ.syncLabel.textContent=fmtFreq(v); },
-        setQ:    v=>{ lowEQ.Q.value=v; } },
+        setQ:    v=>{ lowEQ.Q.value=v; },
+        setGain: v=>applyEqGain('lo',lowEQ,v) },
       { node: midEQ,  gainOnly:true,  freqLabel:'1kHz',   bandName:'B2 — MID',
         gainKnob:midK, freqRange:B2_FREQ, showQ: ()=>true,
         setFreq: v=>{ midEQ.frequency.value=v; midFreqIdx=0; if(B2_FREQ.syncKnob&&B2_FREQ.syncKnob.setValue) B2_FREQ.syncKnob.setValue(v); if(B2_FREQ.syncLabel) B2_FREQ.syncLabel.textContent=fmtFreq(v); },
-        setQ:    v=>{ midEQ.Q.value=v; } },
-      { node: pEq3,   gainOnly:false,                     bandName:'B3 — PARAM' },
+        setQ:    v=>{ midEQ.Q.value=v; },
+        setGain: v=>applyEqGain('mid',midEQ,v) },
+      { node: pEq3,   gainOnly:false,                     bandName:'B3 — PARAM',
+        setGain: v=>applyEqGain('p3',pEq3,v) },
       { node: highEQ, gainOnly:true,  freqLabel:'8kHz',   bandName:'B4 — HI',
         gainKnob:hiK,  freqRange:B4_FREQ, showQ: ()=> highEQ.type==='peaking',
         setFreq: v=>{ highEQ.frequency.value=v; if(B4_FREQ.syncLabel) B4_FREQ.syncLabel.textContent=fmtFreq(v); },
-        setQ:    v=>{ highEQ.Q.value=v; } },
+        setQ:    v=>{ highEQ.Q.value=v; },
+        setGain: v=>applyEqGain('hi',highEQ,v) },
     ];
     const barEl = el.querySelector('.ch-color-bar');
     const chColor = barEl ? barEl.style.background : '#e8a020';
@@ -3106,15 +3154,13 @@ function createChannel(i){
       get hpfFreq(){ return hpfFreq; },
       setHpfFreq(v){ hpfFreq=v; if(hpfActive) hpfNode.frequency.value=v; hpfFreqK.setValue(v); },
       toggleHpf(){ hpfActive=!hpfActive; hpfBtn.classList.toggle('active-hpf',hpfActive); hpfNode.frequency.value=hpfActive?hpfFreq:20; focusThisChannel(); },
+      getEqOn: ()=>eqOn,
+      setEqOn,
       rtaAnalyser: analyser,
       rtaBuf:      new Uint8Array(analyser.frequencyBinCount),
     });
-    pEqBtn.classList.add('peq-active');
   });
   el.appendChild(pEqBtn);
-
-  // Remove active state when panel closes
-  const _origClose = closePEqPanel;
 
   // SENDS — BUS 1-6 (2-column grid) + FX1/FX2
   const sendsSec=document.createElement('div');sendsSec.className='sends-section';
@@ -5226,7 +5272,7 @@ document.addEventListener('keydown', e => {
 // ══════════════════════════════════════════════════════════════
 // Element refs — populated after DOM ready
 let pEqOverlay, pEqPanel, pEqCanvas, pEqCanvasWrap,
-    pEqBandsRow, pEqChColor, pEqChName, pEqHpfBtn, pEqCloseBtn;
+    pEqBandsRow, pEqChColor, pEqChName, pEqHpfBtn, pEqOnBtn, pEqCloseBtn;
 
 // Current channel context
 let pEqChannel = null; // { eq4: [...nodes], hpfNode, hpfActive getter/setter, color, label }
@@ -5574,7 +5620,7 @@ function buildPEqBands(){
         value: band.node.gain ? band.node.gain.value : 0,
         size:36, color:BAND_COLORS[bi], unit:'dB', decimals:1,
         onChange: v => {
-          if(band.node.gain) band.node.gain.value = v;
+          if(band.setGain) band.setGain(v); else if(band.node.gain) band.node.gain.value = v;
           if(band.gainKnob && band.gainKnob.setValue) band.gainKnob.setValue(v);
         }
       });
@@ -5620,7 +5666,7 @@ function buildPEqBands(){
         label:'GAIN', min:-18, max:18,
         value: band.node.gain ? band.node.gain.value : 0,
         size:36, color:BAND_COLORS[bi], unit:'dB', decimals:1,
-        onChange: v => { if(band.node.gain) band.node.gain.value=v; }
+        onChange: v => { if(band.setGain) band.setGain(v); else if(band.node.gain) band.node.gain.value=v; }
       });
       band._gainKnob = gainK;
       band._gainCol  = gainCol;
@@ -5660,6 +5706,7 @@ function openPEqPanel(chData){
   pEqCloseBtn.parentNode.insertBefore(hpfFreqWrap, pEqCloseBtn);
   // Sync HPF button
   syncPEqHpf();
+  syncPEqOn();
   buildPEqBands();
   buildPEqHandles();
   pEqOverlay.classList.add('open');
@@ -5689,6 +5736,7 @@ function initPEqPanel(){
   pEqChColor    = document.getElementById('pEqChColor');
   pEqChName     = document.getElementById('pEqChName');
   pEqHpfBtn     = document.getElementById('pEqHpfBtn');
+  pEqOnBtn      = document.getElementById('pEqOnBtn');
   pEqCloseBtn   = document.getElementById('pEqCloseBtn');
 
   if(!pEqOverlay || !pEqCloseBtn){ console.warn('pEq panel HTML not found'); return; }
@@ -5700,6 +5748,19 @@ function initPEqPanel(){
     pEqChannel.toggleHpf();
     syncPEqHpf();
   });
+  pEqOnBtn.addEventListener('click', ()=>{
+    if(!pEqChannel || !pEqChannel.setEqOn) return;
+    const next = !(pEqChannel.getEqOn ? pEqChannel.getEqOn() : true);
+    pEqChannel.setEqOn(next);
+    syncPEqOn();
+  });
+}
+function syncPEqOn(){
+  if(!pEqChannel || !pEqOnBtn) return;
+  const on = pEqChannel.getEqOn ? pEqChannel.getEqOn() : true;
+  pEqOnBtn.textContent = on ? 'ACTIVE' : 'BYPASS';
+  pEqOnBtn.style.borderColor = on ? '#c080ff' : '#333';
+  pEqOnBtn.style.color = on ? '#c080ff' : '#555';
 }
 document.addEventListener('DOMContentLoaded', initPEqPanel);
 // Also try immediately if DOM already ready
@@ -6083,34 +6144,29 @@ document.addEventListener('mousedown', () => {
 }, { capture: true });
 
 window.addEventListener('beforeunload', e => {
-  if(flHasAudio || flHasChanges){
-    e.preventDefault();
-    e.returnValue = '';
-  }
+  e.preventDefault();
+  e.returnValue = '';
 });
 
 // Prevent trackpad swipe-back gesture (Mac) from losing session
 // Push a dummy history entry so back-gesture hits it first
 history.pushState(null, '', location.href);
-window.addEventListener('popstate', () => {
-  if(flHasAudio || flHasChanges){
-    // Push again to block the back navigation
-    history.pushState(null, '', location.href);
-    // Show native confirm dialog
-    const leave = window.confirm('¿Salir de FaderLab? Perderás tu avance actual.');
-    if(leave){
-      // Allow navigation by removing the listener temporarily
-      window.removeEventListener('popstate', arguments.callee);
-      history.back();
-    }
-  } else {
+function handleFlPopstate(){
+  // Push again to block the back navigation
+  history.pushState(null, '', location.href);
+  // Show native confirm dialog — siempre, desde que se entra a la app
+  const leave = window.confirm('¿Salir de FaderLab? Perderás tu avance actual.');
+  if(leave){
+    // Allow navigation by removing the listener temporarily
+    window.removeEventListener('popstate', handleFlPopstate);
     history.back();
   }
-});
+}
+window.addEventListener('popstate', handleFlPopstate);
 
 // ── EDITABLE SOF BUS NAMES ──
-// Bus name storage (persists in localStorage)
-const sofBusNames = JSON.parse(localStorage.getItem('fl_sofBusNames') || '{}');
+// Bus name storage — solo en memoria durante la sesión, se reinicia a los defaults en cada carga de la app
+const sofBusNames = {};
 const SOF_DEFAULTS = {FOH:'FOH',BUS1:'BUS 1',BUS2:'BUS 2',BUS3:'BUS 3',BUS4:'BUS 4',BUS5:'BUS 5',BUS6:'BUS 6'};
 
 function initSofEditableNames(){
@@ -6140,8 +6196,7 @@ function initSofEditableNames(){
         const newName = input.value.trim() || SOF_DEFAULTS[key] || key;
         btn.textContent = newName;
         btn.dataset.name = newName;
-        sofBusNames[key] = newName;
-        localStorage.setItem('fl_sofBusNames', JSON.stringify(sofBusNames));
+        sofBusNames[key] = newName; // solo en memoria — no persiste al recargar
         btn.classList.remove('editing');
         // Also update ESCUCHA listen button label if it corresponds
         const listenKey = key.replace('BUS','bus').toLowerCase();
@@ -6384,6 +6439,7 @@ function sgCompLoop(){
     <div id="pEqHeader">
       <div id="pEqChColor"></div>
       <div id="pEqChName">— EQ PARAMÉTRICO —</div>
+      <button id="pEqOnBtn" style="font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;padding:2px 8px;border:1px solid #333;border-radius:2px;background:#111;color:#555;cursor:pointer;">BYPASS</button>
       <button id="pEqHpfBtn">HPF OFF</button>
       <button id="pEqCloseBtn">✕</button>
     </div>
