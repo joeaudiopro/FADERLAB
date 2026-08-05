@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
-<title>FaderLab v3.12 — Joe Mendoza</title>
+<title>FaderLab v3.13 — Joe Mendoza</title>
 <!-- Paint black BEFORE anything else — eliminates white/chrome flash -->
 <style>
   html{background:#141414;}
@@ -1109,7 +1109,7 @@ body.splash-active #appRoot{
     <div class="splash-rule"></div>
     <div class="splash-credit">by <span>Joe Mendoza</span></div>
     <div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#333;letter-spacing:2px;margin-top:6px;">© 2026 Joe Mendoza · FaderLab · Todos los derechos reservados</div>
-    <div class="splash-version">v3.12 · Web Audio Engine</div>
+    <div class="splash-version">v3.13 · Web Audio Engine</div>
 
     <!-- Social links -->
     <div class="splash-social">
@@ -1425,14 +1425,20 @@ function buildIR(sec){
   return ir;
 }
 reverbNode.buffer=buildIR(2.5);
-fx1Bus.connect(reverbNode); reverbNode.connect(reverbRetGain); reverbRetGain.connect(masterBus); // FOH return
+// GEQ 15 bandas para FX1/FX2 — se inserta en el retorno húmedo (post-efecto), antes del master
+const fxGeqFilters = {'FX 1':createGeqSet(),'FX 2':createGeqSet()};
+fx1Bus.connect(reverbNode); reverbNode.connect(reverbRetGain);
+reverbRetGain.connect(fxGeqFilters['FX 1'][0]);
+fxGeqFilters['FX 1'][GEQ_BANDS-1].connect(masterBus); // FOH return (con GEQ)
 
 // DELAY
 const delayNode    =ctx.createDelay(5.0); delayNode.delayTime.value=0.3;
 const delayFB      =ctx.createGain();     delayFB.gain.value=0.4;
 const delayRetGain =ctx.createGain();     delayRetGain.gain.value=0.8;
 delayNode.connect(delayFB); delayFB.connect(delayNode);
-fx2Bus.connect(delayNode); delayNode.connect(delayRetGain); delayRetGain.connect(masterBus); // FOH return
+fx2Bus.connect(delayNode); delayNode.connect(delayRetGain);
+delayRetGain.connect(fxGeqFilters['FX 2'][0]);
+fxGeqFilters['FX 2'][GEQ_BANDS-1].connect(masterBus); // FOH return (con GEQ)
 // OUTPUT: todo el audio sale por monitorGain → destination
 // monitorGain es el único nodo conectado al destination.
 // masterBus NO se conecta directamente al destination.
@@ -3690,6 +3696,9 @@ function createChannel(i){
       buffer=null; useLocalBuffer=false;
       fl.textContent='▸ LOAD AUDIO'; fl.classList.remove('loaded');
       fi.value=''; clearBtn.style.display='none';
+      // Apaga también cualquier entrada en vivo (mic/línea) que haya quedado activa en este canal —
+      // si no, su señal se sigue sumando al mismo trimNode aunque no haya archivo ni play
+      if(useInput) setSourceFile();
     },
     assignInput,
     getLabel: ()=>lEl.textContent,
@@ -3806,7 +3815,7 @@ function makeMasterCh(label,bus,color,isMain, hasPfl=false, isNinja=false){
   _gBtn.className='bus-pfl-btn';_gBtn.textContent='GEQ';
   _gBtn.style.cssText+='border-color:#c080ff44;color:#c080ff;margin-top:2px;';
   _gBtn.addEventListener('click',()=>{
-    const gs=(label==='MASTER')?masterEQFilters:(busGeqFilters[label]||null);
+    const gs=(label==='MASTER')?masterEQFilters:(busGeqFilters[label]||fxGeqFilters[label]||null);
     if(gs) openGeqPanel(label,gs);
   });
   // COMP button (MASTER only)
@@ -4891,7 +4900,7 @@ function meterLoop(){
   pflAnalyser.getByteTimeDomainData(pflBuf2);
   let ps=0;for(let i=0;i<pflBuf2.length;i++){const s=(pflBuf2[i]-128)/128;ps+=s*s;}
   const pdb=gainToDB(Math.sqrt(ps/pflBuf2.length));
-  pflVU.setLevel(0,pdb + METER_OFFSET);pflVU.setLevel(1,pdb + METER_OFFSET + (Math.random()*.6-.3));
+  pflVU.setLevel(0,pdb + METER_OFFSET);pflVU.setLevel(1,pdb + METER_OFFSET);
 
   // Master Bus Processor GR meter
   updateMasterGR();
