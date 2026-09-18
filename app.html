@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
-<title>FaderLab v3.14 — Joe Mendoza</title>
+<title>FaderLab v3.15 — Joe Mendoza</title>
 <!-- Paint black BEFORE anything else — eliminates white/chrome flash -->
 <style>
   html{background:#141414;}
@@ -1109,7 +1109,7 @@ body.splash-active #appRoot{
     <div class="splash-rule"></div>
     <div class="splash-credit">by <span>Joe Mendoza</span></div>
     <div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#333;letter-spacing:2px;margin-top:6px;">© 2026 Joe Mendoza · FaderLab · Todos los derechos reservados</div>
-    <div class="splash-version">v3.14 · Web Audio Engine</div>
+    <div class="splash-version">v3.15 · Web Audio Engine</div>
 
     <!-- Social links -->
     <div class="splash-social">
@@ -6239,6 +6239,9 @@ function makeDraggable(handle,container){
 // ── GEQ Panel ──
 let geqPanel_filters=null,geqPanel_raf=null,geqPanel_values=new Array(GEQ_BANDS).fill(0);
 let geqPanelOverlay,geqPanel,geqBusName,geqBypassBtn,geqCloseBtn,geqCurveCanvas,geqFadersRow,geqBypassActive=false;
+let geqPanel_busName=null;
+const geqDesiredValues={}; // busName -> [15 valores deseados], sobrevive a bypass y a cerrar/reabrir el panel
+const geqActiveState={};   // busName -> true/false (ACTIVE/BYPASS), sobrevive a cerrar/reabrir el panel
 
 function initGeqPanel(){
   geqPanelOverlay=document.getElementById('geqPanelOverlay');
@@ -6252,6 +6255,7 @@ function initGeqPanel(){
   geqCloseBtn.addEventListener('click',closeGeqPanel);
   geqBypassBtn.addEventListener('click',()=>{
     geqBypassActive=!geqBypassActive;
+    if(geqPanel_busName) geqActiveState[geqPanel_busName]=geqBypassActive;
     geqBypassBtn.textContent=geqBypassActive?'ACTIVE':'BYPASS';
     geqBypassBtn.style.borderColor=geqBypassActive?'#c080ff':'#333';
     geqBypassBtn.style.color=geqBypassActive?'#c080ff':'#555';
@@ -6266,8 +6270,16 @@ else document.addEventListener('DOMContentLoaded',initGeqPanel);
 function openGeqPanel(busName,filters){
   if(!geqPanelOverlay){initGeqPanel();if(!geqPanelOverlay)return;}
   geqPanel_filters=filters;
-  geqPanel_values=filters.map(f=>f.gain.value);
-  geqBypassActive=filters.some(f=>f.gain.value!==0);
+  geqPanel_busName=busName;
+  if(!geqDesiredValues[busName]){
+    // Primera vez que se abre este bus en la sesión: toma lo que ya traían los filtros como punto de partida
+    geqDesiredValues[busName]=filters.map(f=>f.gain.value);
+    geqActiveState[busName]=filters.some(f=>f.gain.value!==0);
+  }
+  geqPanel_values=geqDesiredValues[busName];
+  geqBypassActive=geqActiveState[busName];
+  // Re-sincroniza los filtros reales con el estado guardado (no borra nada, solo refleja lo persistido)
+  filters.forEach((f,i)=>{f.gain.value=geqBypassActive?geqPanel_values[i]:0;});
   geqBusName.textContent='GEQ — '+busName;
   geqBypassBtn.textContent=geqBypassActive?'ACTIVE':'BYPASS';
   geqBypassBtn.style.borderColor=geqBypassActive?'#c080ff':'#333';
@@ -6298,7 +6310,7 @@ function buildGeqFaders(){
     function setVal(db){
       db=Math.max(-GDB,Math.min(GDB,db));
       geqPanel_values[idx]=db;
-      if(geqPanel_filters&&geqPanel_filters[idx]) geqPanel_filters[idx].gain.value=db;
+      if(geqBypassActive && geqPanel_filters&&geqPanel_filters[idx]) geqPanel_filters[idx].gain.value=db;
       const pct=(db/GDB+1)/2;
       cap.style.top=((1-pct)*(80-8))+'px';cap.style.marginTop='0';
       valLbl.textContent=db>=0?'+'+db.toFixed(0):db.toFixed(0);
