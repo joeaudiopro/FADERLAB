@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
-<title>FaderLab v3.13 — Joe Mendoza</title>
+<title>FaderLab v3.14 — Joe Mendoza</title>
 <!-- Paint black BEFORE anything else — eliminates white/chrome flash -->
 <style>
   html{background:#141414;}
@@ -1109,7 +1109,7 @@ body.splash-active #appRoot{
     <div class="splash-rule"></div>
     <div class="splash-credit">by <span>Joe Mendoza</span></div>
     <div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#333;letter-spacing:2px;margin-top:6px;">© 2026 Joe Mendoza · FaderLab · Todos los derechos reservados</div>
-    <div class="splash-version">v3.13 · Web Audio Engine</div>
+    <div class="splash-version">v3.14 · Web Audio Engine</div>
 
     <!-- Social links -->
     <div class="splash-social">
@@ -5751,7 +5751,7 @@ function initPEqPanel(){
   if(!pEqOverlay || !pEqCloseBtn){ console.warn('pEq panel HTML not found'); return; }
 
   pEqCloseBtn.addEventListener('click', closePEqPanel);
-  pEqOverlay.addEventListener('click', e => { if(e.target===pEqOverlay) closePEqPanel(); });
+  // (el panel ya NO se cierra al hacer clic fuera — solo con el botón ✕ o Escape)
   pEqHpfBtn.addEventListener('click', ()=>{
     if(!pEqChannel || !pEqChannel.toggleHpf) return;
     pEqChannel.toggleHpf();
@@ -5804,7 +5804,7 @@ function initGatePanel(){
   gateKnobsRow     = document.getElementById('gateKnobsRow');
   if(!gatePanelOverlay) return;
   gatePanelClose.addEventListener('click', closeGatePanel);
-  gatePanelOverlay.addEventListener('click', e=>{ if(e.target===gatePanelOverlay) closeGatePanel(); });
+  // (el panel ya NO se cierra al hacer clic fuera — solo con el botón ✕ o Escape)
   gatePanelBypass.addEventListener('click', ()=>{
     if(!gatePanel_ch) return;
     gatePanel_ch.toggle();
@@ -5967,7 +5967,7 @@ function initCompPanel(){
   compKnobsRow     = document.getElementById('compKnobsRow');
   if(!compPanelOverlay) return;
   compPanelClose.addEventListener('click', closeCompPanel);
-  compPanelOverlay.addEventListener('click', e=>{ if(e.target===compPanelOverlay) closeCompPanel(); });
+  // (el panel ya NO se cierra al hacer clic fuera — solo con el botón ✕ o Escape)
   compPanelBypass.addEventListener('click', ()=>{
     if(!compPanel_ch) return;
     compPanel_ch.toggle();
