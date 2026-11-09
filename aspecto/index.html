@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0e">
+<title>Relación de Aspecto · FaderLab</title>
+<meta name="description" content="Calculadora de relación de aspecto para pantallas: calcula alto, ancho y diagonal, y arma pantallas LED por módulos.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aspecto">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Misma familia visual que /temporizador: oscuro de escenario, Barlow, acento ámbar de tally. */
+:root{
+  --ink:#0b0c0e;
+  --chrome:#16181c;
+  --chrome-2:#20232a;
+  --line:#2e323a;
+  --text:#ece8df;
+  --muted:#9097a1;
+  --tally:#ffb020;
+  --tally-dim:rgba(255,176,32,.14);
+  --f-digits:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-ui:"Barlow",system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ink);color:var(--text);font-family:var(--f-ui);font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent;min-height:100vh}
+.wrap{max-width:1180px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) calc(32px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+header h1{font-family:var(--f-digits);font-weight:600;font-size:clamp(28px,4vw,40px);letter-spacing:.01em;margin:0;line-height:1}
+header h1 span{color:var(--tally)}
+header a{font-family:var(--f-digits);font-weight:600;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);text-decoration:none}
+header a:hover{color:var(--text)}
+
+.grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.grid > *{min-width:0}
+
+.card{background:var(--chrome);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card + .card{margin-top:14px}
+h2{font-family:var(--f-digits);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.row-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.row-h h2{margin:0}
+
+button{font:inherit;font-weight:600;font-size:15px;color:var(--text);background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;justify-content:center}
+button:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--tally);outline-offset:2px}
+button.on{border-color:var(--tally);color:var(--tally);background:var(--tally-dim)}
+button svg{width:18px;height:18px;flex:none}
+
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.chips button{font-family:var(--f-digits);font-size:18px;padding:6px 4px;font-variant-numeric:tabular-nums}
+
+.ratio-custom{display:flex;align-items:center;gap:8px;margin-top:12px}
+.ratio-custom input{width:100%;min-width:0;text-align:center}
+.ratio-custom .colon{font-family:var(--f-digits);font-size:28px;color:var(--muted)}
+.ratio-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:var(--muted)}
+.ratio-meta b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+
+input,select{font:inherit;color:var(--text);background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:44px}
+input{font-family:var(--f-digits);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+input::placeholder{color:#555b65}
+
+.seg{display:flex;background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;min-height:34px;border:0;background:transparent;font-size:14px;padding:4px 8px;border-radius:7px;color:var(--muted)}
+.seg button.on{background:var(--tally);color:#1a1205}
+
+.dims{display:grid;gap:10px}
+.dim{display:grid;grid-template-columns:86px 1fr 44px;align-items:center;gap:10px;border:1px solid transparent;border-radius:12px;padding:4px 6px 4px 10px;transition:border-color .2s,background .2s}
+.dim label{font-family:var(--f-digits);font-weight:600;font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.dim input{width:100%;min-width:0;font-size:34px;padding:6px 12px;min-height:56px}
+.dim .u{font-family:var(--f-digits);font-size:18px;color:var(--muted)}
+.dim.base{border-color:var(--tally);background:var(--tally-dim)}
+.dim.base label{color:var(--tally)}
+.hint{font-size:13px;color:var(--muted);margin:10px 2px 0}
+.hint b{color:var(--tally);font-weight:600}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.stat{background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.stat small{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-family:var(--f-digits);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* Vista previa */
+.preview{position:sticky;top:14px}
+@media (max-width:860px){.preview{position:static}}
+#stage{position:relative;width:100%;aspect-ratio:16/10;min-height:260px;background:var(--ink);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:24px 24px}
+#stage svg{position:absolute;inset:0;width:100%;height:100%}
+.pv-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.pv-bar .big{font-family:var(--f-digits);font-size:clamp(22px,3vw,30px);font-weight:600;font-variant-numeric:tabular-nums}
+.pv-bar .big span{color:var(--muted);font-weight:500}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer;user-select:none}
+.toggle input{appearance:none;-webkit-appearance:none;width:40px;height:24px;min-height:0;padding:0;border-radius:99px;background:var(--chrome-2);border:1px solid var(--line);position:relative;cursor:pointer;transition:background .2s}
+.toggle input::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:transform .2s,background .2s}
+.toggle input:checked{background:var(--tally-dim);border-color:var(--tally)}
+.toggle input:checked::after{transform:translateX(16px);background:var(--tally)}
+
+/* LED */
+details.card{padding:0}
+details summary{list-style:none;cursor:pointer;padding:16px;display:flex;justify-content:space-between;align-items:center}
+details summary::-webkit-details-marker{display:none}
+details summary h2{margin:0}
+details summary .chev{color:var(--muted);transition:transform .2s}
+details[open] summary .chev{transform:rotate(180deg)}
+.led-body{padding:0 16px 16px}
+.led-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:end}
+.led-grid label{display:grid;gap:4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.led-grid input{width:100%;min-width:0;font-size:22px}
+.led-presets{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.led-presets button{font-size:13px;min-height:34px;padding:4px 10px}
+.led-out{margin-top:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.led-out .stat b{font-size:22px}
+.led-note{font-size:13px;color:var(--muted);margin-top:10px}
+.led-note.warn{color:var(--tally)}
+.led-fit{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.led-fit button{font-size:13px;min-height:34px}
+
+@media (max-width:440px){.stat b{font-size:17px}.stat{padding:8px}.dim{grid-template-columns:72px 1fr 34px;gap:8px}.dim input{font-size:30px}}
+.stat b{white-space:nowrap}
+footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Relación de <span>aspecto</span></h1>
+    <a href="/">FaderLab</a>
+  </header>
+
+  <div class="grid">
+    <div>
+      <section class="card">
+        <div class="row-h">
+          <h2>Relación</h2>
+          <button id="rotate" title="Girar (horizontal / vertical)" aria-label="Girar orientación">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/></svg>
+            Girar
+          </button>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="ratio-custom">
+          <input id="rw" inputmode="decimal" autocomplete="off" aria-label="Proporción ancho">
+          <span class="colon">:</span>
+          <input id="rh" inputmode="decimal" autocomplete="off" aria-label="Proporción alto">
+        </div>
+        <div class="ratio-meta"><span>Decimal <b id="rdec">1.778 : 1</b></span><span id="rname"></span></div>
+      </section>
+
+      <section class="card">
+        <div class="row-h">
+          <h2>Medidas</h2>
+          <div class="seg" id="units">
+            <button data-u="m">m</button><button data-u="cm">cm</button><button data-u="ft">ft</button><button data-u="in">in</button>
+          </div>
+        </div>
+        <div class="dims">
+          <div class="dim" data-k="w"><label for="w">Ancho</label><input id="w" inputmode="decimal" autocomplete="off" placeholder="0"><span class="u"></span></div>
+          <div class="dim" data-k="h"><label for="h">Alto</label><input id="h" inputmode="decimal" autocomplete="off" placeholder="0"><span class="u"></span></div>
+          <div class="dim" data-k="d"><label for="d">Diagonal</label><input id="d" inputmode="decimal" autocomplete="off" placeholder="0"><span class="u"></span></div>
+        </div>
+        <p class="hint">Escribe en cualquier campo y los otros se calculan. La medida en <b>ámbar</b> es la que se respeta al cambiar la relación.</p>
+        <div class="stats">
+          <div class="stat"><small>Área</small><b id="sArea">—</b></div>
+          <div class="stat"><small>Diagonal</small><b id="sDiagIn">—</b></div>
+          <div class="stat"><small>Perímetro</small><b id="sPer">—</b></div>
+        </div>
+      </section>
+
+      <details class="card" id="ledBox">
+        <summary><h2>Pantalla LED por módulos</h2><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="led-body">
+          <div class="led-presets" id="ledPresets"></div>
+          <div class="led-grid">
+            <label>Módulo ancho (mm)<input id="mw" inputmode="decimal" autocomplete="off"></label>
+            <label>Módulo alto (mm)<input id="mh" inputmode="decimal" autocomplete="off"></label>
+            <label>Pitch (mm)<input id="pitch" inputmode="decimal" autocomplete="off"></label>
+          </div>
+          <div class="led-out">
+            <div class="stat"><small>Módulos</small><b id="lMods">—</b></div>
+            <div class="stat"><small>Medida real</small><b id="lSize">—</b></div>
+            <div class="stat"><small>Resolución</small><b id="lRes">—</b></div>
+            <div class="stat"><small>Relación real</small><b id="lRatio">—</b></div>
+          </div>
+          <p class="led-note" id="lNote"></p>
+          <div class="led-fit">
+            <button id="ledApply">Usar medida real de los módulos</button>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <section class="card preview">
+      <div class="row-h">
+        <h2>Vista</h2>
+        <label class="toggle"><input type="checkbox" id="person" checked> Persona de 1.75 m (escala)</label>
+      </div>
+      <div id="stage"><svg id="svg" aria-label="Vista previa de la pantalla"></svg></div>
+      <div class="pv-bar">
+        <div class="big" id="pvBig">—</div>
+        <button id="copy" title="Copiar medidas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          <span>Copiar</span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <footer>FaderLab · Herramientas para producción de eventos</footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  // ---------- Datos ----------
+  const PRESETS = [
+    {w:16, h:9,    name:'HD / 4K · TV y proyección'},
+    {w:16, h:10,   name:'WUXGA · proyectores y laptops'},
+    {w:4,  h:3,    name:'Clásico · proyección antigua'},
+    {w:21, h:9,    name:'Ultra ancho'},
+    {w:32, h:9,    name:'Súper ultra ancho'},
+    {w:1,  h:1,    name:'Cuadrado'},
+    {w:2.39, h:1,  name:'Cine scope'},
+    {w:1.85, h:1,  name:'Cine flat'},
+  ];
+  const UNITS = { m:1, cm:0.01, ft:0.3048, in:0.0254 };
+  const DEC   = { m:2, cm:1, ft:2, in:1 };
+  const LED_PRESETS = [
+    {mw:500, mh:500,  p:3.91, label:'500×500 · P3.9'},
+    {mw:500, mh:1000, p:3.91, label:'500×1000 · P3.9'},
+    {mw:500, mh:500,  p:2.6,  label:'500×500 · P2.6'},
+    {mw:500, mh:500,  p:2.97, label:'500×500 · P2.9'},
+    {mw:500, mh:1000, p:4.81, label:'500×1000 · P4.8'},
+    {mw:600, mh:337.5,p:1.875,label:'600×337.5 · 16:9 P1.9'},
+  ];
+
+  // ---------- Estado (internamente en metros) ----------
+  const S = {
+    rw:16, rh:9,
+    unit:'m',
+    base:'w',          // campo que se respeta: 'w' | 'h' | 'd'
+    baseM:6,           // valor del campo base en metros
+    person:true,
+    led:{mw:500, mh:500, p:3.91, open:false},
+  };
+  try { Object.assign(S, JSON.parse(localStorage.getItem('fl-aspecto') || '{}')); } catch (_) {}
+  const save = () => { try { localStorage.setItem('fl-aspecto', JSON.stringify(S)); } catch (_) {} };
+
+  // ---------- Utilidades ----------
+  const parse = v => {
+    const n = parseFloat(String(v).replace(',', '.').replace(/[^\d.\-]/g, ''));
+    return isFinite(n) ? n : NaN;
+  };
+  const fmt = (n, d = 2) => {
+    if (!isFinite(n)) return '';
+    const s = n.toFixed(d);
+    return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
+  };
+  const fmtN = (n, d) => fmt(n, d) || '0';
+  const ratio = () => S.rw / S.rh;
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+
+  function dimsM() {
+    const r = ratio(), k = Math.sqrt(r * r + 1);
+    let h;
+    if (S.base === 'w') h = S.baseM / r;
+    else if (S.base === 'h') h = S.baseM;
+    else h = S.baseM / k;
+    return { w: h * r, h, d: h * k };
+  }
+
+  // Nombre simple de una relación (ej. 1.7777 -> 16:9)
+  function nameRatio(r) {
+    for (const p of PRESETS) {
+      if (Math.abs(p.w / p.h - r) < 0.005) return p.w + ':' + p.h;
+      if (Math.abs(p.h / p.w - r) < 0.005) return p.h + ':' + p.w;
+    }
+    return fmt(r, 2) + ':1';
+  }
+
+  // ---------- UI: chips ----------
+  const chips = $('chips');
+  PRESETS.forEach((p, i) => {
+    const b = document.createElement('button');
+    b.textContent = p.w + ':' + p.h;
+    b.title = p.name;
+    b.onclick = () => {
+      const vertical = S.rh > S.rw;
+      if (vertical && p.w !== p.h) { S.rw = p.h; S.rh = p.w; } else { S.rw = p.w; S.rh = p.h; }
+      render(); save();
+    };
+    chips.appendChild(b);
+  });
+
+  $('rotate').onclick = () => { [S.rw, S.rh] = [S.rh, S.rw];
+    // girar intercambia ancho y alto: si el campo base era uno de ellos, cambia al otro para que la pantalla gire tal cual
+    if (S.base === 'w') S.base = 'h'; else if (S.base === 'h') S.base = 'w';
+    render(); save(); };
+
+  function onRatioInput() {
+    const a = parse($('rw').value), b = parse($('rh').value);
+    if (a > 0 && b > 0) { S.rw = a; S.rh = b; render({ skip: ['rw', 'rh'] }); save(); }
+  }
+  $('rw').addEventListener('input', onRatioInput);
+  $('rh').addEventListener('input', onRatioInput);
+  ['rw', 'rh'].forEach(id => $(id).addEventListener('blur', () => render()));
+
+  // ---------- UI: unidades ----------
+  $('units').addEventListener('click', e => {
+    const u = e.target.closest('button')?.dataset.u;
+    if (u) { S.unit = u; render(); save(); }
+  });
+
+  // ---------- UI: medidas ----------
+  ['w', 'h', 'd'].forEach(k => {
+    const el = $(k);
+    el.addEventListener('input', () => {
+      const v = parse(el.value);
+      S.base = k;
+      S.baseM = v >= 0 ? v * UNITS[S.unit] : 0;
+      render({ skip: [k] }); save();
+    });
+    el.addEventListener('focus', () => el.select());
+    el.addEventListener('blur', () => render());
+  });
+
+  $('person').addEventListener('change', e => { S.person = e.target.checked; render(); save(); });
+
+  // ---------- UI: LED ----------
+  const ledBox = $('ledBox');
+  ledBox.open = !!S.led.open;
+  ledBox.addEventListener('toggle', () => { S.led.open = ledBox.open; render(); save(); });
+  LED_PRESETS.forEach(p => {
+    const b = document.createElement('button');
+    b.textContent = p.label;
+    b.onclick = () => { S.led.mw = p.mw; S.led.mh = p.mh; S.led.p = p.p; render(); save(); };
+    $('ledPresets').appendChild(b);
+  });
+  [['mw', 'mw'], ['mh', 'mh'], ['pitch', 'p']].forEach(([id, key]) => {
+    $(id).addEventListener('input', () => {
+      const v = parse($(id).value);
+      if (v > 0) { S.led[key] = v; render({ skip: [id] }); save(); }
+    });
+    $(id).addEventListener('blur', () => render());
+  });
+
+  function ledCalc() {
+    const { w, h } = dimsM();
+    const mw = S.led.mw / 1000, mh = S.led.mh / 1000;
+    if (!(w > 0 && h > 0 && mw > 0 && mh > 0)) return null;
+    const cols = Math.max(1, Math.round(w / mw));
+    const rows = Math.max(1, Math.round(h / mh));
+    const W = cols * mw, H = rows * mh;
+    const pxW = Math.round(S.led.mw / S.led.p) * cols;
+    const pxH = Math.round(S.led.mh / S.led.p) * rows;
+    return { cols, rows, W, H, pxW, pxH, r: W / H };
+  }
+
+  $('ledApply').onclick = () => {
+    const L = ledCalc(); if (!L) return;
+    const g = gcd(L.pxW, L.pxH);
+    // ajusta la relación a la real de los módulos y respeta el ancho real
+    S.rw = +(L.pxW / g).toFixed(4); S.rh = +(L.pxH / g).toFixed(4);
+    if (S.rw > 100 || S.rh > 100) { S.rw = +fmt(L.r, 3); S.rh = 1; }
+    S.base = 'w'; S.baseM = L.W;
+    render(); save();
+  };
+
+  // ---------- Copiar ----------
+  $('copy').onclick = async () => {
+    const { w, h, d } = dimsM(), u = S.unit, f = UNITS[u];
+    let txt = `Pantalla ${nameRatio(ratio())}: ${fmtN(w / f, DEC[u] + 1)} × ${fmtN(h / f, DEC[u] + 1)} ${u} (diagonal ${fmtN(d / f, DEC[u] + 1)} ${u} / ${fmtN(d / 0.0254, 1)} in)`;
+    const L = S.led.open && ledCalc();
+    if (L) txt += `\nLED ${S.led.mw}×${S.led.mh} mm P${S.led.p}: ${L.cols}×${L.rows} módulos = ${fmtN(L.W, 2)} × ${fmtN(L.H, 2)} m · ${L.pxW}×${L.pxH} px`;
+    const span = $('copy').querySelector('span');
+    try { await navigator.clipboard.writeText(txt); span.textContent = 'Copiado'; }
+    catch (_) { span.textContent = 'No se pudo'; }
+    setTimeout(() => span.textContent = 'Copiar', 1400);
+  };
+
+  // ---------- Render ----------
+  function render(opt = {}) {
+    // nunca reescribimos el campo donde la persona está escribiendo
+    const skip = (opt.skip || []).concat(document.activeElement && document.activeElement.id ? [document.activeElement.id] : []);
+    const u = S.unit, f = UNITS[u], dp = DEC[u];
+    const D = dimsM(), r = ratio();
+
+    // relación
+    [...chips.children].forEach((b, i) => {
+      const p = PRESETS[i];
+      const on = (Math.abs(p.w - S.rw) < 1e-6 && Math.abs(p.h - S.rh) < 1e-6) || (Math.abs(p.h - S.rw) < 1e-6 && Math.abs(p.w - S.rh) < 1e-6);
+      b.classList.toggle('on', on);
+      b.textContent = (S.rh > S.rw && p.w !== p.h) ? p.h + ':' + p.w : p.w + ':' + p.h;
+    });
+    if (!skip.includes('rw')) $('rw').value = fmt(S.rw, 4);
+    if (!skip.includes('rh')) $('rh').value = fmt(S.rh, 4);
+    $('rdec').textContent = r >= 1 ? fmt(r, 3) + ' : 1' : '1 : ' + fmt(1 / r, 3);
+    const pre = PRESETS.find(p => (Math.abs(p.w / p.h - r) < 1e-4) || (Math.abs(p.h / p.w - r) < 1e-4));
+    $('rname').textContent = pre ? pre.name + (r < 1 && pre.w !== pre.h ? ' (vertical)' : '') : (r < 1 ? 'Vertical' : r > 1 ? 'Horizontal' : 'Cuadrado');
+
+    // unidades
+    [...$('units').children].forEach(b => b.classList.toggle('on', b.dataset.u === u));
+    document.querySelectorAll('.dim .u').forEach(s => s.textContent = u);
+
+    // medidas
+    ['w', 'h', 'd'].forEach(k => {
+      if (!skip.includes(k)) $(k).value = S.baseM > 0 ? fmt(D[k] / f, dp + 1) : '';
+      document.querySelector(`.dim[data-k="${k}"]`).classList.toggle('base', S.base === k);
+    });
+
+    // estadísticas
+    const area = D.w * D.h;
+    const areaU = u === 'ft' || u === 'in' ? fmtN(area / 0.092903, 1) + ' ft²' : fmtN(area, 2) + ' m²';
+    $('sArea').textContent = S.baseM > 0 ? areaU : '—';
+    $('sDiagIn').textContent = S.baseM > 0 ? fmtN(D.d / 0.0254, 1) + ' in' : '—';
+    $('sPer').textContent = S.baseM > 0 ? fmtN(2 * (D.w + D.h) / f, dp) + ' ' + u : '—';
+
+    $('person').checked = S.person;
+    $('pvBig').innerHTML = S.baseM > 0 ? `${fmtN(D.w / f, dp + 1)} <span>×</span> ${fmtN(D.h / f, dp + 1)} <span>${u}</span>` : '—';
+
+    // LED
+    if (!skip.includes('mw')) $('mw').value = fmt(S.led.mw, 2);
+    if (!skip.includes('mh')) $('mh').value = fmt(S.led.mh, 2);
+    if (!skip.includes('pitch')) $('pitch').value = fmt(S.led.p, 3);
+    const L = ledCalc();
+    if (L) {
+      $('lMods').textContent = `${L.cols} × ${L.rows} = ${L.cols * L.rows}`;
+      $('lSize').textContent = `${fmtN(L.W / f, dp + 1)} × ${fmtN(L.H / f, dp + 1)} ${u}`;
+      $('lRes').textContent = `${L.pxW} × ${L.pxH} px`;
+      $('lRatio').textContent = (L.r >= 1 ? fmt(L.r, 3) + ':1' : '1:' + fmt(1 / L.r, 3)) + (Math.abs(L.r - r) / r < 0.01 ? ' ✓' : '');
+      const dev = (L.r - r) / r * 100;
+      const n = $('lNote');
+      if (Math.abs(dev) < 1) { n.textContent = `Los módulos cuadran con ${nameRatio(r)}.`; n.className = 'led-note'; }
+      else { n.textContent = `Con estos módulos la pantalla queda ${dev > 0 ? 'más ancha' : 'más alta'} que ${nameRatio(r)} (${dev > 0 ? '+' : ''}${fmt(dev, 1)} %). Ajusta el contenido o la cantidad de módulos.`; n.className = 'led-note warn'; }
+    } else {
+      ['lMods', 'lSize', 'lRes', 'lRatio'].forEach(id => $(id).textContent = '—');
+      $('lNote').textContent = '';
+    }
+
+    draw(D, S.led.open ? L : null);
+  }
+
+  // ---------- Dibujo ----------
+  const svg = $('svg');
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; };
+
+  function draw(D, L) {
+    const box = svg.getBoundingClientRect();
+    const VW = box.width || 600, VH = box.height || 375;
+    svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+    svg.innerHTML = '';
+
+    const W = L ? L.W : D.w, H = L ? L.H : D.h;
+    if (!(W > 0 && H > 0)) {
+      const t = el('text', { x: VW / 2, y: VH / 2, 'text-anchor': 'middle', fill: '#5d636d', 'font-family': 'Barlow', 'font-size': 15 });
+      t.textContent = 'Escribe una medida';
+      return;
+    }
+
+    const PH = 1.75, PW = 0.55;
+    const showP = S.person;
+    const gap = showP ? Math.max(W * 0.06, 0.4) : 0;
+    const sceneW = W + (showP ? gap + PW : 0);
+    const sceneH = Math.max(H, showP ? PH : 0);
+
+    const padL = 64, padR = 24, padT = 46, padB = 26;
+    const sc = Math.min((VW - padL - padR) / sceneW, (VH - padT - padB) / sceneH);
+    const ox = padL + ((VW - padL - padR) - sceneW * sc) / 2;
+    const floor = padT + ((VH - padT - padB) + sceneH * sc) / 2;
+    const sx = ox, sy = floor - H * sc, sw = W * sc, sh = H * sc;
+
+    // pantalla
+    const defs = el('defs', {});
+    const grad = el('linearGradient', { id: 'gl', x1: 0, y1: 0, x2: 1, y2: 1 }, defs);
+    el('stop', { offset: '0', 'stop-color': '#2a2414' }, grad);
+    el('stop', { offset: '1', 'stop-color': '#141210' }, grad);
+    el('rect', { x: sx, y: sy, width: sw, height: sh, fill: 'url(#gl)', stroke: '#ffb020', 'stroke-width': 2, rx: 2 });
+
+    // módulos LED
+    if (L && L.cols * L.rows <= 2500) {
+      const g = el('g', { stroke: 'rgba(255,176,32,.28)', 'stroke-width': 1 });
+      for (let c = 1; c < L.cols; c++) { const x = sx + sw * c / L.cols; el('line', { x1: x, y1: sy, x2: x, y2: sy + sh }, g); }
+      for (let r = 1; r < L.rows; r++) { const y = sy + sh * r / L.rows; el('line', { x1: sx, y1: y, x2: sx + sw, y2: y }, g); }
+    }
+
+    // contorno de la medida pedida si difiere de la real LED
+    if (L) {
+      const tw = D.w * sc, th = D.h * sc;
+      el('rect', { x: sx, y: floor - th, width: tw, height: th, fill: 'none', stroke: '#ece8df', 'stroke-width': 1, 'stroke-dasharray': '4 4', opacity: .5 });
+    }
+
+    // diagonal
+    el('line', { x1: sx, y1: sy + sh, x2: sx + sw, y2: sy, stroke: 'rgba(236,232,223,.18)', 'stroke-width': 1, 'stroke-dasharray': '2 5' });
+
+    // cotas
+    const u = S.unit, f = UNITS[u], dp = DEC[u] + 1;
+    const dimCol = '#9097a1';
+    const ty = sy - 18;
+    el('line', { x1: sx, y1: ty, x2: sx + sw, y2: ty, stroke: dimCol, 'stroke-width': 1 });
+    el('line', { x1: sx, y1: ty - 5, x2: sx, y2: ty + 5, stroke: dimCol });
+    el('line', { x1: sx + sw, y1: ty - 5, x2: sx + sw, y2: ty + 5, stroke: dimCol });
+    const tw = el('text', { x: sx + sw / 2, y: ty - 7, 'text-anchor': 'middle', fill: '#ece8df', 'font-family': 'Barlow Condensed, Arial Narrow, sans-serif', 'font-size': 17, 'font-weight': 600 });
+    tw.textContent = fmtN(W / f, dp) + ' ' + u;
+
+    const lx = sx - 18;
+    el('line', { x1: lx, y1: sy, x2: lx, y2: sy + sh, stroke: dimCol, 'stroke-width': 1 });
+    el('line', { x1: lx - 5, y1: sy, x2: lx + 5, y2: sy, stroke: dimCol });
+    el('line', { x1: lx - 5, y1: sy + sh, x2: lx + 5, y2: sy + sh, stroke: dimCol });
+    const th = el('text', { x: lx - 8, y: sy + sh / 2, 'text-anchor': 'middle', fill: '#ece8df', 'font-family': 'Barlow Condensed, Arial Narrow, sans-serif', 'font-size': 17, 'font-weight': 600, transform: `rotate(-90 ${lx - 8} ${sy + sh / 2})` });
+    th.textContent = fmtN(H / f, dp) + ' ' + u;
+
+    // relación al centro
+    if (sw > 70 && sh > 34) {
+      const tc = el('text', { x: sx + sw / 2, y: sy + sh / 2 + 8, 'text-anchor': 'middle', fill: 'rgba(255,176,32,.55)', 'font-family': 'Barlow Condensed, Arial Narrow, sans-serif', 'font-size': Math.min(48, sh * 0.32, sw * 0.16), 'font-weight': 600 });
+      tc.textContent = L ? `${L.cols}×${L.rows}` : nameRatio(D.w / D.h);
+    }
+
+    // persona
+    if (showP) {
+      const px = sx + sw + gap * sc, pw = PW * sc, ph = PH * sc, py = floor - ph;
+      const g = el('g', { fill: '#3a3f48' });
+      const hr = ph * 0.065;
+      el('circle', { cx: px + pw / 2, cy: py + hr, r: hr }, g);
+      el('rect', { x: px + pw * 0.18, y: py + hr * 2.25, width: pw * 0.64, height: ph * 0.42, rx: Math.min(pw * 0.2, 12) }, g);
+      el('rect', { x: px + pw * 0.24, y: py + hr * 2.25 + ph * 0.38, width: pw * 0.23, height: ph * 0.62 - hr * 2.25, rx: pw * 0.08 }, g);
+      el('rect', { x: px + pw * 0.53, y: py + hr * 2.25 + ph * 0.38, width: pw * 0.23, height: ph * 0.62 - hr * 2.25, rx: pw * 0.08 }, g);
+      if (ph > 40) {
+        const t = el('text', { x: px + pw / 2, y: py - 6, 'text-anchor': 'middle', fill: '#5d636d', 'font-family': 'Barlow', 'font-size': 11 });
+        t.textContent = '1.75 m';
+      }
+    }
+    // piso
+    el('line', { x1: 8, y1: floor + .5, x2: VW - 8, y2: floor + .5, stroke: '#2e323a', 'stroke-width': 1 });
+  }
+
+  new ResizeObserver(() => draw(dimsM(), S.led.open ? ledCalc() : null)).observe($('stage'));
+  render();
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+</body>
+</html>
