@@ -1,8 +1,8 @@
-// Relación de Aspecto: guarda todo en el dispositivo para usarse sin conexión.
+// Ratio (relación de aspecto): guarda todo en el dispositivo para usarse sin conexión.
 // Cambia VERSION cada vez que subas una versión nueva del index.html.
 const VERSION = 'v1';
-const CORE = 'aspecto-' + VERSION;
-const FONTS = 'aspecto-fuentes';
+const CORE = 'ratio-' + VERSION;
+const FONTS = 'ratio-fuentes';
 const FILES = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable.png'];
 const FONT_CSS = 'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap';
 
@@ -28,7 +28,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
     // Solo borra cachés viejos de esta app: el dominio comparte cachés con las otras apps de FaderLab.
-    for (const k of await caches.keys()) if (k.startsWith('aspecto-') && k !== CORE && k !== FONTS) await caches.delete(k);
+    for (const k of await caches.keys()) if (k.startsWith('ratio-') && k !== CORE && k !== FONTS) await caches.delete(k);
     await self.clients.claim();
   })());
 });
