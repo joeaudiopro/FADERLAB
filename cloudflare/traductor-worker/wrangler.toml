@@ -11,6 +11,15 @@ routes = [
 [vars]
 ALLOWED_ORIGINS = "https://faderlab.mx,https://www.faderlab.mx,http://localhost:8080"
 
+# Salas de evento (subtítulos por QR): un Durable Object por sala.
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
 # Secretos (no van aquí):
 #   npx wrangler secret put OPENAI_API_KEY
 #   npx wrangler secret put ACCESS_CODE
