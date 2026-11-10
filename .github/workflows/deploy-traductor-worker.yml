@@ -1,0 +1,66 @@
+# Despliega el Worker del traductor (cloudflare/traductor-worker) en Cloudflare.
+# Corre solo cuando cambia el Worker en main, o a mano desde la pestaña Actions.
+#
+# Secretos necesarios en GitHub (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   — token de Cloudflare (plantilla "Edit Cloudflare Workers")
+#   CLOUDFLARE_ACCOUNT_ID  — ID de la cuenta de Cloudflare
+#   OPENAI_API_KEY         — clave de OpenAI
+#   TRADUCTOR_ACCESS_CODE  — código que piden las páginas del operador
+
+name: Desplegar Worker del traductor
+
+on:
+  push:
+    branches: [main]
+    paths: ["cloudflare/traductor-worker/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: traductor-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: cloudflare/traductor-worker
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ACCESS_CODE: ${{ secrets.TRADUCTOR_ACCESS_CODE }}
+      WRANGLER: npx --yes wrangler@4.160.0
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Revisar secretos
+        run: |
+          missing=""
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID OPENAI_API_KEY ACCESS_CODE; do
+            [ -z "${!v}" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Faltan secretos en GitHub:${missing/ACCESS_CODE/TRADUCTOR_ACCESS_CODE}"
+            exit 1
+          fi
+
+      - name: Desplegar
+        run: $WRANGLER deploy
+
+      - name: Guardar claves en el Worker
+        run: |
+          umask 077
+          node -e 'process.stdout.write(JSON.stringify({OPENAI_API_KEY:process.env.OPENAI_API_KEY,ACCESS_CODE:process.env.ACCESS_CODE}))' > "$RUNNER_TEMP/s.json"
+          $WRANGLER secret bulk "$RUNNER_TEMP/s.json"
+          rm -f "$RUNNER_TEMP/s.json"
+
+      - name: Probar
+        run: |
+          # el subdominio y su certificado pueden tardar unos minutos la primera vez
+          for i in $(seq 1 12); do
+            if curl -fsS https://traductor-api.faderlab.mx/health; then echo; echo "Worker en línea"; exit 0; fi
+            sleep 15
+          done
+          echo "::warning::El Worker se desplegó pero traductor-api.faderlab.mx aún no responde; puede tardar unos minutos más."
