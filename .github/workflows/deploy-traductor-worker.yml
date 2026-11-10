@@ -38,13 +38,17 @@ jobs:
       - name: Revisar secretos
         run: |
           missing=""
-          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID OPENAI_API_KEY ACCESS_CODE; do
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
             [ -z "${!v}" ] && missing="$missing $v"
           done
           if [ -n "$missing" ]; then
-            echo "::error::Faltan secretos en GitHub:${missing/ACCESS_CODE/TRADUCTOR_ACCESS_CODE}"
+            echo "::error::Faltan secretos en GitHub:$missing"
             exit 1
           fi
+          # Sin estos el Worker se despliega pero no traduce (falla cerrado) hasta que se agreguen.
+          [ -z "$OPENAI_API_KEY" ] && echo "::warning::Falta el secreto OPENAI_API_KEY en GitHub."
+          [ -z "$ACCESS_CODE" ] && echo "::warning::Falta el secreto TRADUCTOR_ACCESS_CODE en GitHub."
+          true
 
       - name: Desplegar
         run: $WRANGLER deploy
@@ -52,8 +56,9 @@ jobs:
       - name: Guardar claves en el Worker
         run: |
           umask 077
-          node -e 'process.stdout.write(JSON.stringify({OPENAI_API_KEY:process.env.OPENAI_API_KEY,ACCESS_CODE:process.env.ACCESS_CODE}))' > "$RUNNER_TEMP/s.json"
-          $WRANGLER secret bulk "$RUNNER_TEMP/s.json"
+          # solo los que existan; los que falten se conservan como estén en Cloudflare
+          node -e 'const s={};for(const k of ["OPENAI_API_KEY","ACCESS_CODE"])if(process.env[k])s[k]=process.env[k];process.stdout.write(JSON.stringify(s))' > "$RUNNER_TEMP/s.json"
+          if [ "$(cat "$RUNNER_TEMP/s.json")" != "{}" ]; then $WRANGLER secret bulk "$RUNNER_TEMP/s.json"; fi
           rm -f "$RUNNER_TEMP/s.json"
 
       - name: Probar
