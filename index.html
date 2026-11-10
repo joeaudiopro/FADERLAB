@@ -77,12 +77,11 @@ a{color:inherit}
 .ico svg{width:30px;height:30px}
 .card h3{font-family:var(--f-digits);font-weight:600;font-size:26px;line-height:1.05;margin:2px 0 4px}
 .q{font-size:15px;color:var(--tally);margin:0;font-weight:500}
-.desc{font-size:15px;color:#b9b5ac;margin:0 0 14px;flex:1}
 .tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
 .tag{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--muted);background:var(--chrome-2);border:1px solid var(--line);border-radius:99px;padding:3px 9px}
 .tag.new{color:#1a1205;background:var(--tally);border-color:var(--tally)}
 .tag.soon{color:var(--tally);border-color:rgba(255,176,32,.5);background:var(--tally-dim)}
-.card-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
+.card-foot{margin-top:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
 .url{font-family:var(--f-digits);font-size:16px;letter-spacing:.02em;color:var(--muted);flex:1 1 100%;margin-bottom:2px}
 .card-foot .btn.go{flex:1}
 .url b{color:var(--text);font-weight:600}
@@ -93,7 +92,7 @@ a{color:inherit}
 .btn.go{background:var(--tally);color:#1a1205;border-color:var(--tally)}
 .btn svg{width:18px;height:18px;flex:none}
 .card.soon{border-style:dashed;background:rgba(22,24,28,.6)}
-.soon-foot{border-top:1px dashed var(--line);padding-top:14px;font-size:14px;color:var(--muted)}
+.soon-foot{margin-top:auto;border-top:1px dashed var(--line);padding-top:14px;font-size:14px;color:var(--muted)}
 .soon-foot a{color:var(--tally);text-decoration:none;font-weight:600}
 .card.soon .ico{color:var(--muted)}
 .card.soon h3{color:#cfcbc2}
@@ -199,20 +198,16 @@ footer a:hover{color:var(--text)}
   const GROUPS = [
     { title: 'Audio', tools: [
       { id: 'consola', name: 'Consola FaderLab', q: '¿Quieres practicar mezcla en vivo sin una consola real?',
-        desc: 'Consola digital de 16 canales con multitracks reales: EQ, dinámica, monitores, efectos y escenas. Tu simulador de horas de vuelo.',
         tags: ['Ideal en compu', 'Con audífonos'], path: '/consola', label: 'Abrir consola' },
       { id: 'traductor', name: 'Traductor simultáneo', q: '¿Tu evento necesita traducción en vivo?',
-        desc: 'Entra el audio desde tu interfaz y sale traducido en tiempo real, listo para mandar a un canal de la consola.',
         tags: ['Próximamente'], soon: true },
     ]},
     { title: 'Escenario', tools: [
       { id: 'temporizador', name: 'Temporizador de escenario', q: '¿Cuánto tiempo le queda al orador?',
-        desc: 'Cuenta regresiva a pantalla completa con reloj, mensajes para el talento y tu logo. Para monitores de piso, tablets o pantallas.',
         tags: ['Funciona sin internet', 'Celular · tablet · pantalla'], path: '/temporizador', label: 'Abrir temporizador' },
     ]},
     { title: 'Video y pantallas', tools: [
       { id: 'ratio', name: 'Ratio', q: '¿Cuánto debe medir de alto la pantalla?',
-        desc: 'Calcula ancho, alto y diagonal en cualquier relación (16:9, 4:3, 21:9…) y arma pantallas LED por módulos con su resolución.',
         tags: ['Nueva', 'Funciona sin internet', 'Celular o compu'], path: '/ratio', label: 'Abrir Ratio' },
     ]},
   ];
@@ -234,7 +229,6 @@ footer a:hover{color:var(--text)}
               <div class="ico" aria-hidden="true">${ICONS[t.id] || ''}</div>
               <div><p class="area">${esc(area)}</p><h3>${esc(t.name)}</h3><p class="q">${esc(t.q)}</p></div>
             </div>
-            <p class="desc">${esc(t.desc)}</p>
             <div class="tags">${t.tags.map(x => `<span class="tag${x === 'Nueva' ? ' new' : x === 'Próximamente' ? ' soon' : ''}">${esc(x)}</span>`).join('')}</div>
             ${t.soon ? `<div class="soon-foot">En desarrollo · <a href="#novedades">Avísame cuando salga</a></div>` : `
             <div class="card-foot">
