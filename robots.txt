@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /stems/
+
+Sitemap: https://faderlab.mx/sitemap.xml

@@ -5,7 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0c0e">
-<title>Temporizador de Escenario</title>
+<title>Temporizador de escenario online · Cuenta regresiva para oradores · FaderLab</title>
+<meta name="description" content="Temporizador de escenario gratis: cuenta regresiva a pantalla completa con reloj, mensajes para el orador y tu logo. Funciona sin internet en celular, tablet o pantalla.">
+<link rel="canonical" href="https://faderlab.mx/temporizador/">
+<meta property="og:title" content="Temporizador de escenario · FaderLab">
+<meta property="og:description" content="Cuenta regresiva a pantalla completa para oradores, con reloj y mensajes. Gratis y sin internet.">
+<meta property="og:url" content="https://faderlab.mx/temporizador/">
+<meta property="og:type" content="website">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Temporizador">
 <meta name="mobile-web-app-capable" content="yes">
@@ -67,6 +73,9 @@ body.edit #bar{right:min(340px,100%)}
 button{font:inherit;font-weight:600;font-size:15px;color:var(--text);background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-height:44px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
 button:active{transform:translateY(1px)}
 button:focus-visible,input:focus-visible{outline:2px solid var(--tally);outline-offset:2px}
+a.home{font-weight:600;font-size:15px;color:var(--muted);text-decoration:none;padding:10px 8px;min-height:44px;display:inline-flex;align-items:center;border-radius:10px}
+a.home:hover{color:var(--text)}
+a.home:focus-visible{outline:2px solid var(--tally);outline-offset:2px}
 button.go{background:var(--tally);color:#1a1205;border-color:var(--tally);min-width:118px;justify-content:center}
 button.go.pause{background:var(--chrome-2);color:var(--tally)}
 button.on{border-color:var(--tally);color:var(--tally)}
@@ -133,6 +142,8 @@ input[type=color]{width:44px;height:36px;padding:0;border:1px solid var(--line);
 </div>
 
 <div id="bar">
+  <a class="home" href="/" title="Volver al menú de herramientas">← Herramientas</a>
+  <span class="sep"></span>
   <button class="go" id="b-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg><span>Iniciar</span></button>
   <button id="b-reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v5h5"/></svg>Reiniciar</button>
   <button id="b-minus">−1 min</button>

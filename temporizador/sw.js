@@ -1,6 +1,6 @@
 // Temporizador de Escenario: guarda todo en el dispositivo para usarse sin conexión.
 // Cambia VERSION cada vez que subas una versión nueva del index.html.
-const VERSION = 'v2';
+const VERSION = 'v4';
 const CORE = 'temporizador-' + VERSION;
 const FONTS = 'temporizador-fuentes';
 const FILES = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable.png'];
