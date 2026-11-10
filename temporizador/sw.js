@@ -1,6 +1,6 @@
 // Temporizador de Escenario: guarda todo en el dispositivo para usarse sin conexión.
 // Cambia VERSION cada vez que subas una versión nueva del index.html.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CORE = 'temporizador-' + VERSION;
 const FONTS = 'temporizador-fuentes';
 const FILES = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable.png'];
@@ -27,7 +27,8 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
-    for (const k of await caches.keys()) if (k !== CORE && k !== FONTS) await caches.delete(k);
+    // Solo borra cachés viejos de esta app: el dominio comparte cachés con las otras apps de FaderLab.
+    for (const k of await caches.keys()) if (k.startsWith('temporizador-') && k !== CORE && k !== FONTS) await caches.delete(k);
     await self.clients.claim();
   })());
 });
