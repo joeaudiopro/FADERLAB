@@ -1,1069 +1,311 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0a0a0a">
-<title>FaderLab — Early Access</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=DM+Sans:wght@300;400;500&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0e">
+<title>FaderLab · Herramientas de producción</title>
+<meta name="description" content="Herramientas gratuitas para técnicos de audio, video y escenario: consola de práctica, temporizador de escenario, calculadora de pantallas y más.">
+<meta property="og:title" content="FaderLab · Herramientas de producción">
+<meta property="og:description" content="Herramientas gratuitas para técnicos de audio, video y escenario.">
+<meta property="og:url" content="https://faderlab.mx/">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FaderLab">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
-/* ══════════════════════════════════════
-   RESET & ROOT
-══════════════════════════════════════ */
-*{box-sizing:border-box;margin:0;padding:0;}
+/* Menú de herramientas FaderLab. Misma familia visual que /temporizador y /ratio. */
 :root{
-  --bg:#0a0a0a;
-  --bg2:#111;
-  --border:#1e1e1e;
-  --accent:#e8a020;
-  --accent2:#20c8e8;
-  --purple:#c080ff;
-  --green:#20e880;
-  --red:#e82020;
-  --text:#c8c8c8;
-  --dim:#555;
-  --dim2:#333;
+  --ink:#0b0c0e;
+  --chrome:#16181c;
+  --chrome-2:#20232a;
+  --line:#2e323a;
+  --text:#ece8df;
+  --muted:#9097a1;
+  --tally:#ffb020;
+  --tally-dim:rgba(255,176,32,.14);
+  --ok:#3ddc84;
+  --f-digits:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-ui:"Barlow",system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
 }
-html{background:var(--bg);scroll-behavior:smooth;}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:'DM Sans',sans-serif;
-  font-weight:300;
-  min-height:100vh;
-  overflow-x:hidden;
-}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ink);color:var(--text);font-family:var(--f-ui);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent;min-height:100vh;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:32px 32px}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(36px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
 
-/* ══════════════════════════════════════
-   NOISE OVERLAY
-══════════════════════════════════════ */
-body::before{
-  content:'';
-  position:fixed;inset:0;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events:none;z-index:0;opacity:.4;
-}
+/* Encabezado */
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:42px}
+.brand{font-family:var(--f-digits);font-weight:700;font-size:22px;letter-spacing:.14em;text-decoration:none}
+.brand span{color:var(--tally)}
+.top nav{display:flex;gap:18px}
+.top nav a{font-family:var(--f-digits);font-weight:600;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-decoration:none}
+.top nav a:hover{color:var(--text)}
 
-/* ══════════════════════════════════════
-   GRID BACKGROUND
-══════════════════════════════════════ */
-.grid-bg{
-  position:fixed;inset:0;z-index:0;
-  background-image:
-    linear-gradient(rgba(232,160,32,0.03) 1px, transparent 1px),
-    linear-gradient(90deg,rgba(232,160,32,0.03) 1px, transparent 1px);
-  background-size:48px 48px;
-  animation:gridDrift 20s linear infinite;
-}
-@keyframes gridDrift{
-  0%{background-position:0 0;}
-  100%{background-position:48px 48px;}
-}
+@media (max-width:420px){.top nav{gap:12px}.top nav a{font-size:12px;letter-spacing:.1em}.brand{font-size:19px}}
+.hero{max-width:820px;margin-bottom:34px}
+.kicker{font-family:var(--f-digits);font-weight:600;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--tally);margin:0 0 10px}
+.hero h1{font-family:var(--f-digits);font-weight:600;font-size:clamp(36px,5.2vw,58px);line-height:.98;letter-spacing:-.005em;margin:0 0 16px}
+.hero p{font-size:clamp(16px,1.8vw,19px);color:#c5c1b8;margin:0;max-width:620px}
 
-/* ══════════════════════════════════════
-   SCAN LINE
-══════════════════════════════════════ */
-.scanline{
-  position:fixed;top:0;left:0;right:0;
-  height:2px;
-  background:linear-gradient(90deg,transparent,rgba(232,160,32,0.3),transparent);
-  animation:scan 8s linear infinite;
-  z-index:1;pointer-events:none;
-}
-@keyframes scan{0%{top:-2px;}100%{top:100vh;}}
+/* Filtros por área */
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
+.filters button{font:inherit;font-weight:600;font-size:14px;color:var(--muted);background:var(--chrome);border:1px solid var(--line);border-radius:99px;padding:6px 14px;min-height:36px;cursor:pointer}
+.filters button.on{color:#1a1205;background:var(--tally);border-color:var(--tally)}
+.filters button:focus-visible{outline:2px solid var(--tally);outline-offset:2px}
+.area{font-family:var(--f-digits);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
+.card[hidden]{display:none}
+/* Grupos */
+.group{margin-top:34px}
+.group-h{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.group-h h2{font-family:var(--f-digits);font-weight:600;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0;white-space:nowrap}
+.group-h::after{content:"";flex:1;height:1px;background:var(--line)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:14px}
 
-/* ══════════════════════════════════════
-   LAYOUT
-══════════════════════════════════════ */
-.page{position:relative;z-index:2;}
+.card{position:relative;display:flex;flex-direction:column;background:var(--chrome);border:1px solid var(--line);border-radius:16px;padding:20px;transition:border-color .2s,transform .2s}
+.card:not(.soon):hover{border-color:#4a4f58}
+.card-top{display:flex;gap:14px;align-items:flex-start;margin-bottom:12px}
+.ico{width:52px;height:52px;flex:none;border-radius:13px;background:var(--chrome-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--tally)}
+.ico svg{width:28px;height:28px}
+.card h3{font-family:var(--f-digits);font-weight:600;font-size:26px;line-height:1.05;margin:2px 0 4px}
+.q{font-size:15px;color:var(--tally);margin:0;font-weight:500}
+.desc{font-size:15px;color:#b9b5ac;margin:0 0 14px;flex:1}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.tag{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--muted);background:var(--chrome-2);border:1px solid var(--line);border-radius:99px;padding:3px 9px}
+.tag.new{color:#1a1205;background:var(--tally);border-color:var(--tally)}
+.tag.soon{color:var(--tally);border-color:rgba(255,176,32,.5);background:var(--tally-dim)}
+.card-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
+.url{font-family:var(--f-digits);font-size:16px;letter-spacing:.02em;color:var(--muted);flex:1 1 100%;margin-bottom:2px}
+.card-foot .btn.go{flex:1}
+.url b{color:var(--text);font-weight:600}
 
-/* ══════════════════════════════════════
-   HERO
-══════════════════════════════════════ */
-.hero{
-  min-height:100vh;
-  display:grid;
-  grid-template-rows:auto 1fr auto;
-  padding:0 clamp(20px,5vw,80px);
-}
+.btn{font:inherit;font-weight:600;font-size:15px;color:var(--text);background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:9px 14px;min-height:42px;cursor:pointer;display:inline-flex;gap:7px;align-items:center;justify-content:center;text-decoration:none}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,input:focus-visible{outline:2px solid var(--tally);outline-offset:2px}
+.btn.go{background:var(--tally);color:#1a1205;border-color:var(--tally)}
+.btn svg{width:18px;height:18px;flex:none}
+.card.soon{border-style:dashed;background:rgba(22,24,28,.6)}
+.soon-foot{border-top:1px dashed var(--line);padding-top:14px;font-size:14px;color:var(--muted)}
+.soon-foot a{color:var(--tally);text-decoration:none;font-weight:600}
+.card.soon .ico{color:var(--muted)}
+.card.soon h3{color:#cfcbc2}
 
-/* topbar */
-.topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:28px 0 20px;
-  border-bottom:1px solid var(--border);
-}
-.logo-mark{
-  font-family:'Orbitron',sans-serif;
-  font-size:11px;font-weight:400;
-  color:var(--dim);letter-spacing:4px;
-}
-.logo-mark span{color:var(--accent);}
-.beta-badge{
-  font-family:'Share Tech Mono',monospace;
-  font-size:9px;letter-spacing:3px;
-  padding:4px 12px;
-  border:1px solid var(--accent);
-  border-radius:2px;
-  color:var(--accent);
-  background:rgba(232,160,32,0.06);
-  animation:badgePulse 3s ease-in-out infinite;
-}
-@keyframes badgePulse{
-  0%,100%{box-shadow:0 0 0 rgba(232,160,32,0);}
-  50%{box-shadow:0 0 12px rgba(232,160,32,0.25);}
-}
+/* Bloque de correo */
+.news{margin-top:48px;display:grid;grid-template-columns:1fr minmax(0,440px);gap:24px;align-items:center;background:var(--chrome);border:1px solid var(--line);border-radius:18px;padding:26px}
+@media (max-width:820px){.news{grid-template-columns:1fr}}
+.news h2{font-family:var(--f-digits);font-weight:600;font-size:clamp(26px,3.4vw,34px);line-height:1.05;margin:0 0 8px}
+.news p{margin:0;color:#b9b5ac}
+.news form{display:flex;gap:8px}
+.news input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--text);background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-height:48px}
+.news input.err{border-color:#ff4d3d}
+.news .btn{min-height:48px;padding:10px 18px}
+.news small{display:block;margin-top:8px;font-size:12px;color:var(--muted)}
+.news .done{display:none;align-items:center;gap:10px;font-weight:600;color:var(--ok)}
+.news.ok form,.news.ok small{display:none}
+.news.ok .done{display:flex}
+@media (max-width:420px){.news form{flex-direction:column}}
 
-/* center hero content */
-.hero-center{
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  text-align:center;
-  padding:60px 0 40px;
-  gap:0;
-}
+footer{margin-top:44px;padding-top:22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+footer strong{color:var(--text);font-weight:600}
+footer nav{display:flex;gap:16px;flex-wrap:wrap}
+footer a{text-decoration:none}
+footer a:hover{color:var(--text)}
 
-/* EQ bars animation */
-.eq-bars{
-  display:flex;align-items:flex-end;gap:5px;
-  height:56px;margin-bottom:28px;
-}
-.eq-bar{
-  width:5px;border-radius:3px 3px 0 0;
-  background:linear-gradient(to top, var(--accent) 0%, #fff8e0 100%);
-  animation:eqAnim 1.4s ease-in-out infinite;
-  transform-origin:bottom;
-}
-.eq-bar:nth-child(1){height:22px;animation-delay:0s;}
-.eq-bar:nth-child(2){height:40px;animation-delay:.12s;}
-.eq-bar:nth-child(3){height:14px;animation-delay:.24s;}
-.eq-bar:nth-child(4){height:52px;animation-delay:.06s;}
-.eq-bar:nth-child(5){height:30px;animation-delay:.18s;}
-.eq-bar:nth-child(6){height:44px;animation-delay:.3s;}
-.eq-bar:nth-child(7){height:18px;animation-delay:.09s;}
-.eq-bar:nth-child(8){height:38px;animation-delay:.21s;}
-.eq-bar:nth-child(9){height:56px;animation-delay:.15s;}
-@keyframes eqAnim{
-  0%,100%{transform:scaleY(1);}
-  50%{transform:scaleY(.25);}
-}
-
-.hero-title{
-  font-family:'Bebas Neue',sans-serif;
-  font-size:clamp(72px,14vw,140px);
-  line-height:.9;
-  letter-spacing:8px;
-  color:transparent;
-  background:linear-gradient(135deg,#e8a020 0%,#f5d06a 35%,#e8a020 55%,#b07010 100%);
-  -webkit-background-clip:text;background-clip:text;
-  filter:drop-shadow(0 0 40px rgba(232,160,32,0.3));
-  animation:titleShimmer 4s ease-in-out infinite;
-}
-@keyframes titleShimmer{
-  0%,100%{filter:drop-shadow(0 0 25px rgba(232,160,32,0.25));}
-  50%{filter:drop-shadow(0 0 55px rgba(232,160,32,0.5));}
-}
-
-.hero-subtitle{
-  font-family:'Share Tech Mono',monospace;
-  font-size:clamp(10px,1.5vw,13px);
-  color:var(--dim);
-  letter-spacing:6px;
-  text-transform:uppercase;
-  margin-top:10px;
-}
-
-.hero-rule{
-  width:80px;height:1px;
-  background:linear-gradient(90deg,transparent,var(--accent),transparent);
-  margin:32px auto;
-}
-
-.hero-desc{
-  font-size:clamp(15px,1.8vw,18px);
-  color:#888;
-  line-height:1.8;
-  max-width:540px;
-  font-weight:300;
-}
-.hero-desc strong{color:var(--text);font-weight:500;}
-
-/* ── VU METER GRAPHIC (decorative) ── */
-.vu-graphic{
-  display:flex;gap:3px;align-items:flex-end;
-  height:40px;margin-top:32px;opacity:.35;
-}
-.vu-seg{
-  width:18px;border-radius:2px 2px 0 0;
-  animation:vuAnim 2s ease-in-out infinite;
-}
-.vu-seg:nth-child(1){height:12px;background:#20e880;animation-delay:0s;}
-.vu-seg:nth-child(2){height:22px;background:#20e880;animation-delay:.1s;}
-.vu-seg:nth-child(3){height:32px;background:#20e880;animation-delay:.2s;}
-.vu-seg:nth-child(4){height:38px;background:#e8e020;animation-delay:.15s;}
-.vu-seg:nth-child(5){height:40px;background:#e8e020;animation-delay:.05s;}
-.vu-seg:nth-child(6){height:34px;background:#e87020;animation-delay:.25s;}
-.vu-seg:nth-child(7){height:24px;background:#e82020;animation-delay:.3s;}
-@keyframes vuAnim{
-  0%,100%{transform:scaleY(1);}
-  50%{transform:scaleY(.4);}
-}
-
-/* hero bottom */
-.hero-bottom{
-  display:flex;align-items:center;justify-content:center;
-  gap:40px;
-  padding:24px 0 40px;
-  border-top:1px solid var(--border);
-  flex-wrap:wrap;
-}
-.hero-stat{text-align:center;}
-.hero-stat-num{
-  font-family:'Orbitron',sans-serif;
-  font-size:22px;font-weight:700;
-  color:var(--accent);
-  text-shadow:0 0 16px rgba(232,160,32,0.4);
-}
-.hero-stat-lbl{
-  font-family:'Share Tech Mono',monospace;
-  font-size:8px;color:var(--dim);
-  letter-spacing:2px;margin-top:3px;
-}
-.hero-stat-sep{
-  width:1px;height:36px;
-  background:linear-gradient(to bottom,transparent,var(--dim2),transparent);
-}
-
-/* ══════════════════════════════════════
-   FEATURES STRIP
-══════════════════════════════════════ */
-.features-strip{
-  border-top:1px solid var(--border);
-  border-bottom:1px solid var(--border);
-  background:var(--bg2);
-  padding:18px clamp(20px,5vw,80px);
-  display:flex;gap:32px;
-  overflow-x:auto;
-  scrollbar-width:none;
-}
-.features-strip::-webkit-scrollbar{display:none;}
-.feat-item{
-  display:flex;align-items:center;gap:8px;
-  white-space:nowrap;flex-shrink:0;
-}
-.feat-dot{
-  width:6px;height:6px;border-radius:50%;
-  background:var(--accent);
-  box-shadow:0 0 6px var(--accent);
-  flex-shrink:0;
-}
-.feat-text{
-  font-family:'Share Tech Mono',monospace;
-  font-size:10px;color:#666;letter-spacing:1px;
-}
-
-/* ══════════════════════════════════════
-   EMAIL CAPTURE SECTION
-══════════════════════════════════════ */
-.capture-section{
-  padding:80px clamp(20px,5vw,80px);
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:60px;
-  align-items:start;
-  max-width:1100px;
-  margin:0 auto;
-}
-@media(max-width:768px){
-  .capture-section{grid-template-columns:1fr;gap:40px;}
-}
-
-/* left: pitch */
-.pitch{display:flex;flex-direction:column;gap:20px;}
-.pitch-tag{
-  font-family:'Share Tech Mono',monospace;
-  font-size:9px;color:var(--accent2);
-  letter-spacing:4px;
-  display:flex;align-items:center;gap:8px;
-}
-.pitch-tag::before{
-  content:'';width:24px;height:1px;background:var(--accent2);
-}
-.pitch-title{
-  font-family:'Bebas Neue',sans-serif;
-  font-size:clamp(36px,5vw,56px);
-  line-height:1;
-  letter-spacing:3px;
-  color:#e8e8e8;
-}
-.pitch-title span{color:var(--accent);}
-.pitch-body{
-  font-size:15px;color:#666;line-height:1.9;
-  font-weight:300;
-}
-.pitch-body strong{color:#aaa;font-weight:500;}
-
-.pitch-list{
-  display:flex;flex-direction:column;gap:10px;
-  margin-top:4px;
-}
-.pitch-item{
-  display:flex;align-items:flex-start;gap:10px;
-  font-size:13px;color:#666;line-height:1.5;
-}
-.pitch-item-icon{
-  font-family:'Share Tech Mono',monospace;
-  font-size:9px;color:var(--accent);
-  letter-spacing:1px;
-  background:rgba(232,160,32,0.1);
-  border:1px solid rgba(232,160,32,0.2);
-  border-radius:2px;
-  padding:2px 5px;
-  margin-top:1px;
-  flex-shrink:0;
-}
-
-/* right: form card */
-.form-card{
-  background:#0e0e0e;
-  border:1px solid #1e1e1e;
-  border-radius:8px;
-  padding:36px;
-  position:relative;
-  overflow:hidden;
-}
-.form-card::before{
-  content:'';
-  position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,var(--accent),var(--accent2),transparent);
-}
-.form-card-tag{
-  font-family:'Share Tech Mono',monospace;
-  font-size:8px;color:var(--dim);
-  letter-spacing:3px;margin-bottom:20px;
-  display:flex;align-items:center;gap:6px;
-}
-.form-card-led{
-  width:6px;height:6px;border-radius:50%;
-  background:var(--green);
-  box-shadow:0 0 6px var(--green);
-  animation:ledBlink 2s ease-in-out infinite;
-}
-@keyframes ledBlink{0%,100%{opacity:1;}50%{opacity:.3;}}
-
-.form-card-title{
-  font-family:'Orbitron',sans-serif;
-  font-size:16px;font-weight:700;
-  color:var(--text);letter-spacing:2px;
-  margin-bottom:6px;
-  line-height:1.4;
-}
-.form-card-sub{
-  font-size:13px;color:var(--dim);
-  line-height:1.7;margin-bottom:28px;
-}
-
-/* form elements */
-.form-group{margin-bottom:16px;}
-.form-label{
-  font-family:'Share Tech Mono',monospace;
-  font-size:8px;color:var(--dim);
-  letter-spacing:2px;
-  display:block;margin-bottom:7px;
-}
-.form-input{
-  width:100%;
-  font-family:'Share Tech Mono',monospace;
-  font-size:12px;
-  padding:12px 14px;
-  background:#0a0a0a;
-  border:1px solid #2a2a2a;
-  border-radius:3px;
-  color:var(--text);
-  outline:none;
-  transition:border-color .2s,box-shadow .2s;
-  letter-spacing:.5px;
-}
-.form-input::placeholder{color:#333;}
-.form-input:focus{
-  border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(232,160,32,0.08);
-}
-
-.form-select{
-  width:100%;
-  font-family:'Share Tech Mono',monospace;
-  font-size:11px;
-  padding:12px 14px;
-  background:#0a0a0a;
-  border:1px solid #2a2a2a;
-  border-radius:3px;
-  color:var(--text);
-  outline:none;
-  cursor:pointer;
-  transition:border-color .2s;
-  appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;
-  background-position:right 12px center;
-}
-.form-select:focus{border-color:var(--accent);}
-.form-select option{background:#111;}
-
-.submit-btn{
-  width:100%;
-  font-family:'Share Tech Mono',monospace;
-  font-size:11px;letter-spacing:3px;
-  padding:16px;
-  border:1px solid var(--accent);
-  border-radius:3px;
-  background:rgba(232,160,32,0.08);
-  color:var(--accent);
-  cursor:pointer;
-  transition:all .25s;
-  margin-top:8px;
-  position:relative;
-  overflow:hidden;
-}
-.submit-btn::before{
-  content:'';
-  position:absolute;inset:0;
-  background:var(--accent);
-  transform:translateX(-100%);
-  transition:transform .3s cubic-bezier(0.4,0,0.2,1);
-}
-.submit-btn:hover::before{transform:translateX(0);}
-.submit-btn:hover{color:#000;border-color:var(--accent);}
-.submit-btn span{position:relative;z-index:1;}
-.submit-btn:disabled{opacity:.5;cursor:not-allowed;}
-
-.form-note{
-  font-size:11px;color:#333;
-  text-align:center;margin-top:14px;
-  line-height:1.6;
-}
-.form-note a{color:var(--dim);text-decoration:underline;text-underline-offset:3px;}
-
-/* ── SUCCESS STATE ── */
-.success-state{
-  display:none;
-  flex-direction:column;
-  align-items:center;
-  text-align:center;
-  gap:16px;
-  padding:20px 0;
-}
-.success-icon{
-  width:56px;height:56px;
-  border-radius:50%;
-  border:2px solid var(--green);
-  display:flex;align-items:center;justify-content:center;
-  animation:successPop .4s cubic-bezier(0.175,0.885,0.32,1.275);
-}
-@keyframes successPop{
-  0%{transform:scale(0);}100%{transform:scale(1);}
-}
-.success-title{
-  font-family:'Orbitron',sans-serif;
-  font-size:14px;color:var(--green);letter-spacing:2px;
-}
-.success-body{font-size:13px;color:var(--dim);line-height:1.7;}
-
-.launch-btn{
-  display:inline-flex;align-items:center;gap:10px;
-  font-family:'Share Tech Mono',monospace;
-  font-size:11px;letter-spacing:3px;
-  padding:16px 32px;
-  border:1px solid var(--accent);
-  border-radius:3px;
-  background:var(--accent);
-  color:#000;
-  text-decoration:none;
-  cursor:pointer;
-  transition:all .25s;
-  margin-top:8px;
-  font-weight:bold;
-}
-.launch-btn:hover{
-  background:transparent;
-  color:var(--accent);
-  box-shadow:0 0 24px rgba(232,160,32,0.3);
-}
-.launch-btn svg{transition:transform .2s;}
-.launch-btn:hover svg{transform:translateX(4px);}
-
-/* ══════════════════════════════════════
-   PREVIEW SECTION
-══════════════════════════════════════ */
-.preview-section{
-  padding:0 clamp(20px,5vw,80px) 80px;
-  max-width:1100px;margin:0 auto;
-}
-.preview-label{
-  font-family:'Share Tech Mono',monospace;
-  font-size:9px;color:var(--dim);
-  letter-spacing:4px;text-align:center;
-  margin-bottom:24px;
-  display:flex;align-items:center;justify-content:center;gap:16px;
-}
-.preview-label::before,.preview-label::after{
-  content:'';flex:1;height:1px;
-  background:linear-gradient(90deg,transparent,var(--dim2));
-}
-.preview-label::after{
-  background:linear-gradient(90deg,var(--dim2),transparent);
-}
-
-/* Console mockup */
-.console-mockup{
-  background:#111;
-  border:1px solid #1e1e1e;
-  border-radius:8px;
-  padding:20px;
-  overflow:hidden;
-  position:relative;
-}
-.console-mockup::after{
-  content:'';
-  position:absolute;inset:0;
-  background:linear-gradient(to bottom,transparent 60%,#0a0a0a);
-  pointer-events:none;
-}
-.mockup-topbar{
-  display:flex;align-items:center;gap:8px;
-  margin-bottom:16px;padding-bottom:12px;
-  border-bottom:1px solid #1e1e1e;
-}
-.mockup-dot{width:8px;height:8px;border-radius:50%;}
-.mockup-channels{display:flex;gap:5px;}
-.mockup-ch{
-  width:52px;
-  background:#1a1a1a;
-  border:1px solid #222;
-  border-radius:4px;
-  padding:6px 4px;
-  display:flex;flex-direction:column;
-  align-items:center;gap:4px;
-}
-.mockup-label{
-  font-family:'Orbitron',sans-serif;
-  font-size:6px;color:var(--accent);
-  letter-spacing:1px;text-align:center;
-  white-space:nowrap;overflow:hidden;width:100%;text-overflow:ellipsis;
-}
-.mockup-vu{
-  width:8px;height:40px;
-  background:#111;border-radius:2px;
-  position:relative;overflow:hidden;
-}
-.mockup-vu-bar{
-  position:absolute;bottom:0;width:100%;
-  border-radius:2px 2px 0 0;
-  animation:mockuVU 1.8s ease-in-out infinite;
-}
-@keyframes mockuVU{0%,100%{height:30%;}50%{height:85%;}}
-.mockup-fader{
-  width:6px;height:36px;
-  background:#0d0d0d;
-  border-radius:3px;
-  border:1px solid #2a2a2a;
-  position:relative;
-}
-.mockup-cap{
-  width:14px;height:8px;
-  background:linear-gradient(180deg,#555,#3a3a3a);
-  border:1px solid #666;
-  border-radius:2px;
-  position:absolute;
-  left:50%;transform:translateX(-50%);
-  top:35%;
-}
-
-/* ══════════════════════════════════════
-   TESTIMONIAL / CREDIBILITY
-══════════════════════════════════════ */
-.cred-section{
-  padding:60px clamp(20px,5vw,80px);
-  border-top:1px solid var(--border);
-  border-bottom:1px solid var(--border);
-  background:var(--bg2);
-}
-.cred-inner{
-  max-width:900px;margin:0 auto;
-  display:grid;grid-template-columns:1fr 2fr;
-  gap:48px;align-items:center;
-}
-@media(max-width:640px){.cred-inner{grid-template-columns:1fr;}}
-.cred-photo{
-  display:flex;flex-direction:column;align-items:center;gap:14px;
-}
-.cred-avatar{
-  width:88px;height:88px;
-  border-radius:50%;
-  border:2px solid var(--accent);
-  background:linear-gradient(135deg,#2a2a2a,#1a1a1a);
-  display:flex;align-items:center;justify-content:center;
-  overflow:hidden;
-  box-shadow:0 0 24px rgba(232,160,32,0.2);
-}
-.cred-avatar svg{opacity:.6;}
-.cred-name{
-  font-family:'Orbitron',sans-serif;
-  font-size:11px;font-weight:700;
-  color:var(--text);letter-spacing:2px;
-  text-align:center;
-}
-.cred-role{
-  font-family:'Share Tech Mono',monospace;
-  font-size:8px;color:var(--dim);
-  letter-spacing:2px;text-align:center;
-}
-.cred-ig{
-  display:flex;align-items:center;gap:5px;
-  font-family:'Share Tech Mono',monospace;
-  font-size:8px;color:var(--dim);
-  text-decoration:none;letter-spacing:1px;
-  padding:3px 8px;
-  border:1px solid #2a2a2a;border-radius:20px;
-  transition:all .2s;
-}
-.cred-ig:hover{color:var(--accent);border-color:var(--accent);}
-.cred-quote{display:flex;flex-direction:column;gap:16px;}
-.quote-mark{
-  font-family:'Bebas Neue',sans-serif;
-  font-size:60px;line-height:.8;
-  color:var(--accent);opacity:.3;
-}
-.quote-text{
-  font-size:17px;color:#aaa;
-  line-height:1.8;font-weight:300;
-  font-style:italic;
-}
-.quote-text strong{color:var(--text);font-style:normal;font-weight:500;}
-
-/* ══════════════════════════════════════
-   FOOTER
-══════════════════════════════════════ */
-.footer{
-  padding:32px clamp(20px,5vw,80px);
-  display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:16px;
-}
-.footer-logo{
-  font-family:'Orbitron',sans-serif;
-  font-size:10px;color:var(--dim);letter-spacing:3px;
-}
-.footer-logo span{color:var(--accent);}
-.footer-links{
-  display:flex;gap:20px;align-items:center;
-}
-.footer-link{
-  font-family:'Share Tech Mono',monospace;
-  font-size:9px;color:var(--dim);
-  text-decoration:none;letter-spacing:1px;
-  transition:color .15s;
-}
-.footer-link:hover{color:var(--accent);}
-
-/* ══════════════════════════════════════
-   ANIMATIONS
-══════════════════════════════════════ */
-.reveal{
-  opacity:0;transform:translateY(20px);
-  transition:opacity .7s cubic-bezier(0.4,0,0.2,1), transform .7s cubic-bezier(0.4,0,0.2,1);
-}
-.reveal.visible{opacity:1;transform:none;}
-
-/* stagger delays */
-.reveal-d1{transition-delay:.1s;}
-.reveal-d2{transition-delay:.2s;}
-.reveal-d3{transition-delay:.3s;}
-.reveal-d4{transition-delay:.4s;}
+/* QR */
+#qr{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(5,6,7,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:20px}
+#qr.open{display:flex}
+.qr-box{background:var(--chrome);border:1px solid var(--line);border-radius:20px;padding:24px;text-align:center;width:min(420px,100%)}
+.qr-box h3{font-family:var(--f-digits);font-weight:600;font-size:28px;margin:0 0 4px}
+.qr-box p{margin:0 0 16px;color:var(--muted);font-size:14px}
+.qr-img{background:#fff;border-radius:14px;padding:16px;margin:0 auto 14px;width:min(320px,100%);aspect-ratio:1}
+.qr-img svg{display:block;width:100%;height:100%}
+.qr-url{font-family:var(--f-digits);font-size:24px;font-weight:600;letter-spacing:.02em;margin-bottom:16px}
+.qr-actions{display:flex;gap:8px;justify-content:center}
 </style>
 </head>
 <body>
-<div class="grid-bg"></div>
-<div class="scanline"></div>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/">FADER<span>LAB</span></a>
+    <nav><a href="#novedades">Novedades</a><a href="https://www.instagram.com/faderlab.audio/" target="_blank" rel="noopener">Instagram</a></nav>
+  </header>
 
-<div class="page">
-
-  <!-- ══════════════════════════════════
-       HERO
-  ══════════════════════════════════ -->
   <section class="hero">
-    <div class="topbar">
-      <div class="logo-mark">FADER<span>LAB</span></div>
-      <div class="beta-badge">EARLY ACCESS BETA</div>
+    <p class="kicker">Herramientas de producción</p>
+    <h1>Tu caja de herramientas para audio, video y escenario.</h1>
+    <p>Apps gratuitas que abres en el navegador, en la compu o en el celular, sin instalar nada. Hechas por un ingeniero de audio en vivo, para resolver lo que pasa de verdad en un evento.</p>
+  </section>
+
+  <main id="tools"></main>
+
+  <section class="news" id="novedades">
+    <div>
+      <h2>Avísame cuando salga una herramienta nueva</h2>
+      <p>Seguimos agregando herramientas. Deja tu correo y te avisamos cuando haya algo nuevo.</p>
     </div>
-
-    <div class="hero-center">
-      <div class="eq-bars">
-        <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
-        <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
-        <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
-      </div>
-
-      <h1 class="hero-title">FADERLAB</h1>
-      <div class="hero-subtitle">Consola de mezcla · Web Audio Engine · 100% Browser</div>
-
-      <div class="hero-rule"></div>
-
-      <p class="hero-desc">
-        Una <strong>consola de mezcla digital completa</strong> que vive en tu navegador.
-        Sin instalaciones. Sin licencias. Diseñada por un ingeniero de audio
-        con 20 años en escenarios reales.
-      </p>
-
-      <div class="vu-graphic">
-        <div class="vu-seg"></div><div class="vu-seg"></div><div class="vu-seg"></div>
-        <div class="vu-seg"></div><div class="vu-seg"></div><div class="vu-seg"></div>
-        <div class="vu-seg"></div>
-      </div>
-    </div>
-
-    <div class="hero-bottom">
-      <div class="hero-stat">
-        <div class="hero-stat-num">16</div>
-        <div class="hero-stat-lbl">CANALES</div>
-      </div>
-      <div class="hero-stat-sep"></div>
-      <div class="hero-stat">
-        <div class="hero-stat-num">3</div>
-        <div class="hero-stat-lbl">BANDAS EQ</div>
-      </div>
-      <div class="hero-stat-sep"></div>
-      <div class="hero-stat">
-        <div class="hero-stat-num">4</div>
-        <div class="hero-stat-lbl">SENDS AUX/FX</div>
-      </div>
-      <div class="hero-stat-sep"></div>
-      <div class="hero-stat">
-        <div class="hero-stat-num">0</div>
-        <div class="hero-stat-lbl">INSTALACIONES</div>
-      </div>
-      <div class="hero-stat-sep"></div>
-      <div class="hero-stat">
-        <div class="hero-stat-num">∞</div>
-        <div class="hero-stat-lbl">PRÁCTICA</div>
+    <div>
+      <form id="newsForm" novalidate>
+        <input id="newsEmail" type="email" inputmode="email" autocomplete="email" placeholder="tu@correo.com" aria-label="Correo electrónico">
+        <button class="btn go" type="submit" id="newsBtn">Avísame</button>
+      </form>
+      <small>Sin spam. Solo novedades de FaderLab.</small>
+      <div class="done">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Listo, te avisaremos de lo nuevo.
       </div>
     </div>
   </section>
 
-  <!-- ══════════════════════════════════
-       FEATURES STRIP
-  ══════════════════════════════════ -->
-  <div class="features-strip">
-    <div class="feat-item"><div class="feat-dot"></div><div class="feat-text">GATE + COMPRESOR POR CANAL</div></div>
-    <div class="feat-item"><div class="feat-dot" style="background:var(--accent2);box-shadow:0 0 6px var(--accent2)"></div><div class="feat-text">EQ PARAMÉTRICO ±32dB</div></div>
-    <div class="feat-item"><div class="feat-dot"></div><div class="feat-text">VU METERS EN TIEMPO REAL</div></div>
-    <div class="feat-item"><div class="feat-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple)"></div><div class="feat-text">RTA SPECTRUM ANALYSER</div></div>
-    <div class="feat-item"><div class="feat-dot"></div><div class="feat-text">DCA GROUPS</div></div>
-    <div class="feat-item"><div class="feat-dot" style="background:var(--accent2);box-shadow:0 0 6px var(--accent2)"></div><div class="feat-text">REVERB + DELAY CON TAP TEMPO</div></div>
-    <div class="feat-item"><div class="feat-dot"></div><div class="feat-text">SCENE RECALL</div></div>
-    <div class="feat-item"><div class="feat-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple)"></div><div class="feat-text">SALIDA PFL INDEPENDIENTE</div></div>
-    <div class="feat-item"><div class="feat-dot"></div><div class="feat-text">AUDIO EN VIVO DESDE INTERFAZ</div></div>
-    <div class="feat-item"><div class="feat-dot" style="background:var(--accent2);box-shadow:0 0 6px var(--accent2)"></div><div class="feat-text">MODO NINJA 🥷</div></div>
-    <div class="feat-item"><div class="feat-dot"></div><div class="feat-text">EQ GRÁFICO 10 BANDAS EN MASTER</div></div>
-    <div class="feat-item"><div class="feat-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple)"></div><div class="feat-text">COMPRESOR EN MASTER BUS</div></div>
-  </div>
-
-  <!-- ══════════════════════════════════
-       CAPTURE + PITCH
-  ══════════════════════════════════ -->
-  <section class="capture-section">
-
-    <!-- LEFT: pitch -->
-    <div class="pitch reveal">
-      <div class="pitch-tag">EARLY ACCESS</div>
-      <h2 class="pitch-title">Aprende<br>mezclando<br><span>en vivo.</span></h2>
-      <p class="pitch-body">
-        FaderLab es una consola real corriendo en tu navegador.
-        No una simulación de juguete — <strong>el mismo motor de audio
-        que usarías en producción</strong>, accesible desde cualquier dispositivo,
-        sin instalar nada.
-      </p>
-
-      <div class="pitch-list">
-        <div class="pitch-item">
-          <span class="pitch-item-icon">FREE</span>
-          <span>Completamente gratis. Siempre. Sin registro de tarjeta.</span>
-        </div>
-        <div class="pitch-item">
-          <span class="pitch-item-icon">BETA</span>
-          <span>Estás entrando antes que nadie. Tu feedback construye la herramienta.</span>
-        </div>
-        <div class="pitch-item">
-          <span class="pitch-item-icon">NEXT</span>
-          <span>Los usuarios de esta lista tendrán acceso prioritario a <strong>FaderLab Academy</strong> y a <strong>FaderLab Expert</strong> cuando lancen.</span>
-        </div>
-        <div class="pitch-item">
-          <span class="pitch-item-icon">MX</span>
-          <span>Hecho en México, para ingenieros de audio de todo el mundo.</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT: form -->
-    <div class="form-card reveal reveal-d2">
-      <div class="form-card-tag">
-        <div class="form-card-led"></div>
-        SISTEMA EN LÍNEA · BETA ABIERTA
-      </div>
-      <div class="form-card-title">SOLICITAR<br>ACCESO GRATUITO</div>
-      <p class="form-card-sub">Deja tu email y accede al FaderLab ahora mismo.</p>
-
-      <!-- FORM STATE -->
-      <div id="formState">
-        <div class="form-group">
-          <label class="form-label" for="emailInput">EMAIL</label>
-          <input class="form-input" type="email" id="emailInput"
-            placeholder="tu@email.com" autocomplete="email" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="roleSelect">¿CUÁL ES TU PERFIL?</label>
-          <select class="form-select" id="roleSelect">
-            <option value="">— selecciona —</option>
-            <option value="estudiante">Estudiante de audio</option>
-            <option value="ingeniero">Ingeniero de audio / FOH</option>
-            <option value="musico">Músico / productor</option>
-            <option value="docente">Docente de audio</option>
-            <option value="curioso">Curioso del audio</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="countryInput">PAÍS (opcional)</label>
-          <input class="form-input" type="text" id="countryInput"
-            placeholder="México, Colombia, España...">
-        </div>
-        <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">
-          <span>ACCEDER AL FADERLAB →</span>
-        </button>
-        <p class="form-note">
-          Sin spam. Solo novedades de FaderLab.<br>
-          Al acceder aceptas compartir tu feedback para mejorar la herramienta.
-        </p>
-      </div>
-
-      <!-- SUCCESS STATE -->
-      <div class="success-state" id="successState">
-        <div class="success-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#20e880" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-        </div>
-        <div class="success-title">ACCESO CONCEDIDO</div>
-        <p class="success-body">
-          Ya eres parte de la beta de FaderLab.<br>
-          Te avisaremos cuando lancen Academy y Expert.
-        </p>
-        <a href="https://faderlab.mx/app.html" target="_blank" class="launch-btn">
-          <span>ABRIR FADERLAB →</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-          </svg>
-        </a>
-        <p style="font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:1px;margin-top:8px;">
-          ¿Algo no funciona? Escríbenos a
-          <a href="mailto:feedback@faderlab.mx" style="color:var(--dim);">feedback@faderlab.mx</a>
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══════════════════════════════════
-       CONSOLE PREVIEW
-  ══════════════════════════════════ -->
-  <section class="preview-section reveal">
-    <div class="preview-label">ASÍ SE VE EL FADERLAB</div>
-    <div class="console-mockup">
-      <div class="mockup-topbar">
-        <div class="mockup-dot" style="background:#e8a020;box-shadow:0 0 4px #e8a020;"></div>
-        <div style="font-family:'Orbitron',sans-serif;font-size:9px;color:#e8a020;letter-spacing:3px;">FADERLAB v1.0</div>
-        <div style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:8px;color:#333;">● LIVE · 16CH · WEB AUDIO</div>
-      </div>
-      <div class="mockup-channels" id="mockupChannels"></div>
-    </div>
-  </section>
-
-  <!-- ══════════════════════════════════
-       CREDIBILITY
-  ══════════════════════════════════ -->
-  <section class="cred-section">
-    <div class="cred-inner reveal">
-      <div class="cred-photo">
-        <div class="cred-avatar">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-        </div>
-        <div class="cred-name">JOE MENDOZA</div>
-        <div class="cred-role">INGENIERO DE AUDIO · DOCENTE TEC DE MONTERREY</div>
-        <a href="https://www.instagram.com/joeaudiopro/" target="_blank" class="cred-ig">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-          </svg>
-          @joeaudiopro
-        </a>
-      </div>
-      <div class="cred-quote">
-        <div class="quote-mark">"</div>
-        <p class="quote-text">
-          Después de 20 años en audio en vivo y 15 dando clases en el
-          <strong>Tec de Monterrey</strong>, construí la herramienta que me hubiera
-          gustado tener cuando yo aprendía. Sé lo difícil que es tener acceso a una
-          consola digital conectada a instrumentos, con todo el set listo para practicar.
-          FaderLab es exactamente eso: <strong>un simulador de horas de vuelo</strong>.
-          Para que cuando estés frente a una consola de verdad, no te tome tanto tiempo
-          llegar a los resultados que buscas.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══════════════════════════════════
-       FOOTER
-  ══════════════════════════════════ -->
-  <footer class="footer">
-    <div class="footer-logo">FADER<span>LAB</span> · v1.0</div>
-    <div class="footer-links">
-      <a href="https://faderlab.mx/app.html" class="footer-link" target="_blank">APP</a>
-      <a href="https://www.instagram.com/joeaudiopro/" class="footer-link" target="_blank">@joeaudiopro</a>
-      <a href="https://www.instagram.com/faderlab.audio/" class="footer-link" target="_blank">@faderlab.audio</a>
-      <a href="mailto:feedback@faderlab.mx" class="footer-link">FEEDBACK</a>
-    </div>
-    <div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#222;letter-spacing:1px;">
-      HECHO EN MÉXICO · WEB AUDIO API
-    </div>
+  <footer>
+    <div>Hecho en México por <strong>Joe Mendoza</strong> · Ingeniero de audio y docente</div>
+    <nav>
+      <a href="https://www.instagram.com/joeaudiopro/" target="_blank" rel="noopener">@joeaudiopro</a>
+      <a href="https://www.instagram.com/faderlab.audio/" target="_blank" rel="noopener">@faderlab.audio</a>
+      <a href="mailto:feedback@faderlab.mx">feedback@faderlab.mx</a>
+    </nav>
   </footer>
+</div>
 
-</div><!-- .page -->
+<div id="qr" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+  <div class="qr-box">
+    <h3 id="qrTitle"></h3>
+    <p>Escanéalo con la cámara del celular para abrirla.</p>
+    <div class="qr-img" id="qrImg"></div>
+    <div class="qr-url" id="qrUrl"></div>
+    <div class="qr-actions">
+      <button class="btn" id="qrCopy">Copiar enlace</button>
+      <button class="btn go" id="qrClose">Cerrar</button>
+    </div>
+  </div>
+</div>
 
 <script>
-// ══════════════════════════════════════
-//  CONSOLE MOCKUP GENERATOR
-// ══════════════════════════════════════
-const CH_LABELS = ['KICK','SNARE','HH','TOM','BASS','GTR L','GTR R','KEYS','VOZ','CORO','AUX 1','FX 1'];
-const CH_COLORS = ['#e82020','#e86020','#e8c020','#20c8e8','#a020e8','#20e880','#20e880','#c080ff','#e8a020','#e8a020','#20c8e8','#c080ff'];
-const CH_HEIGHTS= [85,60,40,70,90,55,50,65,80,75,35,45]; // % VU height
-const container = document.getElementById('mockupChannels');
+(() => {
+  // ───────── Catálogo ─────────
+  // Para agregar una herramienta: añade un objeto aquí (y su QR en QR_SVG si ya tiene dirección).
+  const ICONS = {
+    consola: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 3v18M12 3v18M19 3v18"/><rect x="3" y="13" width="4" height="3" rx="1" fill="currentColor"/><rect x="10" y="6" width="4" height="3" rx="1" fill="currentColor"/><rect x="17" y="10" width="4" height="3" rx="1" fill="currentColor"/></svg>',
+    traductor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/><path d="M10 9h4M12 8v1M10.5 12c1-1 2.2-2.2 2.5-3.5M11 10.5c.6.8 1.5 1.4 2.5 1.6"/></svg>',
+    temporizador: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4"/></svg>',
+    ratio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="11" rx="1.5"/><path d="M5 13.5 19 7.5" stroke-dasharray="2 2.5"/><path d="M12 16v3M8 20h8"/></svg>',
+  };
 
-CH_LABELS.forEach((label,i)=>{
-  const ch = document.createElement('div');
-  ch.className = 'mockup-ch';
-  ch.style.borderTopColor = CH_COLORS[i]+'55';
+  const GROUPS = [
+    { title: 'Audio', tools: [
+      { id: 'consola', name: 'Consola FaderLab', q: '¿Quieres practicar mezcla en vivo sin una consola real?',
+        desc: 'Consola digital de 16 canales con multitracks reales: EQ, dinámica, monitores, efectos y escenas. Tu simulador de horas de vuelo.',
+        tags: ['Ideal en compu', 'Con audífonos'], path: '/consola', label: 'Abrir consola' },
+      { id: 'traductor', name: 'Traductor simultáneo', q: '¿Tu evento necesita traducción en vivo?',
+        desc: 'Entra el audio desde tu interfaz y sale traducido en tiempo real, listo para mandar a un canal de la consola.',
+        tags: ['Próximamente'], soon: true },
+    ]},
+    { title: 'Escenario', tools: [
+      { id: 'temporizador', name: 'Temporizador de escenario', q: '¿Cuánto tiempo le queda al orador?',
+        desc: 'Cuenta regresiva a pantalla completa con reloj, mensajes para el talento y tu logo. Para monitores de piso, tablets o pantallas.',
+        tags: ['Funciona sin internet', 'Celular · tablet · pantalla'], path: '/temporizador', label: 'Abrir temporizador' },
+    ]},
+    { title: 'Video y pantallas', tools: [
+      { id: 'ratio', name: 'Ratio', q: '¿Cuánto debe medir de alto la pantalla?',
+        desc: 'Calcula ancho, alto y diagonal en cualquier relación (16:9, 4:3, 21:9…) y arma pantallas LED por módulos con su resolución.',
+        tags: ['Nueva', 'Funciona sin internet', 'Celular o compu'], path: '/ratio', label: 'Abrir Ratio' },
+    ]},
+  ];
 
-  const lbl = document.createElement('div');
-  lbl.className = 'mockup-label';
-  lbl.style.color = CH_COLORS[i];
-  lbl.textContent = label;
+  const QR_SVG = {
+"consola": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 29 29\" shape-rendering=\"crispEdges\"><path fill=\"#0b0c0e\" d=\"M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM5 0h1v1h-1zM6 0h1v1h-1zM8 0h1v1h-1zM11 0h1v1h-1zM13 0h1v1h-1zM14 0h1v1h-1zM15 0h1v1h-1zM18 0h1v1h-1zM22 0h1v1h-1zM23 0h1v1h-1zM24 0h1v1h-1zM25 0h1v1h-1zM26 0h1v1h-1zM27 0h1v1h-1zM28 0h1v1h-1zM0 1h1v1h-1zM6 1h1v1h-1zM9 1h1v1h-1zM11 1h1v1h-1zM15 1h1v1h-1zM17 1h1v1h-1zM18 1h1v1h-1zM20 1h1v1h-1zM22 1h1v1h-1zM28 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM8 2h1v1h-1zM10 2h1v1h-1zM13 2h1v1h-1zM17 2h1v1h-1zM18 2h1v1h-1zM22 2h1v1h-1zM24 2h1v1h-1zM25 2h1v1h-1zM26 2h1v1h-1zM28 2h1v1h-1zM0 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM10 3h1v1h-1zM15 3h1v1h-1zM16 3h1v1h-1zM17 3h1v1h-1zM18 3h1v1h-1zM19 3h1v1h-1zM22 3h1v1h-1zM24 3h1v1h-1zM25 3h1v1h-1zM26 3h1v1h-1zM28 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM6 4h1v1h-1zM11 4h1v1h-1zM15 4h1v1h-1zM16 4h1v1h-1zM17 4h1v1h-1zM22 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM26 4h1v1h-1zM28 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM9 5h1v1h-1zM12 5h1v1h-1zM13 5h1v1h-1zM14 5h1v1h-1zM16 5h1v1h-1zM17 5h1v1h-1zM20 5h1v1h-1zM22 5h1v1h-1zM28 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h1v1h-1zM23 6h1v1h-1zM24 6h1v1h-1zM25 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM28 6h1v1h-1zM11 7h1v1h-1zM12 7h1v1h-1zM13 7h1v1h-1zM18 7h1v1h-1zM19 7h1v1h-1zM0 8h1v1h-1zM2 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM10 8h1v1h-1zM11 8h1v1h-1zM12 8h1v1h-1zM13 8h1v1h-1zM15 8h1v1h-1zM16 8h1v1h-1zM19 8h1v1h-1zM20 8h1v1h-1zM23 8h1v1h-1zM26 8h1v1h-1zM28 8h1v1h-1zM1 9h1v1h-1zM2 9h1v1h-1zM3 9h1v1h-1zM8 9h1v1h-1zM9 9h1v1h-1zM11 9h1v1h-1zM16 9h1v1h-1zM17 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM21 9h1v1h-1zM22 9h1v1h-1zM23 9h1v1h-1zM27 9h1v1h-1zM28 9h1v1h-1zM4 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM9 10h1v1h-1zM13 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM19 10h1v1h-1zM21 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM25 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM0 11h1v1h-1zM1 11h1v1h-1zM2 11h1v1h-1zM3 11h1v1h-1zM4 11h1v1h-1zM8 11h1v1h-1zM10 11h1v1h-1zM12 11h1v1h-1zM14 11h1v1h-1zM15 11h1v1h-1zM16 11h1v1h-1zM18 11h1v1h-1zM19 11h1v1h-1zM20 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM25 11h1v1h-1zM0 12h1v1h-1zM4 12h1v1h-1zM5 12h1v1h-1zM6 12h1v1h-1zM8 12h1v1h-1zM9 12h1v1h-1zM11 12h1v1h-1zM13 12h1v1h-1zM14 12h1v1h-1zM20 12h1v1h-1zM22 12h1v1h-1zM23 12h1v1h-1zM28 12h1v1h-1zM1 13h1v1h-1zM3 13h1v1h-1zM5 13h1v1h-1zM7 13h1v1h-1zM11 13h1v1h-1zM12 13h1v1h-1zM13 13h1v1h-1zM14 13h1v1h-1zM17 13h1v1h-1zM19 13h1v1h-1zM22 13h1v1h-1zM23 13h1v1h-1zM27 13h1v1h-1zM28 13h1v1h-1zM0 14h1v1h-1zM1 14h1v1h-1zM4 14h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM12 14h1v1h-1zM15 14h1v1h-1zM17 14h1v1h-1zM19 14h1v1h-1zM20 14h1v1h-1zM23 14h1v1h-1zM24 14h1v1h-1zM28 14h1v1h-1zM2 15h1v1h-1zM3 15h1v1h-1zM11 15h1v1h-1zM12 15h1v1h-1zM13 15h1v1h-1zM23 15h1v1h-1zM2 16h1v1h-1zM4 16h1v1h-1zM5 16h1v1h-1zM6 16h1v1h-1zM12 16h1v1h-1zM13 16h1v1h-1zM15 16h1v1h-1zM16 16h1v1h-1zM22 16h1v1h-1zM23 16h1v1h-1zM28 16h1v1h-1zM4 17h1v1h-1zM7 17h1v1h-1zM8 17h1v1h-1zM9 17h1v1h-1zM10 17h1v1h-1zM11 17h1v1h-1zM16 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM22 17h1v1h-1zM23 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM28 17h1v1h-1zM0 18h1v1h-1zM1 18h1v1h-1zM3 18h1v1h-1zM5 18h1v1h-1zM6 18h1v1h-1zM7 18h1v1h-1zM11 18h1v1h-1zM13 18h1v1h-1zM14 18h1v1h-1zM16 18h1v1h-1zM17 18h1v1h-1zM18 18h1v1h-1zM19 18h1v1h-1zM21 18h1v1h-1zM22 18h1v1h-1zM24 18h1v1h-1zM25 18h1v1h-1zM28 18h1v1h-1zM8 19h1v1h-1zM11 19h1v1h-1zM12 19h1v1h-1zM14 19h1v1h-1zM15 19h1v1h-1zM16 19h1v1h-1zM18 19h1v1h-1zM20 19h1v1h-1zM21 19h1v1h-1zM0 20h1v1h-1zM1 20h1v1h-1zM2 20h1v1h-1zM4 20h1v1h-1zM5 20h1v1h-1zM6 20h1v1h-1zM7 20h1v1h-1zM12 20h1v1h-1zM13 20h1v1h-1zM14 20h1v1h-1zM17 20h1v1h-1zM18 20h1v1h-1zM20 20h1v1h-1zM21 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM24 20h1v1h-1zM25 20h1v1h-1zM27 20h1v1h-1zM8 21h1v1h-1zM9 21h1v1h-1zM10 21h1v1h-1zM11 21h1v1h-1zM13 21h1v1h-1zM14 21h1v1h-1zM17 21h1v1h-1zM20 21h1v1h-1zM24 21h1v1h-1zM25 21h1v1h-1zM26 21h1v1h-1zM28 21h1v1h-1zM0 22h1v1h-1zM1 22h1v1h-1zM2 22h1v1h-1zM3 22h1v1h-1zM4 22h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM8 22h1v1h-1zM12 22h1v1h-1zM15 22h1v1h-1zM20 22h1v1h-1zM22 22h1v1h-1zM24 22h1v1h-1zM28 22h1v1h-1zM0 23h1v1h-1zM6 23h1v1h-1zM10 23h1v1h-1zM11 23h1v1h-1zM12 23h1v1h-1zM13 23h1v1h-1zM17 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM24 23h1v1h-1zM27 23h1v1h-1zM28 23h1v1h-1zM0 24h1v1h-1zM2 24h1v1h-1zM3 24h1v1h-1zM4 24h1v1h-1zM6 24h1v1h-1zM9 24h1v1h-1zM13 24h1v1h-1zM15 24h1v1h-1zM16 24h1v1h-1zM17 24h1v1h-1zM19 24h1v1h-1zM20 24h1v1h-1zM21 24h1v1h-1zM22 24h1v1h-1zM23 24h1v1h-1zM24 24h1v1h-1zM25 24h1v1h-1zM27 24h1v1h-1zM0 25h1v1h-1zM2 25h1v1h-1zM3 25h1v1h-1zM4 25h1v1h-1zM6 25h1v1h-1zM9 25h1v1h-1zM11 25h1v1h-1zM12 25h1v1h-1zM16 25h1v1h-1zM20 25h1v1h-1zM21 25h1v1h-1zM24 25h1v1h-1zM25 25h1v1h-1zM26 25h1v1h-1zM27 25h1v1h-1zM0 26h1v1h-1zM2 26h1v1h-1zM3 26h1v1h-1zM4 26h1v1h-1zM6 26h1v1h-1zM8 26h1v1h-1zM9 26h1v1h-1zM11 26h1v1h-1zM13 26h1v1h-1zM14 26h1v1h-1zM16 26h1v1h-1zM17 26h1v1h-1zM18 26h1v1h-1zM21 26h1v1h-1zM24 26h1v1h-1zM27 26h1v1h-1zM28 26h1v1h-1zM0 27h1v1h-1zM6 27h1v1h-1zM9 27h1v1h-1zM10 27h1v1h-1zM11 27h1v1h-1zM12 27h1v1h-1zM13 27h1v1h-1zM15 27h1v1h-1zM16 27h1v1h-1zM18 27h1v1h-1zM20 27h1v1h-1zM24 27h1v1h-1zM25 27h1v1h-1zM0 28h1v1h-1zM1 28h1v1h-1zM2 28h1v1h-1zM3 28h1v1h-1zM4 28h1v1h-1zM5 28h1v1h-1zM6 28h1v1h-1zM8 28h1v1h-1zM9 28h1v1h-1zM12 28h1v1h-1zM14 28h1v1h-1zM17 28h1v1h-1zM18 28h1v1h-1zM19 28h1v1h-1zM20 28h1v1h-1zM21 28h1v1h-1zM24 28h1v1h-1zM25 28h1v1h-1zM28 28h1v1h-1z\"/></svg>",
+"temporizador": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 29 29\" shape-rendering=\"crispEdges\"><path fill=\"#0b0c0e\" d=\"M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM5 0h1v1h-1zM6 0h1v1h-1zM9 0h1v1h-1zM10 0h1v1h-1zM11 0h1v1h-1zM15 0h1v1h-1zM16 0h1v1h-1zM18 0h1v1h-1zM22 0h1v1h-1zM23 0h1v1h-1zM24 0h1v1h-1zM25 0h1v1h-1zM26 0h1v1h-1zM27 0h1v1h-1zM28 0h1v1h-1zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h1v1h-1zM10 1h1v1h-1zM11 1h1v1h-1zM12 1h1v1h-1zM13 1h1v1h-1zM14 1h1v1h-1zM16 1h1v1h-1zM20 1h1v1h-1zM22 1h1v1h-1zM28 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM8 2h1v1h-1zM9 2h1v1h-1zM12 2h1v1h-1zM13 2h1v1h-1zM15 2h1v1h-1zM20 2h1v1h-1zM22 2h1v1h-1zM24 2h1v1h-1zM25 2h1v1h-1zM26 2h1v1h-1zM28 2h1v1h-1zM0 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM8 3h1v1h-1zM11 3h1v1h-1zM16 3h1v1h-1zM17 3h1v1h-1zM20 3h1v1h-1zM22 3h1v1h-1zM24 3h1v1h-1zM25 3h1v1h-1zM26 3h1v1h-1zM28 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM6 4h1v1h-1zM9 4h1v1h-1zM12 4h1v1h-1zM15 4h1v1h-1zM16 4h1v1h-1zM19 4h1v1h-1zM20 4h1v1h-1zM22 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM26 4h1v1h-1zM28 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM9 5h1v1h-1zM10 5h1v1h-1zM11 5h1v1h-1zM12 5h1v1h-1zM15 5h1v1h-1zM18 5h1v1h-1zM22 5h1v1h-1zM28 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h1v1h-1zM23 6h1v1h-1zM24 6h1v1h-1zM25 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM28 6h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM11 7h1v1h-1zM12 7h1v1h-1zM14 7h1v1h-1zM15 7h1v1h-1zM16 7h1v1h-1zM18 7h1v1h-1zM20 7h1v1h-1zM0 8h1v1h-1zM6 8h1v1h-1zM8 8h1v1h-1zM11 8h1v1h-1zM16 8h1v1h-1zM17 8h1v1h-1zM20 8h1v1h-1zM21 8h1v1h-1zM22 8h1v1h-1zM25 8h1v1h-1zM26 8h1v1h-1zM27 8h1v1h-1zM1 9h1v1h-1zM3 9h1v1h-1zM4 9h1v1h-1zM8 9h1v1h-1zM9 9h1v1h-1zM10 9h1v1h-1zM13 9h1v1h-1zM16 9h1v1h-1zM17 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM21 9h1v1h-1zM23 9h1v1h-1zM24 9h1v1h-1zM26 9h1v1h-1zM27 9h1v1h-1zM3 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM12 10h1v1h-1zM13 10h1v1h-1zM14 10h1v1h-1zM15 10h1v1h-1zM16 10h1v1h-1zM17 10h1v1h-1zM20 10h1v1h-1zM21 10h1v1h-1zM23 10h1v1h-1zM24 10h1v1h-1zM0 11h1v1h-1zM1 11h1v1h-1zM5 11h1v1h-1zM9 11h1v1h-1zM10 11h1v1h-1zM11 11h1v1h-1zM13 11h1v1h-1zM19 11h1v1h-1zM20 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM24 11h1v1h-1zM25 11h1v1h-1zM0 12h1v1h-1zM1 12h1v1h-1zM5 12h1v1h-1zM6 12h1v1h-1zM8 12h1v1h-1zM9 12h1v1h-1zM10 12h1v1h-1zM13 12h1v1h-1zM15 12h1v1h-1zM16 12h1v1h-1zM20 12h1v1h-1zM22 12h1v1h-1zM23 12h1v1h-1zM28 12h1v1h-1zM0 13h1v1h-1zM2 13h1v1h-1zM3 13h1v1h-1zM5 13h1v1h-1zM8 13h1v1h-1zM11 13h1v1h-1zM16 13h1v1h-1zM19 13h1v1h-1zM22 13h1v1h-1zM23 13h1v1h-1zM24 13h1v1h-1zM27 13h1v1h-1zM28 13h1v1h-1zM0 14h1v1h-1zM2 14h1v1h-1zM4 14h1v1h-1zM6 14h1v1h-1zM9 14h1v1h-1zM11 14h1v1h-1zM17 14h1v1h-1zM18 14h1v1h-1zM22 14h1v1h-1zM24 14h1v1h-1zM25 14h1v1h-1zM26 14h1v1h-1zM0 15h1v1h-1zM2 15h1v1h-1zM4 15h1v1h-1zM5 15h1v1h-1zM11 15h1v1h-1zM15 15h1v1h-1zM18 15h1v1h-1zM20 15h1v1h-1zM22 15h1v1h-1zM23 15h1v1h-1zM24 15h1v1h-1zM26 15h1v1h-1zM28 15h1v1h-1zM0 16h1v1h-1zM1 16h1v1h-1zM4 16h1v1h-1zM6 16h1v1h-1zM7 16h1v1h-1zM12 16h1v1h-1zM17 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM25 16h1v1h-1zM26 16h1v1h-1zM0 17h1v1h-1zM1 17h1v1h-1zM3 17h1v1h-1zM4 17h1v1h-1zM5 17h1v1h-1zM7 17h1v1h-1zM9 17h1v1h-1zM11 17h1v1h-1zM12 17h1v1h-1zM13 17h1v1h-1zM14 17h1v1h-1zM17 17h1v1h-1zM18 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM22 17h1v1h-1zM23 17h1v1h-1zM24 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM28 17h1v1h-1zM0 18h1v1h-1zM1 18h1v1h-1zM6 18h1v1h-1zM7 18h1v1h-1zM8 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM15 18h1v1h-1zM16 18h1v1h-1zM17 18h1v1h-1zM18 18h1v1h-1zM19 18h1v1h-1zM21 18h1v1h-1zM22 18h1v1h-1zM24 18h1v1h-1zM25 18h1v1h-1zM28 18h1v1h-1zM0 19h1v1h-1zM5 19h1v1h-1zM9 19h1v1h-1zM10 19h1v1h-1zM11 19h1v1h-1zM13 19h1v1h-1zM15 19h1v1h-1zM20 19h1v1h-1zM21 19h1v1h-1zM24 19h1v1h-1zM0 20h1v1h-1zM2 20h1v1h-1zM3 20h1v1h-1zM4 20h1v1h-1zM5 20h1v1h-1zM6 20h1v1h-1zM7 20h1v1h-1zM8 20h1v1h-1zM9 20h1v1h-1zM12 20h1v1h-1zM14 20h1v1h-1zM15 20h1v1h-1zM16 20h1v1h-1zM17 20h1v1h-1zM19 20h1v1h-1zM20 20h1v1h-1zM21 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM24 20h1v1h-1zM26 20h1v1h-1zM27 20h1v1h-1zM28 20h1v1h-1zM8 21h1v1h-1zM9 21h1v1h-1zM10 21h1v1h-1zM11 21h1v1h-1zM14 21h1v1h-1zM15 21h1v1h-1zM17 21h1v1h-1zM20 21h1v1h-1zM24 21h1v1h-1zM25 21h1v1h-1zM0 22h1v1h-1zM1 22h1v1h-1zM2 22h1v1h-1zM3 22h1v1h-1zM4 22h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM11 22h1v1h-1zM12 22h1v1h-1zM15 22h1v1h-1zM16 22h1v1h-1zM17 22h1v1h-1zM18 22h1v1h-1zM19 22h1v1h-1zM20 22h1v1h-1zM22 22h1v1h-1zM24 22h1v1h-1zM25 22h1v1h-1zM26 22h1v1h-1zM0 23h1v1h-1zM6 23h1v1h-1zM9 23h1v1h-1zM14 23h1v1h-1zM15 23h1v1h-1zM16 23h1v1h-1zM18 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM24 23h1v1h-1zM0 24h1v1h-1zM2 24h1v1h-1zM3 24h1v1h-1zM4 24h1v1h-1zM6 24h1v1h-1zM9 24h1v1h-1zM10 24h1v1h-1zM13 24h1v1h-1zM14 24h1v1h-1zM16 24h1v1h-1zM19 24h1v1h-1zM20 24h1v1h-1zM21 24h1v1h-1zM22 24h1v1h-1zM23 24h1v1h-1zM24 24h1v1h-1zM25 24h1v1h-1zM27 24h1v1h-1zM28 24h1v1h-1zM0 25h1v1h-1zM2 25h1v1h-1zM3 25h1v1h-1zM4 25h1v1h-1zM6 25h1v1h-1zM10 25h1v1h-1zM14 25h1v1h-1zM15 25h1v1h-1zM16 25h1v1h-1zM18 25h1v1h-1zM20 25h1v1h-1zM21 25h1v1h-1zM25 25h1v1h-1zM26 25h1v1h-1zM28 25h1v1h-1zM0 26h1v1h-1zM2 26h1v1h-1zM3 26h1v1h-1zM4 26h1v1h-1zM6 26h1v1h-1zM9 26h1v1h-1zM12 26h1v1h-1zM15 26h1v1h-1zM18 26h1v1h-1zM19 26h1v1h-1zM20 26h1v1h-1zM21 26h1v1h-1zM22 26h1v1h-1zM23 26h1v1h-1zM24 26h1v1h-1zM25 26h1v1h-1zM26 26h1v1h-1zM27 26h1v1h-1zM0 27h1v1h-1zM6 27h1v1h-1zM9 27h1v1h-1zM11 27h1v1h-1zM13 27h1v1h-1zM22 27h1v1h-1zM25 27h1v1h-1zM26 27h1v1h-1zM28 27h1v1h-1zM0 28h1v1h-1zM1 28h1v1h-1zM2 28h1v1h-1zM3 28h1v1h-1zM4 28h1v1h-1zM5 28h1v1h-1zM6 28h1v1h-1zM8 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM13 28h1v1h-1zM14 28h1v1h-1zM15 28h1v1h-1zM17 28h1v1h-1zM21 28h1v1h-1zM22 28h1v1h-1zM23 28h1v1h-1zM24 28h1v1h-1zM26 28h1v1h-1z\"/></svg>",
+"ratio": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 25 25\" shape-rendering=\"crispEdges\"><path fill=\"#0b0c0e\" d=\"M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM5 0h1v1h-1zM6 0h1v1h-1zM8 0h1v1h-1zM11 0h1v1h-1zM12 0h1v1h-1zM14 0h1v1h-1zM18 0h1v1h-1zM19 0h1v1h-1zM20 0h1v1h-1zM21 0h1v1h-1zM22 0h1v1h-1zM23 0h1v1h-1zM24 0h1v1h-1zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h1v1h-1zM9 1h1v1h-1zM10 1h1v1h-1zM12 1h1v1h-1zM13 1h1v1h-1zM18 1h1v1h-1zM24 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM8 2h1v1h-1zM13 2h1v1h-1zM14 2h1v1h-1zM18 2h1v1h-1zM20 2h1v1h-1zM21 2h1v1h-1zM22 2h1v1h-1zM24 2h1v1h-1zM0 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM9 3h1v1h-1zM10 3h1v1h-1zM12 3h1v1h-1zM13 3h1v1h-1zM15 3h1v1h-1zM16 3h1v1h-1zM18 3h1v1h-1zM20 3h1v1h-1zM21 3h1v1h-1zM22 3h1v1h-1zM24 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM6 4h1v1h-1zM8 4h1v1h-1zM11 4h1v1h-1zM13 4h1v1h-1zM18 4h1v1h-1zM20 4h1v1h-1zM21 4h1v1h-1zM22 4h1v1h-1zM24 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM9 5h1v1h-1zM12 5h1v1h-1zM16 5h1v1h-1zM18 5h1v1h-1zM24 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM19 6h1v1h-1zM20 6h1v1h-1zM21 6h1v1h-1zM22 6h1v1h-1zM23 6h1v1h-1zM24 6h1v1h-1zM9 7h1v1h-1zM11 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM15 7h1v1h-1zM0 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM9 8h1v1h-1zM10 8h1v1h-1zM11 8h1v1h-1zM12 8h1v1h-1zM15 8h1v1h-1zM16 8h1v1h-1zM17 8h1v1h-1zM20 8h1v1h-1zM22 8h1v1h-1zM23 8h1v1h-1zM24 8h1v1h-1zM0 9h1v1h-1zM1 9h1v1h-1zM2 9h1v1h-1zM4 9h1v1h-1zM8 9h1v1h-1zM12 9h1v1h-1zM13 9h1v1h-1zM14 9h1v1h-1zM15 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM21 9h1v1h-1zM22 9h1v1h-1zM23 9h1v1h-1zM0 10h1v1h-1zM1 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM10 10h1v1h-1zM13 10h1v1h-1zM15 10h1v1h-1zM16 10h1v1h-1zM17 10h1v1h-1zM18 10h1v1h-1zM21 10h1v1h-1zM24 10h1v1h-1zM4 11h1v1h-1zM7 11h1v1h-1zM8 11h1v1h-1zM9 11h1v1h-1zM14 11h1v1h-1zM16 11h1v1h-1zM18 11h1v1h-1zM19 11h1v1h-1zM21 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM24 11h1v1h-1zM0 12h1v1h-1zM1 12h1v1h-1zM3 12h1v1h-1zM4 12h1v1h-1zM6 12h1v1h-1zM10 12h1v1h-1zM11 12h1v1h-1zM12 12h1v1h-1zM15 12h1v1h-1zM16 12h1v1h-1zM18 12h1v1h-1zM19 12h1v1h-1zM24 12h1v1h-1zM0 13h1v1h-1zM7 13h1v1h-1zM8 13h1v1h-1zM10 13h1v1h-1zM13 13h1v1h-1zM15 13h1v1h-1zM16 13h1v1h-1zM20 13h1v1h-1zM23 13h1v1h-1zM0 14h1v1h-1zM1 14h1v1h-1zM2 14h1v1h-1zM3 14h1v1h-1zM4 14h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM12 14h1v1h-1zM15 14h1v1h-1zM16 14h1v1h-1zM17 14h1v1h-1zM18 14h1v1h-1zM20 14h1v1h-1zM21 14h1v1h-1zM22 14h1v1h-1zM23 14h1v1h-1zM24 14h1v1h-1zM0 15h1v1h-1zM3 15h1v1h-1zM7 15h1v1h-1zM8 15h1v1h-1zM9 15h1v1h-1zM10 15h1v1h-1zM11 15h1v1h-1zM14 15h1v1h-1zM18 15h1v1h-1zM19 15h1v1h-1zM21 15h1v1h-1zM22 15h1v1h-1zM24 15h1v1h-1zM0 16h1v1h-1zM2 16h1v1h-1zM5 16h1v1h-1zM6 16h1v1h-1zM10 16h1v1h-1zM12 16h1v1h-1zM13 16h1v1h-1zM16 16h1v1h-1zM17 16h1v1h-1zM18 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM22 16h1v1h-1zM23 16h1v1h-1zM8 17h1v1h-1zM11 17h1v1h-1zM12 17h1v1h-1zM16 17h1v1h-1zM20 17h1v1h-1zM22 17h1v1h-1zM23 17h1v1h-1zM0 18h1v1h-1zM1 18h1v1h-1zM2 18h1v1h-1zM3 18h1v1h-1zM4 18h1v1h-1zM5 18h1v1h-1zM6 18h1v1h-1zM8 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM13 18h1v1h-1zM14 18h1v1h-1zM16 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM24 18h1v1h-1zM0 19h1v1h-1zM6 19h1v1h-1zM8 19h1v1h-1zM10 19h1v1h-1zM11 19h1v1h-1zM13 19h1v1h-1zM15 19h1v1h-1zM16 19h1v1h-1zM20 19h1v1h-1zM23 19h1v1h-1zM24 19h1v1h-1zM0 20h1v1h-1zM2 20h1v1h-1zM3 20h1v1h-1zM4 20h1v1h-1zM6 20h1v1h-1zM8 20h1v1h-1zM9 20h1v1h-1zM11 20h1v1h-1zM12 20h1v1h-1zM14 20h1v1h-1zM15 20h1v1h-1zM16 20h1v1h-1zM17 20h1v1h-1zM18 20h1v1h-1zM19 20h1v1h-1zM20 20h1v1h-1zM0 21h1v1h-1zM2 21h1v1h-1zM3 21h1v1h-1zM4 21h1v1h-1zM6 21h1v1h-1zM8 21h1v1h-1zM11 21h1v1h-1zM17 21h1v1h-1zM18 21h1v1h-1zM23 21h1v1h-1zM24 21h1v1h-1zM0 22h1v1h-1zM2 22h1v1h-1zM3 22h1v1h-1zM4 22h1v1h-1zM6 22h1v1h-1zM9 22h1v1h-1zM11 22h1v1h-1zM15 22h1v1h-1zM17 22h1v1h-1zM20 22h1v1h-1zM21 22h1v1h-1zM22 22h1v1h-1zM23 22h1v1h-1zM24 22h1v1h-1zM0 23h1v1h-1zM6 23h1v1h-1zM10 23h1v1h-1zM11 23h1v1h-1zM12 23h1v1h-1zM15 23h1v1h-1zM18 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM22 23h1v1h-1zM23 23h1v1h-1zM24 23h1v1h-1zM0 24h1v1h-1zM1 24h1v1h-1zM2 24h1v1h-1zM3 24h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM6 24h1v1h-1zM8 24h1v1h-1zM12 24h1v1h-1zM16 24h1v1h-1zM18 24h1v1h-1zM21 24h1v1h-1zM24 24h1v1h-1z\"/></svg>"
+};
 
-  const vu = document.createElement('div');
-  vu.className = 'mockup-vu';
-  const bar = document.createElement('div');
-  bar.className = 'mockup-vu-bar';
-  const h = CH_HEIGHTS[i];
-  bar.style.background = h>80?'#e82020':h>65?'#e8e020':'#20e880';
-  bar.style.animationDelay = (i*0.13)+'s';
-  bar.style.animationDuration = (1.4+i*0.08)+'s';
-  vu.appendChild(bar);
+  // ───────── Render ─────────
+  const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const qrIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3h-3"/></svg>';
+  const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 
-  const fdr = document.createElement('div');
-  fdr.className = 'mockup-fader';
-  const cap = document.createElement('div');
-  cap.className = 'mockup-cap';
-  cap.style.top = (20+Math.random()*40)+'%';
-  fdr.appendChild(cap);
+  const card = (t, area) => `
+          <article class="card${t.soon ? ' soon' : ''}" data-area="${esc(area)}">
+            <div class="card-top">
+              <div class="ico" aria-hidden="true">${ICONS[t.id] || ''}</div>
+              <div><p class="area">${esc(area)}</p><h3>${esc(t.name)}</h3><p class="q">${esc(t.q)}</p></div>
+            </div>
+            <p class="desc">${esc(t.desc)}</p>
+            <div class="tags">${t.tags.map(x => `<span class="tag${x === 'Nueva' ? ' new' : x === 'Próximamente' ? ' soon' : ''}">${esc(x)}</span>`).join('')}</div>
+            ${t.soon ? `<div class="soon-foot">En desarrollo · <a href="#novedades">Avísame cuando salga</a></div>` : `
+            <div class="card-foot">
+              <span class="url">faderlab.mx<b>${esc(t.path)}</b></span>
+              ${QR_SVG[t.id] ? `<button class="btn" data-qr="${t.id}" aria-label="Mostrar QR de ${esc(t.name)}">${qrIcon}QR</button>` : ''}
+              <a class="btn go" href="${t.path}/">${esc(t.label)}${arrow}</a>
+            </div>`}
+          </article>`;
 
-  ch.appendChild(lbl);
-  ch.appendChild(vu);
-  ch.appendChild(fdr);
-  container.appendChild(ch);
-});
+  const areas = GROUPS.map(g => g.title);
+  document.getElementById('tools').innerHTML = `
+    <div class="filters" role="group" aria-label="Filtrar por área">
+      ${['Todas', ...areas].map((a, i) => `<button data-f="${esc(a)}" class="${i ? '' : 'on'}" aria-pressed="${!i}">${esc(a)}</button>`).join('')}
+    </div>
+    <div class="cards">${GROUPS.flatMap(g => g.tools.map(t => card(t, g.title))).join('')}</div>`;
 
-// ══════════════════════════════════════
-//  FORM SUBMIT
-//  Uses Google Forms as backend —
-//  replace the URL and entry IDs with yours
-// ══════════════════════════════════════
-async function handleSubmit(){
-  const email   = document.getElementById('emailInput').value.trim();
-  const role    = document.getElementById('roleSelect').value;
-  const country = document.getElementById('countryInput').value.trim();
-  const btn     = document.getElementById('submitBtn');
+  document.querySelector('.filters').addEventListener('click', e => {
+    const b = e.target.closest('[data-f]'); if (!b) return;
+    const f = b.dataset.f;
+    document.querySelectorAll('.filters button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
+    document.querySelectorAll('.cards .card').forEach(c => c.hidden = f !== 'Todas' && c.dataset.area !== f);
+  });
 
-  if(!email || !email.includes('@')){
-    document.getElementById('emailInput').style.borderColor = '#e82020';
-    document.getElementById('emailInput').focus();
-    return;
-  }
-  document.getElementById('emailInput').style.borderColor = '';
+  // ───────── QR ─────────
+  const all = GROUPS.flatMap(g => g.tools);
+  const qr = document.getElementById('qr');
+  let current = null;
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-qr]');
+    if (!b) return;
+    current = all.find(t => t.id === b.dataset.qr);
+    document.getElementById('qrTitle').textContent = current.name;
+    document.getElementById('qrImg').innerHTML = QR_SVG[current.id];
+    document.getElementById('qrUrl').textContent = 'faderlab.mx' + current.path;
+    qr.classList.add('open');
+    document.getElementById('qrClose').focus();
+  });
+  const closeQr = () => qr.classList.remove('open');
+  document.getElementById('qrClose').onclick = closeQr;
+  qr.addEventListener('click', e => { if (e.target === qr) closeQr(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeQr(); });
+  document.getElementById('qrCopy').onclick = async e => {
+    const b = e.currentTarget;
+    try { await navigator.clipboard.writeText('https://faderlab.mx' + current.path); b.textContent = 'Copiado'; }
+    catch (_) { b.textContent = 'No se pudo'; }
+    setTimeout(() => b.textContent = 'Copiar enlace', 1400);
+  };
 
-  btn.disabled = true;
-  btn.querySelector('span').textContent = 'CONECTANDO...';
-
-  // ── GOOGLE FORMS INTEGRATION ──
-  // 1. Crea un Google Form con 3 campos: Email, Perfil, País
-  // 2. Abre el form, haz clic derecho → Ver código fuente
-  // 3. Busca "entry.XXXXXXXXX" para cada campo
-  // 4. Reemplaza los valores de abajo con tus entry IDs
-  // 5. Reemplaza FORM_ID con el ID de tu formulario
-
-  // Apps Script webhook — guarda directo en Google Sheets
+  // ───────── Novedades (mismo Apps Script / Google Sheet que el registro de la consola) ─────────
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzvagYbrAAf6rFO1Jsqh8e9QIDxCUhrY6jW062mQkN1-UgaKvP_H8SSf5r1-I4TFRZn/exec';
-  try {
-    await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, role, country })
-    });
-  } catch(e){ console.log('Apps Script fetch:', e); }
-
-  // Save to localStorage so we remember this user
-  localStorage.setItem('fl_access', JSON.stringify({
-    email, role, country,
-    ts: new Date().toISOString()
-  }));
-
-  // Show success state
-  document.getElementById('formState').style.display   = 'none';
-  document.getElementById('successState').style.display = 'flex';
-}
-
-// ── If already registered, show success state directly ──
-window.addEventListener('DOMContentLoaded', ()=>{
-  const saved = localStorage.getItem('fl_access');
-  if(saved){
-    document.getElementById('formState').style.display   = 'none';
-    document.getElementById('successState').style.display = 'flex';
-  }
-});
-
-// ══════════════════════════════════════
-//  SCROLL REVEAL
-// ══════════════════════════════════════
-const revealEls = document.querySelectorAll('.reveal');
-const observer  = new IntersectionObserver(entries=>{
-  entries.forEach(e=>{
-    if(e.isIntersecting) e.target.classList.add('visible');
+  const news = document.getElementById('novedades');
+  try { if (localStorage.getItem('fl_tools_news')) news.classList.add('ok'); } catch (_) {}
+  document.getElementById('newsForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const input = document.getElementById('newsEmail');
+    const email = input.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { input.classList.add('err'); input.focus(); return; }
+    input.classList.remove('err');
+    const btn = document.getElementById('newsBtn');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    try {
+      // "role" marca de dónde vino el registro para distinguirlo en la hoja
+      await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role: 'Novedades herramientas', country: '' }) });
+    } catch (_) {}
+    try { localStorage.setItem('fl_tools_news', JSON.stringify({ email, ts: new Date().toISOString() })); } catch (_) {}
+    news.classList.add('ok');
   });
-}, {threshold:.15});
-revealEls.forEach(el=>observer.observe(el));
-
-// Also reveal on load for above-fold elements
-setTimeout(()=>{
-  document.querySelectorAll('.reveal').forEach(el=>{
-    const rect = el.getBoundingClientRect();
-    if(rect.top < window.innerHeight) el.classList.add('visible');
-  });
-},100);
-
-// Enter key on form
-document.getElementById('emailInput').addEventListener('keydown',e=>{
-  if(e.key==='Enter') handleSubmit();
-});
+})();
 </script>
 </body>
 </html>
