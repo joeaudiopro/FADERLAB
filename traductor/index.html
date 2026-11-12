@@ -510,7 +510,7 @@ function initMain() {
   // ---------- sesión de traducción (WebRTC) ----------
   async function connect() {
     const { url, code } = cfg();
-    if (!code) { $("#cfgBtn").click(); throw new Error("Falta el código de acceso (Configuración)."); }
+    if (!code) { $("#cfgBtn").click(); const e = new Error("Falta el código de acceso (Configuración)."); e.fatal = true; throw e; }
     setStatus("busy", reconnectTries ? "Reconectando" : "Conectando");
     const r = await fetch(url + "/session", {
       method: "POST",
@@ -607,6 +607,7 @@ function initMain() {
   }));
 
   async function start() {
+    if (!cfg().code) { log("Escribe tu código de acceso en Configuración y vuelve a pulsar INICIAR.", true); $("#cfgBtn").click(); return; }
     $("#goBtn").disabled = true;
     try {
       ensureCtx();
