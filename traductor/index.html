@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a0a0a">
+<title>Traductor Simultáneo · FaderLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Mismo lenguaje visual que la consola: negro, ámbar como acento, cian para la señal traducida. */
+:root{
+  --bg:#0a0a0a; --bg2:#111; --bg3:#181818; --border:#242424;
+  --accent:#e8a020; --accent2:#20c8e8; --green:#20e880; --red:#e82020;
+  --text:#d4d4d4; --dim:#6a6a6a;
+  --f-head:"Bebas Neue",Impact,sans-serif; --f-mono:"Share Tech Mono",ui-monospace,monospace; --f-ui:"DM Sans",system-ui,sans-serif;
+  --subs-size:44px; --subs-bg:#000;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:15px}
+button,select,input{font:inherit;color:inherit}
+
+/* ---------- barra superior ---------- */
+header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:5}
+.brand{font-family:var(--f-head);font-size:26px;letter-spacing:.06em;line-height:1}
+.brand b{color:var(--accent);font-weight:400}
+.brand span{color:var(--dim);font-size:18px;margin-left:6px}
+.pill{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;padding:5px 10px;border:1px solid var(--border);border-radius:999px;display:flex;align-items:center;gap:8px;text-transform:uppercase}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.pill.live i{background:var(--red);box-shadow:0 0 10px var(--red)}
+.pill.live{color:#fff;border-color:#5a1a1a}
+.pill.busy i{background:var(--accent);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.clock{font-family:var(--f-mono);color:var(--dim);font-size:13px}
+.spacer{flex:1}
+.ghost{background:none;border:1px solid var(--border);border-radius:6px;padding:7px 12px;cursor:pointer;font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- layout ---------- */
+main{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:16px;padding:16px 20px 28px;max-width:1500px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr;padding:12px 16px 24px}header{padding:10px 16px;flex-wrap:wrap}}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 14px 16px}
+.card h2{font-family:var(--f-head);font-weight:400;font-size:20px;letter-spacing:.08em;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.card h2 small{font-family:var(--f-mono);font-size:11px;color:var(--dim);letter-spacing:.06em;margin-left:auto;text-transform:uppercase}
+.field{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.field>label,.lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+select,input[type=text],input[type=password],input[type=url]{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;min-width:0}
+select:focus,input:focus{outline:none;border-color:var(--accent)}
+.row{display:flex;gap:10px;align-items:center}
+.row>*{flex:1;min-width:0}
+.check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;cursor:pointer}
+.check input{accent-color:var(--accent);width:16px;height:16px}
+.hint{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.4}
+
+/* fader horizontal + medidor */
+.fader{display:grid;grid-template-columns:80px 1fr 56px;align-items:center;gap:10px;margin-top:12px}
+.fader output{font-family:var(--f-mono);font-size:12px;text-align:right;color:var(--text)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.meter{height:10px;border-radius:3px;background:#050505;border:1px solid var(--border);overflow:hidden;position:relative;margin-top:10px}
+.meter i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,#1a8f50 0%,var(--green) 65%,var(--accent) 85%,var(--red) 100%);background-size:var(--w,300px) 100%;transition:width .05s linear}
+.meter.cyan i{background:linear-gradient(90deg,#0f6070,var(--accent2) 80%,#fff)}
+.meter-row{display:grid;grid-template-columns:80px 1fr 56px;gap:10px;align-items:center}
+.meter-row .meter{margin-top:0}
+.meter-row output{font-family:var(--f-mono);font-size:12px;text-align:right;color:var(--dim)}
+
+/* botón principal */
+#goBtn{width:100%;padding:16px;border-radius:10px;border:1px solid #6b4a10;background:linear-gradient(#2a1d06,#1a1204);color:var(--accent);font-family:var(--f-head);font-size:28px;letter-spacing:.12em;cursor:pointer}
+#goBtn:hover{border-color:var(--accent)}
+#goBtn.on{background:linear-gradient(#3a0c0c,#200606);border-color:var(--red);color:#fff}
+#goBtn:disabled{opacity:.5;cursor:wait}
+
+/* ---------- subtítulos ---------- */
+.stage{position:relative;background:var(--subs-bg);border:1px solid var(--border);border-radius:10px;min-height:300px;display:flex;flex-direction:column;justify-content:flex-end;padding:28px 32px;overflow:hidden}
+.stage .empty{position:absolute;inset:0;display:grid;place-items:center;color:#3a3a3a;font-family:var(--f-mono);font-size:13px;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:20px}
+.subs{font-family:var(--f-ui);font-weight:500;font-size:var(--subs-size);line-height:1.22;color:#fff;text-wrap:pretty;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.subs .prev{color:rgba(255,255,255,.45)}
+.subs .src{display:block;font-size:.42em;color:rgba(255,255,255,.55);margin-top:.6em;font-weight:400}
+.stage.center{justify-content:center;text-align:center}
+.stage-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+.stage-tools .field{margin-top:0;flex:1;min-width:140px}
+.history{max-height:260px;overflow:auto;font-size:14px;line-height:1.5}
+.history p{margin:0 0 8px;padding-bottom:8px;border-bottom:1px dashed var(--border)}
+.history p small{display:block;color:var(--dim);font-size:12px}
+.history time{font-family:var(--f-mono);font-size:11px;color:var(--dim);margin-right:8px}
+.log{font-family:var(--f-mono);font-size:11px;color:var(--dim);max-height:110px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+.log .err{color:#ff7a6a}
+
+/* ---------- diálogo configuración ---------- */
+dialog{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:20px;width:min(440px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(0,0,0,.7)}
+dialog h3{font-family:var(--f-head);font-weight:400;font-size:24px;letter-spacing:.08em;margin:0 0 4px}
+dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px 0 0}
+
+/* ---------- vista solo subtítulos (ventana para proyector) ---------- */
+body.solo header,body.solo main{display:none}
+#soloStage{display:none}
+body.solo #soloStage{display:flex;position:fixed;inset:0;border:none;border-radius:0;padding:4vh 6vw}
+body.solo{cursor:none;background:var(--subs-bg)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><b>FADER</b>LAB<span>· TRADUCTOR</span></div>
+  <div class="pill" id="status"><i></i><span>Detenido</span></div>
+  <div class="clock" id="clock">00:00:00</div>
+  <div class="spacer"></div>
+  <a class="ghost" href="evento/" style="text-decoration:none" title="Varios idiomas a la vez; el público los sigue en su teléfono con un código QR">Modo evento (QR)</a>
+  <button class="ghost" id="popBtn" title="Abre una ventana solo con subtítulos para proyector o segunda pantalla">Ventana de subtítulos</button>
+  <button class="ghost" id="cfgBtn">Configuración</button>
+</header>
+
+<main>
+  <div class="col">
+    <section class="card">
+      <h2>Entrada <small id="inInfo">—</small></h2>
+      <div class="field"><label for="inDev">Interfaz / dispositivo</label><select id="inDev"></select></div>
+      <div class="field"><label for="inCh">Canal de entrada</label><select id="inCh"><option value="0">Ch 1</option></select></div>
+      <div class="fader"><span class="lbl">Ganancia</span><input type="range" id="inGain" min="-24" max="24" step="0.5" value="0"><output id="inGainOut">0.0 dB</output></div>
+      <div class="meter-row" style="margin-top:10px"><span class="lbl">Nivel</span><div class="meter"><i id="inMeter"></i></div><output id="inDb">-∞</output></div>
+      <div class="hint" id="permHint">Pulsa <b>Iniciar</b> o <a href="#" id="permLink" style="color:var(--accent)">permite el acceso al audio</a> para ver los nombres de tus dispositivos.</div>
+    </section>
+
+    <section class="card">
+      <h2>Traducción</h2>
+      <div class="field"><label for="lang">Traducir a</label><select id="lang"></select></div>
+      <div class="hint">El idioma de origen se detecta solo (70+ idiomas). Lo que ya venga en el idioma de salida no se vuelve a decir: por eso conviene dejar algo de original en la mezcla.</div>
+      <div class="field"><label for="nr">Reducción de ruido</label>
+        <select id="nr">
+          <option value="off">Apagada (línea / mezcla limpia)</option>
+          <option value="near_field">Campo cercano (micrófono de mano o diadema)</option>
+          <option value="far_field">Campo lejano (micrófono ambiental / sala)</option>
+        </select>
+      </div>
+      <label class="check"><input type="checkbox" id="srcTx" checked> Transcribir también el original</label>
+    </section>
+
+    <section class="card">
+      <h2>Salida <small id="outInfo">—</small></h2>
+      <div class="field"><label for="outDev">Dispositivo de salida</label><select id="outDev"></select></div>
+      <div class="field"><label for="outCh">Canales de salida</label><select id="outCh"><option value="s0">Ch 1-2</option></select></div>
+      <div class="fader"><span class="lbl">Traducción</span><input type="range" id="tGain" min="-60" max="12" step="0.5" value="0"><output id="tGainOut">0.0 dB</output></div>
+      <div class="fader"><span class="lbl">Original</span><input type="range" id="oGain" min="-60" max="0" step="0.5" value="-60"><output id="oGainOut">OFF</output></div>
+      <label class="check"><input type="checkbox" id="duck" checked> Bajar el original mientras habla la traducción (−12 dB)</label>
+      <div class="meter-row" style="margin-top:12px"><span class="lbl">Traducida</span><div class="meter cyan"><i id="tMeter"></i></div><output id="tDb">-∞</output></div>
+      <label class="check"><input type="checkbox" id="mute"> Silenciar salida de audio (solo subtítulos)</label>
+    </section>
+
+    <button id="goBtn">INICIAR</button>
+  </div>
+
+  <div class="col">
+    <section class="card">
+      <h2>Subtítulos <small>vista previa · lo que ve el público</small></h2>
+      <div class="stage" id="stage">
+        <div class="empty" id="stageEmpty">Los subtítulos aparecen aquí</div>
+        <div class="subs" id="subs"></div>
+      </div>
+      <div class="stage-tools">
+        <div class="field"><label for="subsSize">Tamaño</label><input type="range" id="subsSize" min="20" max="120" value="44"></div>
+        <div class="field"><label for="subsBg">Fondo</label>
+          <select id="subsBg"><option value="#000000">Negro</option><option value="#00b140">Verde (chroma)</option><option value="#0047bb">Azul (chroma)</option></select>
+        </div>
+        <div class="field"><label for="subsPos">Posición</label>
+          <select id="subsPos"><option value="bottom">Abajo</option><option value="center">Centro</option></select>
+        </div>
+        <label class="check" style="margin-top:18px"><input type="checkbox" id="subsSrc"> Mostrar original</label>
+        <button class="ghost" id="fsBtn" style="margin-top:18px">Pantalla completa</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Transcripción <small><a href="#" id="dlBtn" style="color:var(--accent)">Descargar .txt</a> · <a href="#" id="clrBtn" style="color:var(--dim)">Borrar</a></small></h2>
+      <div class="history" id="history"><p style="color:var(--dim);border:none">Aún no hay nada.</p></div>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+</main>
+
+<div class="stage" id="soloStage"><div class="subs" id="soloSubs"></div></div>
+
+<dialog id="cfg">
+  <form method="dialog">
+    <h3>Configuración</h3>
+    <div class="hint">Se guarda solo en este navegador.</div>
+    <div class="field"><label for="cfgUrl">URL del Worker</label><input type="url" id="cfgUrl" placeholder="https://traductor-api.faderlab.mx"></div>
+    <div class="field"><label for="cfgCode">Código de acceso</label><input type="password" id="cfgCode" autocomplete="off"></div>
+    <menu><button class="ghost" value="cancel">Cancelar</button><button class="ghost" value="ok" id="cfgOk" style="border-color:var(--accent);color:var(--accent)">Guardar</button></menu>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const DEFAULT_WORKER = "https://traductor-api.faderlab.mx";
+const OPENAI_CALLS = "https://api.openai.com/v1/realtime/translations/calls";
+const LANGS = [["es","Español"],["en","Inglés"],["pt","Portugués"],["fr","Francés"],["de","Alemán"],["it","Italiano"],["ja","Japonés"],["zh","Chino"],["ko","Coreano"],["ru","Ruso"],["hi","Hindi"],["id","Indonesio"],["vi","Vietnamita"]];
+const DUCK_DB = -12, DUCK_THRESH = 0.01; // umbral RMS (~ −40 dBFS) de la traducción para activar el ducking
+const PAUSE_MS = 2200;                    // pausa que cierra un renglón de subtítulo
+const CLEAR_MS = 9000;                    // silencio que limpia la pantalla
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("trad." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("trad." + k, JSON.stringify(v)); } catch {} },
+};
+const bc = ("BroadcastChannel" in window) ? new BroadcastChannel("faderlab-traductor") : null;
+const SOLO = new URLSearchParams(location.search).get("vista") === "subtitulos";
+
+/* ================= Subtítulos (compartido por ambas vistas) ================= */
+const subsState = { prev: "", cur: "", src: "", style: { size: 44, bg: "#000000", pos: "bottom", showSrc: false } };
+function esc(s) { return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+function tail(s, n) { if (s.length <= n) return s; const cut = s.slice(-n); const i = cut.indexOf(" "); return "…" + (i > 0 ? cut.slice(i + 1) : cut); }
+function renderSubs(el, stage, scale) {
+  const st = subsState.style;
+  stage.style.setProperty("--subs-bg", st.bg);
+  document.documentElement.style.setProperty("--subs-bg", st.bg);
+  el.style.fontSize = scale ? `calc(${st.size}px * ${scale})` : st.size + "px";
+  stage.classList.toggle("center", st.pos === "center");
+  const room = Math.max(60, Math.round(9000 / st.size)); // menos caracteres cuanto más grande la letra
+  let html = "";
+  if (subsState.prev && subsState.cur.length < room * 0.6) html += `<span class="prev">${esc(tail(subsState.prev, Math.round(room * 0.6)))}</span> `;
+  html += esc(tail(subsState.cur, room));
+  if (st.showSrc && subsState.src) html += `<span class="src">${esc(tail(subsState.src, Math.round(room * 1.4)))}</span>`;
+  el.innerHTML = html;
+}
+
+if (SOLO) {
+  document.body.classList.add("solo");
+  document.title = "Subtítulos · FaderLab";
+  const draw = () => renderSubs($("#soloSubs"), $("#soloStage"), Math.max(1, innerWidth / 1100));
+  bc?.addEventListener("message", (e) => { if (e.data?.type === "subs") { Object.assign(subsState, e.data.state); draw(); } });
+  bc?.postMessage({ type: "hello" });
+  addEventListener("resize", draw);
+  addEventListener("dblclick", () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.());
+} else {
+  initMain();
+}
+
+/* ================= Consola principal ================= */
+function initMain() {
+  // ---------- estado ----------
+  let ctx = null;
+  const A = {}; // nodos de audio
+  let inStream = null, pc = null, dc = null, remoteEl = null;
+  let running = false, stopping = false, reconnectTries = 0, reconnectTimer = null, discTimer = null;
+  let startedAt = 0, lastDelta = 0;
+  const history = []; // {t, text, src}
+  let segSrc = "";
+
+  // ---------- utilidades UI ----------
+  const log = (msg, err) => {
+    const d = document.createElement("div");
+    if (err) d.className = "err";
+    d.textContent = new Date().toLocaleTimeString() + "  " + msg;
+    $("#log").prepend(d);
+    while ($("#log").childNodes.length > 60) $("#log").lastChild.remove();
+  };
+  const setStatus = (kind, text) => {
+    $("#status").className = "pill " + kind;
+    $("#status span").textContent = text;
+  };
+  const db2g = (db) => db <= -60 ? 0 : Math.pow(10, db / 20);
+  const fmtDb = (db, off) => (off && db <= -60) ? "OFF" : (db > 0 ? "+" : "") + Number(db).toFixed(1) + " dB";
+
+  // ---------- controles persistentes ----------
+  $("#lang").innerHTML = LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join("");
+  const persisted = ["lang", "nr", "inGain", "tGain", "oGain", "subsSize", "subsBg", "subsPos"];
+  const checks = ["srcTx", "duck", "mute", "subsSrc"];
+  persisted.forEach((id) => { const v = store.get(id, null); if (v !== null) $("#" + id).value = v; });
+  checks.forEach((id) => { const v = store.get(id, null); if (v !== null) $("#" + id).checked = v; });
+  if (store.get("lang", null) === null) $("#lang").value = "en";
+  persisted.forEach((id) => $("#" + id).addEventListener("change", () => store.set(id, $("#" + id).value)));
+  checks.forEach((id) => $("#" + id).addEventListener("change", () => store.set(id, $("#" + id).checked)));
+
+  // ---------- subtítulos (vista previa + ventana) ----------
+  function pushSubs() {
+    const s = subsState.style;
+    s.size = +$("#subsSize").value; s.bg = $("#subsBg").value; s.pos = $("#subsPos").value; s.showSrc = $("#subsSrc").checked;
+    $("#stageEmpty").style.display = (subsState.cur || subsState.prev) ? "none" : "";
+    renderSubs($("#subs"), $("#stage"), 0);
+    bc?.postMessage({ type: "subs", state: { prev: subsState.prev, cur: subsState.cur, src: subsState.src, style: { ...s } } });
+  }
+  ["subsSize", "subsBg", "subsPos", "subsSrc"].forEach((id) => $("#" + id).addEventListener("input", pushSubs));
+  bc?.addEventListener("message", (e) => { if (e.data?.type === "hello") pushSubs(); });
+  pushSubs();
+
+  $("#popBtn").onclick = () => window.open(location.pathname + "?vista=subtitulos", "faderlab-subs", "width=1280,height=400");
+  $("#fsBtn").onclick = () => $("#stage").requestFullscreen?.();
+
+  function onTranslated(delta) {
+    lastDelta = performance.now();
+    subsState.cur += delta;
+    pushSubs();
+  }
+  function onSource(delta) { subsState.src += delta; segSrc += delta; pushSubs(); }
+  function closeSegment() {
+    const text = subsState.cur.trim();
+    if (!text) return;
+    history.push({ t: new Date(), text, src: segSrc.trim() });
+    addHistory(history[history.length - 1]);
+    subsState.prev = text; subsState.cur = ""; subsState.src = ""; segSrc = "";
+    pushSubs();
+  }
+  setInterval(() => {
+    if (!lastDelta) return;
+    const idle = performance.now() - lastDelta;
+    if (subsState.cur && idle > PAUSE_MS) closeSegment();
+    if (!subsState.cur && subsState.prev && idle > CLEAR_MS) { subsState.prev = ""; subsState.src = ""; pushSubs(); }
+  }, 300);
+
+  function addHistory(h) {
+    const box = $("#history");
+    if (history.length === 1) box.innerHTML = "";
+    const p = document.createElement("p");
+    p.innerHTML = `<time>${h.t.toLocaleTimeString()}</time>${esc(h.text)}` + (h.src ? `<small>${esc(h.src)}</small>` : "");
+    box.appendChild(p);
+    box.scrollTop = box.scrollHeight;
+  }
+  $("#dlBtn").onclick = (e) => {
+    e.preventDefault();
+    if (subsState.cur) closeSegment();
+    const txt = history.map((h) => `[${h.t.toLocaleTimeString()}] ${h.text}` + (h.src ? `\n    (${h.src})` : "")).join("\n\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([txt], { type: "text/plain;charset=utf-8" }));
+    a.download = `traduccion-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.txt`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $("#clrBtn").onclick = (e) => { e.preventDefault(); history.length = 0; $("#history").innerHTML = '<p style="color:var(--dim);border:none">Aún no hay nada.</p>'; };
+
+  // ---------- configuración ----------
+  const cfg = () => ({ url: (store.get("workerUrl", "") || DEFAULT_WORKER).replace(/\/+$/, ""), code: store.get("code", "") });
+  $("#cfgBtn").onclick = () => { $("#cfgUrl").value = store.get("workerUrl", "") || DEFAULT_WORKER; $("#cfgCode").value = store.get("code", ""); $("#cfg").showModal(); };
+  $("#cfg").addEventListener("close", () => {
+    if ($("#cfg").returnValue !== "ok") return;
+    store.set("workerUrl", $("#cfgUrl").value.trim()); store.set("code", $("#cfgCode").value);
+    log("Configuración guardada.");
+  });
+
+  // ---------- dispositivos ----------
+  async function listDevices() {
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const fill = (sel, kind, key) => {
+      const want = store.get(key, sel.value || "");
+      const list = devs.filter((d) => d.kind === kind);
+      sel.innerHTML = list.map((d, i) => `<option value="${d.deviceId}">${esc(d.label || (kind === "audioinput" ? "Entrada " : "Salida ") + (i + 1))}</option>`).join("");
+      if (list.some((d) => d.deviceId === want)) sel.value = want;
+    };
+    fill($("#inDev"), "audioinput", "inDev");
+    fill($("#outDev"), "audiooutput", "outDev");
+    if (devs.some((d) => d.label)) $("#permHint").style.display = "none";
+    if (!$("#outDev").options.length) $("#outDev").innerHTML = '<option value="">Salida del sistema</option>';
+  }
+  $("#permLink").onclick = async (e) => {
+    e.preventDefault();
+    try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach((t) => t.stop()); await listDevices(); }
+    catch (err) { log("Sin permiso de audio: " + err.message, true); }
+  };
+  navigator.mediaDevices.addEventListener?.("devicechange", listDevices);
+  listDevices();
+
+  // ---------- grafo de audio ----------
+  function ensureCtx() {
+    if (ctx) return;
+    ctx = new AudioContext({ latencyHint: "interactive" });
+    // Señal mono a mandar a OpenAI
+    A.inSel = ctx.createGain();
+    A.inSel.channelCount = 1; A.inSel.channelCountMode = "explicit";
+    A.inGain = ctx.createGain();
+    A.inAn = ctx.createAnalyser(); A.inAn.fftSize = 1024;
+    A.send = ctx.createMediaStreamDestination(); A.send.channelCount = 1;
+    A.inSel.connect(A.inGain); A.inGain.connect(A.inAn); A.inGain.connect(A.send);
+    // Mezcla de salida: traducción + original (con ducking)
+    A.tMono = ctx.createGain(); A.tMono.channelCount = 1; A.tMono.channelCountMode = "explicit";
+    A.tGain = ctx.createGain();
+    A.tAn = ctx.createAnalyser(); A.tAn.fftSize = 1024;
+    A.oGain = ctx.createGain(); A.oGain.gain.value = 0;
+    A.outMono = ctx.createGain(); A.outMono.channelCount = 1; A.outMono.channelCountMode = "explicit";
+    A.tMono.connect(A.tAn); A.tMono.connect(A.tGain); A.tGain.connect(A.outMono);
+    A.inGain.connect(A.oGain); A.oGain.connect(A.outMono);
+    buildOutput();
+    applyLevels();
+    requestAnimationFrame(meterLoop);
+  }
+
+  function buildOutput() {
+    try { A.merger?.disconnect(); } catch {}
+    try { A.outMono.disconnect(); } catch {}
+    const dest = ctx.destination;
+    const max = Math.max(2, dest.maxChannelCount || 2);
+    dest.channelCount = max; dest.channelCountMode = "explicit"; dest.channelInterpretation = "discrete";
+    A.merger = ctx.createChannelMerger(max);
+    A.merger.connect(dest);
+    // opciones: pares estéreo y canales sueltos
+    const sel = $("#outCh"), want = store.get("outCh", sel.value || "s0");
+    let html = "";
+    for (let i = 0; i + 1 < max; i += 2) html += `<option value="s${i}">Ch ${i + 1}-${i + 2} (estéreo)</option>`;
+    for (let i = 0; i < max; i++) html += `<option value="m${i}">Ch ${i + 1} (mono)</option>`;
+    sel.innerHTML = html;
+    if ([...sel.options].some((o) => o.value === want)) sel.value = want;
+    $("#outInfo").textContent = max + " canales";
+    routeOutput();
+  }
+  function routeOutput() {
+    if (!ctx) return;
+    try { A.outMono.disconnect(); } catch {}
+    const v = $("#outCh").value || "s0", ch = +v.slice(1);
+    A.outMono.connect(A.merger, 0, ch);
+    if (v[0] === "s") A.outMono.connect(A.merger, 0, ch + 1);
+  }
+  $("#outCh").addEventListener("change", () => { store.set("outCh", $("#outCh").value); routeOutput(); });
+
+  $("#outDev").addEventListener("change", async () => {
+    store.set("outDev", $("#outDev").value);
+    if (ctx) await applySink();
+  });
+  async function applySink() {
+    const id = $("#outDev").value;
+    if (!ctx.setSinkId) { log("Este navegador no permite elegir salida desde Web Audio; usa Chrome o Edge.", true); return; }
+    try { await ctx.setSinkId(id || ""); buildOutput(); log("Salida: " + ($("#outDev").selectedOptions[0]?.text || "sistema")); }
+    catch (err) { log("No pude abrir la salida: " + err.message, true); }
+  }
+
+  async function openInput() {
+    ensureCtx();
+    closeInput();
+    const id = $("#inDev").value;
+    inStream = await navigator.mediaDevices.getUserMedia({ audio: {
+      deviceId: id ? { exact: id } : undefined,
+      echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+      channelCount: { ideal: 32 },
+    } });
+    await listDevices();
+    const track = inStream.getAudioTracks()[0];
+    if (id) $("#inDev").value = id;
+    const n = Math.max(1, track.getSettings().channelCount || 2);
+    A.inSrc = ctx.createMediaStreamSource(inStream);
+    A.split = ctx.createChannelSplitter(n);
+    A.inSrc.connect(A.split);
+    const sel = $("#inCh"), want = store.get("inCh", sel.value || "0");
+    let html = "";
+    for (let i = 0; i < n; i++) html += `<option value="${i}">Ch ${i + 1}</option>`;
+    for (let i = 0; i + 1 < n; i += 2) html += `<option value="${i}+">Ch ${i + 1}+${i + 2} (suma)</option>`;
+    sel.innerHTML = html;
+    if ([...sel.options].some((o) => o.value === want)) sel.value = want;
+    $("#inInfo").textContent = n + (n === 1 ? " canal" : " canales");
+    routeInput();
+    track.addEventListener("ended", () => { log("La entrada se desconectó.", true); if (running) stop(); });
+  }
+  function closeInput() {
+    try { A.split?.disconnect(); A.inSrc?.disconnect(); } catch {}
+    inStream?.getTracks().forEach((t) => t.stop());
+    inStream = null;
+  }
+  function routeInput() {
+    if (!A.split) return;
+    try { A.split.disconnect(); } catch {}
+    const v = $("#inCh").value, ch = parseInt(v, 10) || 0;
+    A.split.connect(A.inSel, ch);
+    A.inSel.gain.value = 1;
+    if (v.endsWith("+")) { A.split.connect(A.inSel, ch + 1); A.inSel.gain.value = 0.5; }
+  }
+  $("#inCh").addEventListener("change", () => { store.set("inCh", $("#inCh").value); routeInput(); });
+  $("#inDev").addEventListener("change", async () => {
+    store.set("inDev", $("#inDev").value);
+    if (ctx && inStream) { try { await openInput(); log("Entrada: " + $("#inDev").selectedOptions[0]?.text); } catch (err) { log("No pude abrir la entrada: " + err.message, true); } }
+  });
+
+  function applyLevels() {
+    const ig = +$("#inGain").value, tg = +$("#tGain").value, og = +$("#oGain").value;
+    $("#inGainOut").textContent = fmtDb(ig); $("#tGainOut").textContent = fmtDb(tg, true); $("#oGainOut").textContent = fmtDb(og, true);
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    A.inGain.gain.setTargetAtTime(db2g(ig), now, 0.02);
+    A.tGain.gain.setTargetAtTime($("#mute").checked ? 0 : db2g(tg), now, 0.02);
+    A.oBase = $("#mute").checked ? 0 : db2g(og);
+  }
+  ["inGain", "tGain", "oGain"].forEach((id) => $("#" + id).addEventListener("input", applyLevels));
+  $("#mute").addEventListener("change", applyLevels);
+  applyLevels();
+
+  // medidores + ducking
+  const buf = new Float32Array(1024);
+  let ducked = null;
+  function rms(an) { an.getFloatTimeDomainData(buf); let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i]; return Math.sqrt(s / buf.length); }
+  function showMeter(bar, out, r) {
+    const db = r > 0 ? 20 * Math.log10(r) : -Infinity;
+    const pct = Math.max(0, Math.min(100, (db + 60) / 60 * 100));
+    bar.style.width = pct + "%";
+    bar.style.setProperty("--w", (bar.parentElement.clientWidth || 300) + "px");
+    out.textContent = isFinite(db) && db > -60 ? db.toFixed(0) + " dB" : "-∞";
+  }
+  function meterLoop() {
+    const ri = rms(A.inAn), rt = rms(A.tAn);
+    showMeter($("#inMeter"), $("#inDb"), ri);
+    showMeter($("#tMeter"), $("#tDb"), rt);
+    const duck = $("#duck").checked && rt > DUCK_THRESH;
+    const target = (A.oBase || 0) * (duck ? db2g(DUCK_DB) : 1);
+    if (target !== ducked) { A.oGain.gain.setTargetAtTime(target, ctx.currentTime, duck ? 0.05 : 0.6); ducked = target; }
+    if (running && startedAt) {
+      const s = Math.floor((Date.now() - startedAt) / 1000);
+      $("#clock").textContent = [s / 3600, (s % 3600) / 60, s % 60].map((x) => String(Math.floor(x)).padStart(2, "0")).join(":");
+    }
+    requestAnimationFrame(meterLoop);
+  }
+
+  // ---------- sesión de traducción (WebRTC) ----------
+  async function connect() {
+    const { url, code } = cfg();
+    if (!code) { $("#cfgBtn").click(); throw new Error("Falta el código de acceso (Configuración)."); }
+    setStatus("busy", reconnectTries ? "Reconectando" : "Conectando");
+    const r = await fetch(url + "/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Access-Code": code },
+      body: JSON.stringify({ targetLanguage: $("#lang").value, noiseReduction: $("#nr").value, sourceTranscript: $("#srcTx").checked }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.value) { const e = new Error(data.error || "El Worker respondió " + r.status); e.fatal = [400, 401, 403, 500].includes(r.status); throw e; }
+
+    const conn = new RTCPeerConnection();
+    pc = conn;
+    conn.addTrack(A.send.stream.getAudioTracks()[0], A.send.stream);
+    conn.ontrack = (e) => attachRemote(e.streams[0] || new MediaStream([e.track]));
+    const ch = conn.createDataChannel("oai-events");
+    dc = ch;
+    ch.onmessage = (e) => onEvent(e.data);
+    ch.onclose = () => { if (pc === conn) dropped("canal de eventos cerrado"); };
+    conn.onconnectionstatechange = () => {
+      if (pc !== conn) return;
+      const s = conn.connectionState;
+      if (s === "connected") {
+        clearTimeout(discTimer);
+        reconnectTries = 0;
+        setStatus("live", "En vivo · " + $("#lang").selectedOptions[0].text);
+        log("Conectado.");
+      } else if (s === "failed" || s === "closed") dropped("conexión " + s);
+      else if (s === "disconnected") { clearTimeout(discTimer); discTimer = setTimeout(() => { if (pc === conn && conn.connectionState === "disconnected") dropped("sin red"); }, 4000); }
+    };
+    const offer = await conn.createOffer();
+    await conn.setLocalDescription(offer);
+    const sdp = await fetch(OPENAI_CALLS, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + data.value, "Content-Type": "application/sdp" },
+      body: offer.sdp,
+    });
+    const answer = await sdp.text();
+    if (!sdp.ok) throw new Error("OpenAI " + sdp.status + ": " + answer.slice(0, 200));
+    if (pc !== conn) return; // se detuvo mientras conectaba
+    await conn.setRemoteDescription({ type: "answer", sdp: answer });
+  }
+
+  function attachRemote(stream) {
+    // Chrome solo entrega audio WebRTC a Web Audio si un <audio> lo está "reproduciendo" (silenciado).
+    if (!remoteEl) { remoteEl = new Audio(); remoteEl.muted = true; remoteEl.autoplay = true; }
+    remoteEl.srcObject = stream;
+    remoteEl.play().catch(() => {});
+    try { A.tSrc?.disconnect(); } catch {}
+    A.tSrc = ctx.createMediaStreamSource(stream);
+    A.tSrc.connect(A.tMono);
+  }
+
+  const seen = new Set();
+  function onEvent(raw) {
+    let ev; try { ev = JSON.parse(raw); } catch { return; }
+    const t = ev.type || "";
+    if (t === "session.output_transcript.delta") onTranslated(ev.delta || "");
+    else if (t === "session.input_transcript.delta") onSource(ev.delta || "");
+    else if (t === "error" || ev.error) log("OpenAI: " + (ev.error?.message || JSON.stringify(ev).slice(0, 200)), true);
+    else if (!seen.has(t)) { seen.add(t); log("evento: " + t); }
+  }
+
+  function closePc() {
+    const old = pc; pc = null; dc = null;
+    clearTimeout(discTimer);
+    try { old?.getSenders().forEach((s) => s.replaceTrack?.(null)); } catch {}
+    try { old?.close(); } catch {}
+  }
+
+  function dropped(why) {
+    if (!running || stopping) return;
+    closePc();
+    log("Se cayó la sesión (" + why + ").", true);
+    scheduleReconnect();
+  }
+  function scheduleReconnect() {
+    clearTimeout(reconnectTimer);
+    if (reconnectTries >= 10) { log("No pude reconectar después de 10 intentos.", true); stop(); return; }
+    const wait = [500, 1000, 2000, 4000, 8000][Math.min(reconnectTries, 4)];
+    reconnectTries++;
+    setStatus("busy", "Reconectando");
+    reconnectTimer = setTimeout(async () => {
+      try { await connect(); }
+      catch (err) { log(err.message, true); if (err.fatal) stop(); else scheduleReconnect(); }
+    }, wait);
+  }
+
+  // Cambiar idioma u opciones en vivo = nueva sesión (cada sesión tiene un solo idioma de salida)
+  ["lang", "nr", "srcTx"].forEach((id) => $("#" + id).addEventListener("change", () => {
+    if (!running) return;
+    closeSegment();
+    log("Reiniciando sesión con la nueva configuración…");
+    closePc(); reconnectTries = 0;
+    connect().catch((err) => { log(err.message, true); if (err.fatal) stop(); else scheduleReconnect(); });
+  }));
+
+  async function start() {
+    $("#goBtn").disabled = true;
+    try {
+      ensureCtx();
+      await ctx.resume();
+      await openInput();
+      await applySink();
+      running = true; stopping = false; reconnectTries = 0; startedAt = Date.now();
+      $("#goBtn").textContent = "DETENER"; $("#goBtn").classList.add("on");
+      await connect();
+    } catch (err) {
+      log(err.message, true);
+      if (running && !err.fatal && err.name !== "NotAllowedError") scheduleReconnect();
+      else stop();
+    } finally { $("#goBtn").disabled = false; }
+  }
+  function stop() {
+    stopping = true; running = false;
+    clearTimeout(reconnectTimer);
+    closePc();
+    closeInput();
+    try { A.tSrc?.disconnect(); } catch {}
+    if (remoteEl) remoteEl.srcObject = null;
+    closeSegment();
+    setStatus("", "Detenido");
+    $("#goBtn").textContent = "INICIAR"; $("#goBtn").classList.remove("on");
+  }
+  $("#goBtn").onclick = () => running ? stop() : start();
+  addEventListener("beforeunload", (e) => { if (running) { e.preventDefault(); e.returnValue = ""; } });
+
+  if (!cfg().code) log("Primero abre Configuración y escribe el código de acceso del Worker.");
+}
+</script>
+</body>
+</html>

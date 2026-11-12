@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a0a0a">
+<title>Sala de Traducción · FaderLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Mismo lenguaje visual que /traductor: negro, ámbar de acento, cian para señal traducida. */
+:root{
+  --bg:#0a0a0a; --bg2:#111; --bg3:#181818; --border:#242424;
+  --accent:#e8a020; --accent2:#20c8e8; --green:#20e880; --red:#e82020;
+  --text:#d4d4d4; --dim:#6a6a6a;
+  --f-head:"Bebas Neue",Impact,sans-serif; --f-mono:"Share Tech Mono",ui-monospace,monospace; --f-ui:"DM Sans",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:15px}
+button,select,input{font:inherit;color:inherit}
+a{color:var(--accent)}
+
+header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:5}
+.brand{font-family:var(--f-head);font-size:26px;letter-spacing:.06em;line-height:1;white-space:nowrap}
+.brand b{color:var(--accent);font-weight:400}
+.brand span{color:var(--dim);font-size:18px;margin-left:6px}
+.pill{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;padding:5px 10px;border:1px solid var(--border);border-radius:999px;display:flex;align-items:center;gap:8px;text-transform:uppercase;white-space:nowrap}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.pill.live i{background:var(--red);box-shadow:0 0 10px var(--red)}
+.pill.live{color:#fff;border-color:#5a1a1a}
+.pill.busy i{background:var(--accent);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.clock{font-family:var(--f-mono);color:var(--dim);font-size:13px}
+.spacer{flex:1}
+.ghost{background:none;border:1px solid var(--border);border-radius:6px;padding:7px 12px;cursor:pointer;font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text);text-decoration:none;white-space:nowrap}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.ghost.danger:hover{border-color:var(--red);color:#ff7a6a}
+
+main{display:grid;grid-template-columns:minmax(300px,390px) 1fr;gap:16px;padding:16px 20px 28px;max-width:1500px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr;padding:12px 16px 24px}header{padding:10px 16px;flex-wrap:wrap}}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 14px 16px}
+.card h2{font-family:var(--f-head);font-weight:400;font-size:20px;letter-spacing:.08em;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.card h2 small{font-family:var(--f-mono);font-size:11px;color:var(--dim);letter-spacing:.06em;margin-left:auto;text-transform:uppercase}
+.field{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.field>label,.lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+select,input[type=text],input[type=password],input[type=url]{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;min-width:0}
+select:focus,input:focus{outline:none;border-color:var(--accent)}
+.hint{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.45}
+.fader{display:grid;grid-template-columns:80px 1fr 56px;align-items:center;gap:10px;margin-top:12px}
+.fader output,.meter-row output{font-family:var(--f-mono);font-size:12px;text-align:right}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.meter-row{display:grid;grid-template-columns:80px 1fr 56px;gap:10px;align-items:center;margin-top:10px}
+.meter{height:10px;border-radius:3px;background:#050505;border:1px solid var(--border);overflow:hidden;position:relative}
+.meter i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,#1a8f50 0%,var(--green) 65%,var(--accent) 85%,var(--red) 100%);background-size:var(--w,300px) 100%;transition:width .05s linear}
+
+/* chips de idioma */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.chip span{display:block;padding:6px 10px;border:1px solid var(--border);border-radius:999px;font-size:13px;cursor:pointer;background:var(--bg3);user-select:none}
+.chip input:checked+span{border-color:var(--accent2);color:#fff;background:#0b2a30}
+.chip input:focus-visible+span{outline:2px solid var(--accent)}
+.chip input:disabled+span{cursor:default;opacity:.55}
+.chip input:disabled:checked+span{opacity:1}
+
+.big{width:100%;padding:16px;border-radius:10px;border:1px solid #6b4a10;background:linear-gradient(#2a1d06,#1a1204);color:var(--accent);font-family:var(--f-head);font-size:28px;letter-spacing:.12em;cursor:pointer}
+.big:hover{border-color:var(--accent)}
+.big.on{background:linear-gradient(#3a0c0c,#200606);border-color:var(--red);color:#fff}
+.big:disabled{opacity:.45;cursor:not-allowed}
+.big.small{font-size:22px;padding:12px}
+
+/* sala */
+.roomcode{font-family:var(--f-mono);font-size:34px;letter-spacing:.18em;color:#fff}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:8px}
+.kv dt{color:var(--dim);font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+.kv dd{margin:0}
+
+/* QR */
+.qrwrap{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:center}
+@media (max-width:560px){.qrwrap{grid-template-columns:1fr}}
+.qr{background:#fff;border-radius:10px;padding:10px;aspect-ratio:1;display:grid;place-items:center}
+.qr svg{width:100%;height:100%;display:block}
+.qr.off{background:var(--bg3);color:var(--dim);font-family:var(--f-mono);font-size:12px;text-align:center;padding:20px}
+.url{font-family:var(--f-mono);font-size:13px;word-break:break-all;color:var(--accent2)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+
+/* idiomas en vivo */
+.langs{display:flex;flex-direction:column;gap:8px}
+.lrow{display:grid;grid-template-columns:120px 1fr 64px;gap:12px;align-items:start;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3)}
+.lrow .nm{font-family:var(--f-head);font-size:20px;letter-spacing:.06em;display:flex;align-items:center;gap:8px;line-height:1.1}
+.lrow .nm i{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+.lrow.live .nm i{background:var(--green);box-shadow:0 0 8px var(--green)}
+.lrow.busy .nm i{background:var(--accent);animation:blink 1s infinite}
+.lrow.err .nm i{background:var(--red)}
+.lrow .tx{font-size:14px;line-height:1.4;color:#fff;min-height:2.8em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.lrow .tx .old{color:var(--dim)}
+.lrow .ct{font-family:var(--f-mono);text-align:right;font-size:20px;color:var(--accent2);line-height:1}
+.lrow .ct small{display:block;font-size:10px;color:var(--dim);letter-spacing:.06em;margin-top:3px}
+@media (max-width:560px){.lrow{grid-template-columns:1fr 56px}.lrow .tx{grid-column:1/-1;grid-row:2}}
+.totals{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--f-mono);font-size:12px;color:var(--dim);margin-top:10px;text-transform:uppercase;letter-spacing:.06em}
+.totals b{color:var(--text);font-size:16px;font-weight:400;margin-left:4px}
+.log{font-family:var(--f-mono);font-size:11px;color:var(--dim);max-height:130px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+.log .err{color:#ff7a6a}
+
+dialog{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:20px;width:min(440px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(0,0,0,.7)}
+dialog h3{font-family:var(--f-head);font-weight:400;font-size:24px;letter-spacing:.08em;margin:0 0 4px}
+dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px 0 0}
+
+/* QR a pantalla completa (proyector / pantalla de bienvenida) */
+#qrFull{position:fixed;inset:0;z-index:20;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:3vh;padding:4vh 4vw;text-align:center;cursor:none}
+#qrFull.on{display:flex}
+#qrFull .t{font-family:var(--f-head);font-size:clamp(28px,6vh,72px);letter-spacing:.06em;color:#fff;line-height:1}
+#qrFull .qr{width:min(58vh,80vw);padding:2.4vh}
+#qrFull .msg{font-size:clamp(16px,2.8vh,30px);color:#ddd;line-height:1.35}
+#qrFull .msg span{display:block;color:#888;font-size:.8em}
+#qrFull .u{font-family:var(--f-mono);font-size:clamp(14px,2.4vh,26px);color:var(--accent2)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><b>FADER</b>LAB<span>· SALA DE TRADUCCIÓN</span></div>
+  <div class="pill" id="status"><i></i><span>Sin sala</span></div>
+  <div class="clock" id="clock">00:00:00</div>
+  <div class="spacer"></div>
+  <a class="ghost" href="../">Traductor sencillo</a>
+  <button class="ghost" id="cfgBtn">Configuración</button>
+</header>
+
+<main>
+  <div class="col">
+    <!-- 1. Sala -->
+    <section class="card" id="roomCard">
+      <h2>1 · Sala <small id="roomState">nueva</small></h2>
+      <div id="roomNew">
+        <div class="field"><label for="title">Nombre del evento (lo ve el público)</label><input type="text" id="title" maxlength="80" placeholder="Congreso Anual 2026"></div>
+        <div class="field"><span class="lbl">Idiomas que ofreces</span><div class="chips" id="langChips"></div></div>
+        <div class="field"><span class="lbl">Además</span><div class="chips"><label class="chip"><input type="checkbox" id="srcOpt" checked><span>Original (subtítulos del idioma que se habla)</span></label></div></div>
+        <div class="hint">No marques el idioma en que habla el orador: el modelo no "traduce" lo que ya está en ese idioma y esos oyentes se quedarían sin texto. Para ellos está <b>Original</b>.<br>Cada idioma es una sesión de traducción aparte: el costo crece por idioma, no por persona.</div>
+        <button class="big small" id="createBtn" style="margin-top:14px">CREAR SALA</button>
+      </div>
+      <div id="roomOn" hidden>
+        <div class="roomcode" id="roomCode">——————</div>
+        <dl class="kv">
+          <dt>Evento</dt><dd id="roomTitle">—</dd>
+          <dt>Idiomas</dt><dd id="roomLangs">—</dd>
+          <dt>Vence</dt><dd id="roomExp">—</dd>
+        </dl>
+        <div class="btns"><button class="ghost danger" id="endBtn">Terminar sala</button></div>
+        <div class="hint">La sala sigue abierta si recargas esta página. Al terminarla, los teléfonos ven "evento terminado" y el código deja de servir.</div>
+      </div>
+    </section>
+
+    <!-- 2. Entrada -->
+    <section class="card">
+      <h2>2 · Entrada <small id="inInfo">—</small></h2>
+      <div class="field"><label for="inDev">Interfaz / dispositivo</label><select id="inDev"></select></div>
+      <div class="field"><label for="inCh">Canal</label><select id="inCh"><option value="0">Ch 1</option></select></div>
+      <div class="fader"><span class="lbl">Ganancia</span><input type="range" id="inGain" min="-24" max="24" step="0.5" value="0"><output id="inGainOut">0.0 dB</output></div>
+      <div class="meter-row"><span class="lbl">Nivel</span><div class="meter"><i id="inMeter"></i></div><output id="inDb">-∞</output></div>
+      <div class="field"><label for="nr">Reducción de ruido</label>
+        <select id="nr">
+          <option value="off">Apagada (línea / mezcla limpia)</option>
+          <option value="near_field">Campo cercano (micrófono de mano o diadema)</option>
+          <option value="far_field">Campo lejano (micrófono ambiental / sala)</option>
+        </select>
+      </div>
+      <div class="hint" id="permHint"><a href="#" id="permLink">Permite el acceso al audio</a> para ver los nombres de tus dispositivos.</div>
+    </section>
+
+    <!-- 3. Monitor -->
+    <section class="card">
+      <h2>3 · Monitor <small>para el operador</small></h2>
+      <div class="field"><label for="monLang">Escuchar</label><select id="monLang"><option value="">— Nada —</option></select></div>
+      <div class="field"><label for="outDev">Salida</label><select id="outDev"></select></div>
+      <div class="fader"><span class="lbl">Volumen</span><input type="range" id="monVol" min="0" max="100" value="80"><output id="monVolOut">80%</output></div>
+    </section>
+
+    <button class="big" id="goBtn" disabled>INICIAR TRADUCCIÓN</button>
+  </div>
+
+  <div class="col">
+    <!-- QR -->
+    <section class="card">
+      <h2>Código QR <small>el público escanea aquí</small></h2>
+      <div class="qrwrap">
+        <div class="qr off" id="qrBox">Crea la sala para generar el QR</div>
+        <div>
+          <div class="lbl">Enlace</div>
+          <div class="url" id="qrUrl">—</div>
+          <div class="btns">
+            <button class="ghost" id="fullBtn" disabled>Pantalla completa</button>
+            <button class="ghost" id="copyBtn" disabled>Copiar enlace</button>
+            <button class="ghost" id="svgBtn" disabled>Descargar QR (SVG)</button>
+            <a class="ghost" id="openBtn" target="_blank" rel="noopener" aria-disabled="true">Ver como público</a>
+          </div>
+          <div class="hint">Para imprimir en mesas o gafetes, descarga el SVG: escala sin perder calidad. En pantalla completa, doble clic o Esc para salir.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- En vivo -->
+    <section class="card">
+      <h2>Idiomas en vivo <small id="hostWs">sala desconectada</small></h2>
+      <div class="langs" id="langRows"><div class="hint">Aquí verás cada idioma, lo que se está diciendo y cuántas personas lo siguen.</div></div>
+      <div class="totals">
+        <span>Público<b id="totListeners">0</b></span>
+        <span>Idiomas activos<b id="totLangs">0</b></span>
+        <span>Minutos-idioma<b id="totMin">0</b></span>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+</main>
+
+<div id="qrFull" title="Doble clic para salir">
+  <div class="t" id="qfTitle"></div>
+  <div class="qr" id="qfQr"></div>
+  <div class="msg">Escanea para ver la traducción en tu teléfono<span>Scan to follow the live translation on your phone</span></div>
+  <div class="u" id="qfUrl"></div>
+</div>
+
+<dialog id="cfg">
+  <form method="dialog">
+    <h3>Configuración</h3>
+    <div class="hint">La misma que usa el traductor sencillo. Se guarda solo en este navegador.</div>
+    <div class="field"><label for="cfgUrl">URL del Worker</label><input type="url" id="cfgUrl" placeholder="https://traductor-api.faderlab.mx"></div>
+    <div class="field"><label for="cfgCode">Código de acceso</label><input type="password" id="cfgCode" autocomplete="off"></div>
+    <menu><button class="ghost" value="cancel">Cancelar</button><button class="ghost" value="ok" style="border-color:var(--accent);color:var(--accent)">Guardar</button></menu>
+  </form>
+</dialog>
+
+<script src="../lib/qrcode.js"></script>
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const DEFAULT_WORKER = "https://traductor-api.faderlab.mx";
+const OPENAI_CALLS = "https://api.openai.com/v1/realtime/translations/calls";
+const LANGS = [["en","Inglés"],["es","Español"],["pt","Portugués"],["fr","Francés"],["de","Alemán"],["it","Italiano"],["ja","Japonés"],["zh","Chino"],["ko","Coreano"],["ru","Ruso"],["hi","Hindi"],["id","Indonesio"],["vi","Vietnamita"]];
+const LNAME = Object.fromEntries([...LANGS, ["src", "Original"]]);
+const MAX_LANGS = 8;
+let sessions = [], running = false, startedAt = 0, langMs = 0, lastTick = 0; // estado de la traducción
+const PAUSE_MS = 2200;   // silencio que cierra un renglón
+const SOFT_MAX = 170;    // renglón largo: se cierra en el siguiente punto
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const cfg = () => ({ url: (store.get("trad.workerUrl", "") || DEFAULT_WORKER).replace(/\/+$/, ""), code: store.get("trad.code", "") });
+
+function log(msg, err) {
+  const d = document.createElement("div");
+  if (err) d.className = "err";
+  d.textContent = new Date().toLocaleTimeString() + "  " + msg;
+  $("#log").prepend(d);
+  while ($("#log").childNodes.length > 80) $("#log").lastChild.remove();
+}
+function setStatus(kind, text) { $("#status").className = "pill " + kind; $("#status span").textContent = text; }
+
+/* ---------------- configuración ---------------- */
+$("#cfgBtn").onclick = () => { $("#cfgUrl").value = store.get("trad.workerUrl", "") || DEFAULT_WORKER; $("#cfgCode").value = store.get("trad.code", ""); $("#cfg").showModal(); };
+$("#cfg").addEventListener("close", () => {
+  if ($("#cfg").returnValue !== "ok") return;
+  store.set("trad.workerUrl", $("#cfgUrl").value.trim()); store.set("trad.code", $("#cfgCode").value);
+  log("Configuración guardada.");
+});
+
+/* ---------------- chips de idiomas ---------------- */
+const savedLangs = store.get("evento.langs", ["en"]);
+$("#langChips").innerHTML = LANGS.map(([c, n]) => `<label class="chip"><input type="checkbox" value="${c}" ${savedLangs.includes(c) ? "checked" : ""}><span>${n}</span></label>`).join("");
+$("#title").value = store.get("evento.title", "");
+$("#srcOpt").checked = store.get("evento.src", true);
+const pickedLangs = () => [...document.querySelectorAll("#langChips input:checked")].map((i) => i.value);
+$("#langChips").addEventListener("change", (e) => {
+  if (pickedLangs().length > MAX_LANGS) { e.target.checked = false; log(`Máximo ${MAX_LANGS} idiomas por sala.`, true); }
+  store.set("evento.langs", pickedLangs());
+});
+$("#title").addEventListener("change", () => store.set("evento.title", $("#title").value));
+$("#srcOpt").addEventListener("change", () => store.set("evento.src", $("#srcOpt").checked));
+
+/* ================= sala ================= */
+let room = null;     // {code, hostToken, expires, title, langs, src}
+let hostWs = null, hostRetry = 0, hostTimer = null, pingTimer = null;
+const listeners = {}; // lang -> n
+
+async function api(path, body) {
+  const { url, code } = cfg();
+  const r = await fetch(url + path, {
+    method: body ? "POST" : "GET",
+    headers: body ? { "Content-Type": "application/json", "X-Access-Code": code } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(data.error || "El Worker respondió " + r.status); e.status = r.status; throw e; }
+  return data;
+}
+
+$("#createBtn").onclick = async () => {
+  const langs = pickedLangs();
+  if (!langs.length) { log("Elige al menos un idioma de traducción.", true); return; }
+  if (!cfg().code) { log("Falta el código de acceso: abre Configuración.", true); $("#cfgBtn").click(); return; }
+  $("#createBtn").disabled = true;
+  try {
+    const title = $("#title").value.trim();
+    const src = $("#srcOpt").checked;
+    const r = await api("/room", { title, langs, src });
+    room = { code: r.code, hostToken: r.hostToken, expires: r.expires, title, langs, src };
+    store.set("evento.room", room);
+    log("Sala creada: " + room.code);
+    showRoom();
+  } catch (err) { log(err.message, true); }
+  finally { $("#createBtn").disabled = false; }
+};
+
+$("#endBtn").onclick = () => {
+  if (!room) return;
+  if (!confirm("¿Terminar la sala? Los teléfonos conectados verán que el evento terminó y el código dejará de funcionar.")) return;
+  stopTranslation();
+  try { hostWs?.send(JSON.stringify({ t: "end" })); } catch {}
+  log("Sala " + room.code + " terminada.");
+  setTimeout(clearRoom, 300);
+};
+
+function clearRoom() {
+  room = null; store.del("evento.room");
+  clearTimeout(hostTimer); clearInterval(pingTimer);
+  const ws = hostWs; hostWs = null; try { ws?.close(); } catch {}
+  for (const k in listeners) delete listeners[k];
+  $("#roomNew").hidden = false; $("#roomOn").hidden = true; $("#roomState").textContent = "nueva";
+  $("#qrBox").className = "qr off"; $("#qrBox").textContent = "Crea la sala para generar el QR";
+  $("#qrUrl").textContent = "—";
+  ["#fullBtn", "#copyBtn", "#svgBtn"].forEach((s) => $(s).disabled = true);
+  $("#openBtn").removeAttribute("href"); $("#openBtn").setAttribute("aria-disabled", "true");
+  $("#goBtn").disabled = true;
+  $("#langRows").innerHTML = '<div class="hint">Aquí verás cada idioma, lo que se está diciendo y cuántas personas lo siguen.</div>';
+  $("#monLang").innerHTML = '<option value="">— Nada —</option>';
+  $("#hostWs").textContent = "sala desconectada";
+  setStatus("", "Sin sala");
+  updateTotals();
+}
+
+function listenerUrl() {
+  const u = new URL("../escucha/", location.href);
+  u.searchParams.set("s", room.code);
+  // Solo para pruebas en local: el público usa siempre el Worker oficial.
+  if (/^(localhost|127\.)/.test(location.hostname) && cfg().url !== DEFAULT_WORKER) u.searchParams.set("api", cfg().url);
+  return u.toString();
+}
+
+function qrSvg(text) {
+  const qr = qrcode(0, "M");
+  qr.addData(text); qr.make();
+  return qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+}
+
+function showRoom() {
+  $("#roomNew").hidden = true; $("#roomOn").hidden = false;
+  $("#roomState").textContent = "abierta";
+  $("#roomCode").textContent = room.code;
+  $("#roomTitle").textContent = room.title || "(sin nombre)";
+  $("#roomLangs").textContent = [...room.langs.map((l) => LNAME[l]), ...(room.src ? ["Original"] : [])].join(", ");
+  $("#roomExp").textContent = new Date(room.expires).toLocaleString();
+  const url = listenerUrl();
+  const svg = qrSvg(url);
+  $("#qrBox").className = "qr"; $("#qrBox").innerHTML = svg;
+  $("#qrUrl").textContent = url;
+  $("#qfQr").innerHTML = svg; $("#qfUrl").textContent = url.replace(/^https?:\/\//, ""); $("#qfTitle").textContent = room.title || "";
+  ["#fullBtn", "#copyBtn", "#svgBtn"].forEach((s) => $(s).disabled = false);
+  $("#openBtn").href = url; $("#openBtn").removeAttribute("aria-disabled");
+  $("#goBtn").disabled = false;
+  // filas por idioma + monitor
+  const keys = [...room.langs, ...(room.src ? ["src"] : [])];
+  $("#langRows").innerHTML = keys.map((k) => `<div class="lrow" id="row-${k}"><div class="nm"><i></i>${LNAME[k]}</div><div class="tx"><span class="old"></span> <span class="cur"></span></div><div class="ct">0<small>personas</small></div></div>`).join("");
+  $("#monLang").innerHTML = '<option value="">— Nada —</option>' + room.langs.map((l) => `<option value="${l}">${LNAME[l]}</option>`).join("");
+  $("#monLang").value = store.get("evento.mon", "");
+  setStatus("", "Sala lista");
+  connectHost();
+}
+
+$("#copyBtn").onclick = async () => { try { await navigator.clipboard.writeText(listenerUrl()); log("Enlace copiado."); } catch { log("No pude copiar; selecciona el enlace a mano.", true); } };
+$("#svgBtn").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([qrSvg(listenerUrl())], { type: "image/svg+xml" }));
+  a.download = `qr-sala-${room.code}.svg`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$("#fullBtn").onclick = () => { $("#qrFull").classList.add("on"); document.documentElement.requestFullscreen?.().catch(() => {}); };
+const exitFull = () => { $("#qrFull").classList.remove("on"); if (document.fullscreenElement) document.exitFullscreen(); };
+$("#qrFull").addEventListener("dblclick", exitFull);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#qrFull").classList.remove("on"); });
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) $("#qrFull").classList.remove("on"); });
+
+/* ---------- WebSocket del operador con la sala ---------- */
+function connectHost() {
+  if (!room) return;
+  clearTimeout(hostTimer);
+  const u = new URL(cfg().url.replace(/^http/, "ws") + `/room/${room.code}/ws`);
+  u.searchParams.set("role", "host"); u.searchParams.set("token", room.hostToken);
+  const ws = new WebSocket(u);
+  hostWs = ws;
+  $("#hostWs").textContent = "conectando sala…";
+  ws.onopen = () => {
+    hostRetry = 0;
+    $("#hostWs").textContent = "sala conectada";
+    ws.send(JSON.stringify({ t: "live", v: running }));
+    clearInterval(pingTimer); pingTimer = setInterval(() => { try { ws.send("ping"); } catch {} }, 25000);
+  };
+  ws.onmessage = (e) => {
+    if (e.data === "pong") return;
+    let m; try { m = JSON.parse(e.data); } catch { return; }
+    if (m.t === "count") {
+      for (const k in listeners) delete listeners[k];
+      Object.assign(listeners, m.c);
+      document.querySelectorAll(".lrow").forEach((r) => { const k = r.id.slice(4); r.querySelector(".ct").firstChild.nodeValue = listeners[k] || 0; });
+      updateTotals();
+    } else if (m.t === "end") {
+      if (room) { log("La sala terminó.", true); stopTranslation(); clearRoom(); }
+    }
+  };
+  ws.onclose = (e) => {
+    if (hostWs !== ws || !room) return;
+    $("#hostWs").textContent = "sala desconectada · reintentando";
+    if (e.code === 1008 || hostRetry > 20) { log("Perdí la conexión con la sala.", true); return; }
+    hostTimer = setTimeout(connectHost, [500, 1000, 2000, 4000, 8000][Math.min(hostRetry++, 4)]);
+  };
+}
+function sendRoom(obj) { if (hostWs?.readyState === 1) hostWs.send(JSON.stringify(obj)); }
+
+/* ---------- subtítulos: renglones por idioma ---------- */
+const streams = {}; // key -> {partial, last, lastDelta}
+function stream(k) { return streams[k] || (streams[k] = { partial: "", last: "", lastDelta: 0 }); }
+function onDelta(k, d) {
+  if (!d) return;
+  const s = stream(k);
+  s.partial += d; s.lastDelta = performance.now();
+  sendRoom({ t: "d", l: k, x: d });
+  if (s.partial.length > SOFT_MAX && /[.!?。！？]["”»)]?\s*$/.test(s.partial)) closeLine(k);
+  drawRow(k);
+}
+function closeLine(k) {
+  const s = stream(k), line = s.partial.trim();
+  s.partial = "";
+  if (!line) return;
+  s.last = line;
+  sendRoom({ t: "s", l: k, x: line });
+  drawRow(k);
+}
+function drawRow(k) {
+  const r = document.getElementById("row-" + k); if (!r) return;
+  const s = stream(k);
+  r.querySelector(".old").textContent = s.partial.length < 60 ? s.last.slice(-140) : "";
+  r.querySelector(".cur").textContent = s.partial.slice(-240);
+}
+setInterval(() => {
+  const now = performance.now();
+  for (const k in streams) if (streams[k].partial && now - streams[k].lastDelta > PAUSE_MS) closeLine(k);
+}, 300);
+
+/* ================= audio ================= */
+let ctx = null; const A = {}; let inStream = null;
+const db2g = (db) => Math.pow(10, db / 20);
+
+function ensureCtx() {
+  if (ctx) return;
+  ctx = new AudioContext({ latencyHint: "interactive" });
+  A.inSel = ctx.createGain(); A.inSel.channelCount = 1; A.inSel.channelCountMode = "explicit";
+  A.inGain = ctx.createGain();
+  A.inAn = ctx.createAnalyser(); A.inAn.fftSize = 1024;
+  A.send = ctx.createMediaStreamDestination(); A.send.channelCount = 1;
+  A.inSel.connect(A.inGain); A.inGain.connect(A.inAn); A.inGain.connect(A.send);
+  applyGain();
+  requestAnimationFrame(meterLoop);
+}
+
+async function listDevices() {
+  const devs = await navigator.mediaDevices.enumerateDevices();
+  const fill = (sel, kind, key, blank) => {
+    const want = store.get(key, sel.value || "");
+    const list = devs.filter((d) => d.kind === kind);
+    sel.innerHTML = list.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || blank + " " + (i + 1))}</option>`).join("") || `<option value="">${blank} del sistema</option>`;
+    if (list.some((d) => d.deviceId === want)) sel.value = want;
+  };
+  fill($("#inDev"), "audioinput", "evento.inDev", "Entrada");
+  fill($("#outDev"), "audiooutput", "evento.outDev", "Salida");
+  if (devs.some((d) => d.label)) $("#permHint").style.display = "none";
+}
+$("#permLink").onclick = async (e) => {
+  e.preventDefault();
+  try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach((t) => t.stop()); await listDevices(); }
+  catch (err) { log("Sin permiso de audio: " + err.message, true); }
+};
+navigator.mediaDevices.addEventListener?.("devicechange", listDevices);
+listDevices();
+
+async function openInput() {
+  ensureCtx();
+  closeInput();
+  const id = $("#inDev").value;
+  inStream = await navigator.mediaDevices.getUserMedia({ audio: {
+    deviceId: id ? { exact: id } : undefined,
+    echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+    channelCount: { ideal: 32 },
+  } });
+  await listDevices();
+  if (id) $("#inDev").value = id;
+  const track = inStream.getAudioTracks()[0];
+  const n = Math.max(1, track.getSettings().channelCount || 2);
+  A.inSrc = ctx.createMediaStreamSource(inStream);
+  A.split = ctx.createChannelSplitter(n);
+  A.inSrc.connect(A.split);
+  const sel = $("#inCh"), want = store.get("evento.inCh", sel.value || "0");
+  let html = "";
+  for (let i = 0; i < n; i++) html += `<option value="${i}">Ch ${i + 1}</option>`;
+  for (let i = 0; i + 1 < n; i += 2) html += `<option value="${i}+">Ch ${i + 1}+${i + 2} (suma)</option>`;
+  sel.innerHTML = html;
+  if ([...sel.options].some((o) => o.value === want)) sel.value = want;
+  $("#inInfo").textContent = n + (n === 1 ? " canal" : " canales");
+  routeInput();
+  track.addEventListener("ended", () => { log("La entrada se desconectó.", true); if (running) stopTranslation(); });
+}
+function closeInput() {
+  try { A.split?.disconnect(); A.inSrc?.disconnect(); } catch {}
+  inStream?.getTracks().forEach((t) => t.stop()); inStream = null;
+}
+function routeInput() {
+  if (!A.split) return;
+  try { A.split.disconnect(); } catch {}
+  const v = $("#inCh").value, ch = parseInt(v, 10) || 0;
+  A.split.connect(A.inSel, ch); A.inSel.gain.value = 1;
+  if (v.endsWith("+")) { A.split.connect(A.inSel, ch + 1); A.inSel.gain.value = 0.5; }
+}
+$("#inCh").addEventListener("change", () => { store.set("evento.inCh", $("#inCh").value); routeInput(); });
+$("#inDev").addEventListener("change", async () => {
+  store.set("evento.inDev", $("#inDev").value);
+  if (inStream) { try { await openInput(); log("Entrada: " + $("#inDev").selectedOptions[0]?.text); } catch (err) { log("No pude abrir la entrada: " + err.message, true); } }
+});
+function applyGain() {
+  const g = +$("#inGain").value;
+  $("#inGainOut").textContent = (g > 0 ? "+" : "") + g.toFixed(1) + " dB";
+  if (ctx) A.inGain.gain.setTargetAtTime(db2g(g), ctx.currentTime, 0.02);
+}
+$("#inGain").value = store.get("evento.inGain", 0);
+$("#inGain").addEventListener("input", () => { store.set("evento.inGain", $("#inGain").value); applyGain(); });
+applyGain();
+$("#nr").value = store.get("evento.nr", "off");
+$("#nr").addEventListener("change", () => { store.set("evento.nr", $("#nr").value); if (running) { log("Reiniciando sesiones con la nueva reducción de ruido…"); sessions.forEach((s) => s.restart()); } });
+
+const buf = new Float32Array(1024);
+function meterLoop() {
+  A.inAn.getFloatTimeDomainData(buf);
+  let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+  const r = Math.sqrt(s / buf.length), db = r > 0 ? 20 * Math.log10(r) : -Infinity;
+  const bar = $("#inMeter");
+  bar.style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + "%";
+  bar.style.setProperty("--w", (bar.parentElement.clientWidth || 300) + "px");
+  $("#inDb").textContent = isFinite(db) && db > -60 ? db.toFixed(0) + " dB" : "-∞";
+  requestAnimationFrame(meterLoop);
+}
+
+/* ---------- monitor ---------- */
+const mon = new Audio(); mon.autoplay = true;
+function applyMonitor() {
+  const k = $("#monLang").value, s = sessions.find((x) => x.lang === k);
+  mon.srcObject = s?.stream || null;
+  mon.volume = +$("#monVol").value / 100;
+  $("#monVolOut").textContent = $("#monVol").value + "%";
+  if (mon.srcObject) mon.play().catch(() => {});
+}
+$("#monLang").addEventListener("change", () => { store.set("evento.mon", $("#monLang").value); applyMonitor(); });
+$("#monVol").value = store.get("evento.monVol", 80);
+$("#monVol").addEventListener("input", () => { store.set("evento.monVol", $("#monVol").value); applyMonitor(); });
+$("#outDev").addEventListener("change", async () => {
+  store.set("evento.outDev", $("#outDev").value);
+  if (mon.setSinkId) { try { await mon.setSinkId($("#outDev").value || ""); } catch (err) { log("No pude abrir la salida: " + err.message, true); } }
+});
+applyMonitor();
+
+/* ================= sesiones de traducción (una por idioma) ================= */
+class LangSession {
+  constructor(lang, withSrc) { this.lang = lang; this.withSrc = withSrc; this.pc = null; this.stream = null; this.retries = 0; this.timer = null; this.alive = true; }
+  setState(kind) {
+    const r = document.getElementById("row-" + this.lang);
+    if (r) r.className = "lrow " + kind;
+    if (this.withSrc) { const s = document.getElementById("row-src"); if (s) s.className = "lrow " + kind; }
+    updateTotals();
+  }
+  async connect() {
+    this.setState("busy");
+    const { url, code } = cfg();
+    const r = await fetch(url + "/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Access-Code": code },
+      body: JSON.stringify({ targetLanguage: this.lang, noiseReduction: $("#nr").value, sourceTranscript: this.withSrc }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.value) { const e = new Error(data.error || "El Worker respondió " + r.status); e.fatal = [400, 401, 403, 500].includes(r.status); throw e; }
+    if (!this.alive) return;
+    const pc = new RTCPeerConnection();
+    this.pc = pc;
+    pc.addTrack(A.send.stream.getAudioTracks()[0], A.send.stream);
+    pc.ontrack = (e) => { this.stream = e.streams[0] || new MediaStream([e.track]); if ($("#monLang").value === this.lang) applyMonitor(); };
+    const dc = pc.createDataChannel("oai-events");
+    dc.onmessage = (e) => {
+      let ev; try { ev = JSON.parse(e.data); } catch { return; }
+      if (ev.type === "session.output_transcript.delta") onDelta(this.lang, ev.delta || "");
+      else if (ev.type === "session.input_transcript.delta" && this.withSrc) onDelta("src", ev.delta || "");
+      else if (ev.type === "error" || ev.error) log(LNAME[this.lang] + ": " + (ev.error?.message || "error"), true);
+    };
+    dc.onclose = () => { if (this.pc === pc) this.dropped("canal cerrado"); };
+    pc.onconnectionstatechange = () => {
+      if (this.pc !== pc) return;
+      const s = pc.connectionState;
+      if (s === "connected") { clearTimeout(this.disc); this.retries = 0; this.setState("live"); log(LNAME[this.lang] + ": en vivo."); }
+      else if (s === "failed" || s === "closed") this.dropped("conexión " + s);
+      else if (s === "disconnected") { clearTimeout(this.disc); this.disc = setTimeout(() => { if (this.pc === pc && pc.connectionState === "disconnected") this.dropped("sin red"); }, 4000); }
+    };
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    const sdp = await fetch(OPENAI_CALLS, { method: "POST", headers: { Authorization: "Bearer " + data.value, "Content-Type": "application/sdp" }, body: offer.sdp });
+    const answer = await sdp.text();
+    if (!sdp.ok) throw new Error("OpenAI " + sdp.status + ": " + answer.slice(0, 200));
+    if (this.pc !== pc) return;
+    await pc.setRemoteDescription({ type: "answer", sdp: answer });
+  }
+  start() { this.connect().catch((err) => this.failed(err)); }
+  failed(err) {
+    log(LNAME[this.lang] + ": " + err.message, true);
+    if (err.fatal) { this.setState("err"); return; }
+    this.retry();
+  }
+  dropped(why) { if (!this.alive) return; this.closePc(); log(LNAME[this.lang] + ": se cayó (" + why + ").", true); this.retry(); }
+  retry() {
+    if (!this.alive) return;
+    clearTimeout(this.timer);
+    if (this.retries >= 10) { this.setState("err"); log(LNAME[this.lang] + ": no pude reconectar.", true); return; }
+    this.setState("busy");
+    this.timer = setTimeout(() => this.start(), [500, 1000, 2000, 4000, 8000][Math.min(this.retries++, 4)]);
+  }
+  restart() { this.closePc(); this.retries = 0; this.start(); }
+  closePc() { const p = this.pc; this.pc = null; clearTimeout(this.disc); try { p?.close(); } catch {} }
+  stop() { this.alive = false; clearTimeout(this.timer); this.closePc(); this.stream = null; this.setState(""); }
+}
+
+$("#goBtn").onclick = () => running ? stopTranslation() : startTranslation();
+async function startTranslation() {
+  if (!room) return;
+  if (!cfg().code) { log("Falta el código de acceso: abre Configuración.", true); $("#cfgBtn").click(); return; }
+  $("#goBtn").disabled = true;
+  try {
+    ensureCtx(); await ctx.resume();
+    await openInput();
+    running = true; startedAt = Date.now(); lastTick = Date.now();
+    $("#goBtn").textContent = "DETENER TRADUCCIÓN"; $("#goBtn").classList.add("on");
+    setStatus("live", "En vivo · sala " + room.code);
+    sendRoom({ t: "live", v: true });
+    sessions = room.langs.map((l, i) => new LangSession(l, room.src && i === 0));
+    // escalonado para no pedir todas las sesiones en el mismo instante
+    sessions.forEach((s, i) => setTimeout(() => { if (s.alive) s.start(); }, i * 400));
+  } catch (err) { log(err.message, true); stopTranslation(); }
+  finally { $("#goBtn").disabled = !room; }
+}
+function stopTranslation() {
+  sessions.forEach((s) => s.stop()); sessions = [];
+  Object.keys(streams).forEach(closeLine);
+  closeInput();
+  if (running) sendRoom({ t: "live", v: false });
+  running = false;
+  applyMonitor();
+  $("#goBtn").textContent = "INICIAR TRADUCCIÓN"; $("#goBtn").classList.remove("on");
+  if (room) setStatus("", "Sala lista");
+}
+function updateTotals() {
+  $("#totListeners").textContent = Object.values(listeners).reduce((a, b) => a + b, 0);
+  $("#totLangs").textContent = sessions.filter((s) => s.pc?.connectionState === "connected").length;
+}
+setInterval(() => {
+  if (!running) return;
+  const now = Date.now();
+  langMs += (now - lastTick) * sessions.filter((s) => s.pc?.connectionState === "connected").length; lastTick = now;
+  $("#totMin").textContent = Math.round(langMs / 60000);
+  const s = Math.floor((now - startedAt) / 1000);
+  $("#clock").textContent = [s / 3600, (s % 3600) / 60, s % 60].map((x) => String(Math.floor(x)).padStart(2, "0")).join(":");
+  updateTotals();
+}, 1000);
+addEventListener("beforeunload", (e) => { if (running) { e.preventDefault(); e.returnValue = ""; } });
+
+/* ---------- retomar sala guardada ---------- */
+(async () => {
+  const saved = store.get("evento.room", null);
+  if (!saved) { if (!cfg().code) log("Primero abre Configuración y escribe el código de acceso del Worker."); return; }
+  if (saved.expires < Date.now()) { store.del("evento.room"); return; }
+  try {
+    const info = await api("/room/" + saved.code);
+    if (info.ended) { store.del("evento.room"); log("La sala " + saved.code + " ya había terminado."); return; }
+    room = saved; showRoom(); log("Sala " + room.code + " recuperada.");
+  } catch (err) {
+    if (err.status === 404) { store.del("evento.room"); return; }
+    room = saved; showRoom(); log("No pude verificar la sala (" + err.message + "); la muestro de todos modos.", true);
+  }
+})();
+</script>
+</body>
+</html>
