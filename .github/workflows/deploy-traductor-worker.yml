@@ -6,6 +6,8 @@
 #   CLOUDFLARE_ACCOUNT_ID  — ID de la cuenta de Cloudflare
 #   OPENAI_API_KEY         — clave de OpenAI
 #   TRADUCTOR_ACCESS_CODE  — código que piden las páginas del operador
+#   REALTIME_APP_ID        — App ID de Cloudflare Realtime SFU (audio en teléfonos; opcional)
+#   REALTIME_APP_SECRET    — App Secret de Cloudflare Realtime SFU (opcional)
 
 name: Desplegar Worker del traductor
 
@@ -31,6 +33,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ACCESS_CODE: ${{ secrets.TRADUCTOR_ACCESS_CODE }}
+      REALTIME_APP_ID: ${{ secrets.REALTIME_APP_ID }}
+      REALTIME_APP_SECRET: ${{ secrets.REALTIME_APP_SECRET }}
       WRANGLER: npx --yes wrangler@4.160.0
     steps:
       - uses: actions/checkout@v6
@@ -48,6 +52,7 @@ jobs:
           # Sin estos el Worker se despliega pero no traduce (falla cerrado) hasta que se agreguen.
           [ -z "$OPENAI_API_KEY" ] && echo "::warning::Falta el secreto OPENAI_API_KEY en GitHub."
           [ -z "$ACCESS_CODE" ] && echo "::warning::Falta el secreto TRADUCTOR_ACCESS_CODE en GitHub."
+          [ -z "$REALTIME_APP_ID" ] || [ -z "$REALTIME_APP_SECRET" ] && echo "::warning::Sin REALTIME_APP_ID / REALTIME_APP_SECRET: las salas tendrán solo subtítulos (sin audio en teléfonos)."
           true
 
       - name: Desplegar
@@ -57,7 +62,7 @@ jobs:
         run: |
           umask 077
           # solo los que existan; los que falten se conservan como estén en Cloudflare
-          node -e 'const s={};for(const k of ["OPENAI_API_KEY","ACCESS_CODE"])if(process.env[k])s[k]=process.env[k];process.stdout.write(JSON.stringify(s))' > "$RUNNER_TEMP/s.json"
+          node -e 'const s={};for(const k of ["OPENAI_API_KEY","ACCESS_CODE","REALTIME_APP_ID","REALTIME_APP_SECRET"])if(process.env[k])s[k]=process.env[k];process.stdout.write(JSON.stringify(s))' > "$RUNNER_TEMP/s.json"
           if [ "$(cat "$RUNNER_TEMP/s.json")" != "{}" ]; then $WRANGLER secret bulk "$RUNNER_TEMP/s.json"; fi
           rm -f "$RUNNER_TEMP/s.json"
 
