@@ -4,7 +4,8 @@ Hace dos cosas:
 
 1. **Protege la clave de OpenAI.** Entrega a la página un *client secret* efímero (2 min, una sola sesión). La clave nunca llega al navegador. Todo lo del operador pide un **código de acceso** para que nadie más gaste tu saldo.
 2. **Salas de evento (subtítulos por QR).** Cada sala es un Durable Object que recibe los subtítulos de la consola del operador (`/traductor/evento`) y los reparte por WebSocket a los teléfonos del público (`/traductor/escucha`), cada uno en su idioma.
-3. **Audio en los teléfonos.** La consola publica la voz traducida de cada idioma en Cloudflare Realtime (SFU) y cada teléfono escucha solo su idioma. El Worker guarda el App Secret del SFU y hace de intermediario; el navegador nunca lo ve. Es opcional: sin `REALTIME_APP_ID` / `REALTIME_APP_SECRET` las salas funcionan solo con subtítulos.
+3. **Clientes con marca propia.** Cada cliente tiene logo, colores, mensaje y un enlace fijo (`/traductor/escucha/?c=su-enlace`). Su QR no cambia aunque abras salas nuevas. Los permanentes nunca vencen; los "por evento" muestran "evento terminado" al pasar su fecha de fin. Los perfiles viven en el Durable Object `Directory`.
+4. **Audio en los teléfonos.** La consola publica la voz traducida de cada idioma en Cloudflare Realtime (SFU) y cada teléfono escucha solo su idioma. El Worker guarda el App Secret del SFU y hace de intermediario; el navegador nunca lo ve. Es opcional: sin `REALTIME_APP_ID` / `REALTIME_APP_SECRET` las salas funcionan solo con subtítulos.
 
 ## Desplegar (una vez)
 
@@ -36,6 +37,11 @@ El primer `deploy` crea también el Durable Object de las salas (migración `v1`
 | `GET /room/:code` | público | `{code, title, langs, src, live, ended, expires}` |
 | `GET /room/:code/ws?role=host&token=…` | operador | manda `{t:"d",l,x}` (texto parcial), `{t:"s",l,x}` (renglón completo), `{t:"live",v}`, `{t:"end"}`; recibe `{t:"count",c,total}` |
 | `GET /room/:code/ws?lang=en` | público | recibe `init` (últimos 40 renglones), `d`, `s`, `live`, `audio` (cambió la publicación de audio), `end` |
+| `GET /clients` | operador (`X-Access-Code`) | lista de clientes |
+| `PUT /client/:slug` | operador | crea / edita: `{name, type:"permanent"|"event", validFrom, validUntil, message, bg, accent, langs, src, audio, poweredBy, archived}` |
+| `PUT` / `DELETE /client/:slug/logo` | operador | sube (PNG/WebP/JPEG, máx. 400 KB) o quita el logo |
+| `GET /client/:slug` | público | perfil + `status` (`waiting`, `open`, `upcoming`, `expired`, `archived`) + sala activa |
+| `GET /client/:slug/logo` | público | la imagen del logo |
 | `POST /room/:code/audio/publish` | operador (`X-Host-Token`) | `{lang, sdp, mid}` (oferta) → `{sdp, rev}` (respuesta del SFU) |
 | `POST /room/:code/audio/listen` | público | `{lang}` → `{sessionId, sdp, rev}` (oferta del SFU); 404 si ese idioma aún no transmite |
 | `POST /room/:code/audio/answer` | público | `{sessionId, sdp}` (respuesta del teléfono) → `{ok}` |

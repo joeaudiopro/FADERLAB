@@ -16,9 +16,18 @@ ALLOWED_ORIGINS = "https://faderlab.mx,https://www.faderlab.mx,http://localhost:
 name = "ROOMS"
 class_name = "Room"
 
+# Directorio de clientes (marca propia y enlace fijo).
+[[durable_objects.bindings]]
+name = "DIRECTORY"
+class_name = "Directory"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Room"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Directory"]
 
 # Secretos (no van aquí):
 #   npx wrangler secret put OPENAI_API_KEY
