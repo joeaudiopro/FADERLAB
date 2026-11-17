@@ -96,6 +96,11 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .lrow.live .nm i{background:var(--green);box-shadow:0 0 8px var(--green)}
 .lrow.busy .nm i{background:var(--accent);animation:blink 1s infinite}
 .lrow.err .nm i{background:var(--red)}
+.lrow .au{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--dim);border:1px solid var(--border);border-radius:999px;padding:1px 7px;margin-left:2px}
+.lrow .au:empty{display:none}
+.lrow .au.on{color:var(--green);border-color:#1a5a3a}
+.lrow .au.busy{color:var(--accent)}
+.lrow .au.err{color:#ff7a6a;border-color:#5a1a1a}
 .lrow .tx{font-size:14px;line-height:1.4;color:#fff;min-height:2.8em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
 .lrow .tx .old{color:var(--dim)}
 .lrow .ct{font-family:var(--f-mono);text-align:right;font-size:20px;color:var(--accent2);line-height:1}
@@ -140,8 +145,8 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
       <div id="roomNew">
         <div class="field"><label for="title">Nombre del evento (lo ve el público)</label><input type="text" id="title" maxlength="80" placeholder="Congreso Anual 2026"></div>
         <div class="field"><span class="lbl">Idiomas que ofreces</span><div class="chips" id="langChips"></div></div>
-        <div class="field"><span class="lbl">Además</span><div class="chips"><label class="chip"><input type="checkbox" id="srcOpt" checked><span>Original (subtítulos del idioma que se habla)</span></label></div></div>
-        <div class="hint">No marques el idioma en que habla el orador: el modelo no "traduce" lo que ya está en ese idioma y esos oyentes se quedarían sin texto. Para ellos está <b>Original</b>.<br>Cada idioma es una sesión de traducción aparte: el costo crece por idioma, no por persona.</div>
+        <div class="field"><span class="lbl">Además</span><div class="chips"><label class="chip"><input type="checkbox" id="srcOpt" checked><span>Original (subtítulos del idioma que se habla)</span></label><label class="chip"><input type="checkbox" id="audioOpt" checked><span>Audio en teléfonos (con audífonos)</span></label></div></div>
+        <div class="hint">No marques el idioma en que habla el orador: el modelo no "traduce" lo que ya está en ese idioma y esos oyentes se quedarían sin texto. Para ellos está <b>Original</b>.<br>Cada idioma es una sesión de traducción aparte: el costo crece por idioma, no por persona.<br>Con <b>Audio en teléfonos</b> el público también puede escuchar la voz traducida de su idioma (no aplica a Original).</div>
         <button class="big small" id="createBtn" style="margin-top:14px">CREAR SALA</button>
       </div>
       <div id="roomOn" hidden>
@@ -149,6 +154,7 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
         <dl class="kv">
           <dt>Evento</dt><dd id="roomTitle">—</dd>
           <dt>Idiomas</dt><dd id="roomLangs">—</dd>
+          <dt>Audio</dt><dd id="roomAudio">—</dd>
           <dt>Vence</dt><dd id="roomExp">—</dd>
         </dl>
         <div class="btns"><button class="ghost danger" id="endBtn">Terminar sala</button></div>
@@ -245,6 +251,7 @@ const LANGS = [["en","Inglés"],["es","Español"],["pt","Portugués"],["fr","Fra
 const LNAME = Object.fromEntries([...LANGS, ["src", "Original"]]);
 const MAX_LANGS = 8;
 let sessions = [], running = false, startedAt = 0, langMs = 0, lastTick = 0; // estado de la traducción
+let pubs = {}; // idioma -> AudioPub (voz traducida hacia los teléfonos)
 const PAUSE_MS = 2200;   // silencio que cierra un renglón
 const SOFT_MAX = 170;    // renglón largo: se cierra en el siguiente punto
 
@@ -278,6 +285,8 @@ const savedLangs = store.get("evento.langs", ["en"]);
 $("#langChips").innerHTML = LANGS.map(([c, n]) => `<label class="chip"><input type="checkbox" value="${c}" ${savedLangs.includes(c) ? "checked" : ""}><span>${n}</span></label>`).join("");
 $("#title").value = store.get("evento.title", "");
 $("#srcOpt").checked = store.get("evento.src", true);
+$("#audioOpt").checked = store.get("evento.audio", true);
+$("#audioOpt").addEventListener("change", () => store.set("evento.audio", $("#audioOpt").checked));
 const pickedLangs = () => [...document.querySelectorAll("#langChips input:checked")].map((i) => i.value);
 $("#langChips").addEventListener("change", (e) => {
   if (pickedLangs().length > MAX_LANGS) { e.target.checked = false; log(`Máximo ${MAX_LANGS} idiomas por sala.`, true); }
@@ -311,8 +320,10 @@ $("#createBtn").onclick = async () => {
   try {
     const title = $("#title").value.trim();
     const src = $("#srcOpt").checked;
-    const r = await api("/room", { title, langs, src });
-    room = { code: r.code, hostToken: r.hostToken, expires: r.expires, title, langs, src };
+    const wantAudio = $("#audioOpt").checked;
+    const r = await api("/room", { title, langs, src, audio: wantAudio });
+    room = { code: r.code, hostToken: r.hostToken, expires: r.expires, title, langs, src, audio: !!r.audio };
+    if (wantAudio && !r.audio) log("El Worker todavía no tiene configurado el audio (Cloudflare Realtime): esta sala tendrá solo subtítulos.", true);
     store.set("evento.room", room);
     log("Sala creada: " + room.code);
     showRoom();
@@ -368,6 +379,7 @@ function showRoom() {
   $("#roomTitle").textContent = room.title || "(sin nombre)";
   $("#roomLangs").textContent = [...room.langs.map((l) => LNAME[l]), ...(room.src ? ["Original"] : [])].join(", ");
   $("#roomExp").textContent = new Date(room.expires).toLocaleString();
+  $("#roomAudio").textContent = room.audio ? "Sí · el público puede escuchar con audífonos" : "No · solo subtítulos";
   const url = listenerUrl();
   const svg = qrSvg(url);
   $("#qrBox").className = "qr"; $("#qrBox").innerHTML = svg;
@@ -378,7 +390,7 @@ function showRoom() {
   $("#goBtn").disabled = false;
   // filas por idioma + monitor
   const keys = [...room.langs, ...(room.src ? ["src"] : [])];
-  $("#langRows").innerHTML = keys.map((k) => `<div class="lrow" id="row-${k}"><div class="nm"><i></i>${LNAME[k]}</div><div class="tx"><span class="old"></span> <span class="cur"></span></div><div class="ct">0<small>personas</small></div></div>`).join("");
+  $("#langRows").innerHTML = keys.map((k) => `<div class="lrow" id="row-${k}"><div class="nm"><i></i>${LNAME[k]}<span class="au"></span></div><div class="tx"><span class="old"></span> <span class="cur"></span></div><div class="ct">0<small>personas</small></div></div>`).join("");
   $("#monLang").innerHTML = '<option value="">— Nada —</option>' + room.langs.map((l) => `<option value="${l}">${LNAME[l]}</option>`).join("");
   $("#monLang").value = store.get("evento.mon", "");
   setStatus("", "Sala lista");
@@ -605,7 +617,14 @@ class LangSession {
     const pc = new RTCPeerConnection();
     this.pc = pc;
     pc.addTrack(A.send.stream.getAudioTracks()[0], A.send.stream);
-    pc.ontrack = (e) => { this.stream = e.streams[0] || new MediaStream([e.track]); if ($("#monLang").value === this.lang) applyMonitor(); };
+    pc.ontrack = (e) => {
+      this.stream = e.streams[0] || new MediaStream([e.track]);
+      // Chrome solo entrega audio WebRTC remoto si algo lo está "reproduciendo": un <audio> silenciado basta.
+      if (!this.sink) { this.sink = new Audio(); this.sink.muted = true; }
+      this.sink.srcObject = this.stream; this.sink.play().catch(() => {});
+      pubs[this.lang]?.setTrack(e.track);
+      if ($("#monLang").value === this.lang) applyMonitor();
+    };
     const dc = pc.createDataChannel("oai-events");
     dc.onmessage = (e) => {
       let ev; try { ev = JSON.parse(e.data); } catch { return; }
@@ -645,8 +664,73 @@ class LangSession {
   }
   restart() { this.closePc(); this.retries = 0; this.start(); }
   closePc() { const p = this.pc; this.pc = null; clearTimeout(this.disc); try { p?.close(); } catch {} }
-  stop() { this.alive = false; clearTimeout(this.timer); this.closePc(); this.stream = null; this.setState(""); }
+  stop() { this.alive = false; clearTimeout(this.timer); this.closePc(); this.stream = null; if (this.sink) this.sink.srcObject = null; this.setState(""); }
 }
+
+/* ================= audio hacia los teléfonos (Cloudflare Realtime) =================
+   Una conexión por idioma hacia el repetidor. Sobrevive a las reconexiones con OpenAI:
+   cuando llega una pista nueva solo se cambia con replaceTrack, sin renegociar. */
+const ICE = [{ urls: "stun:stun.cloudflare.com:3478" }];
+function iceDone(pc, ms = 2000) {
+  if (pc.iceGatheringState === "complete") return Promise.resolve();
+  return new Promise((res) => {
+    const t = setTimeout(res, ms);
+    pc.addEventListener("icegatheringstatechange", () => { if (pc.iceGatheringState === "complete") { clearTimeout(t); res(); } });
+  });
+}
+class AudioPub {
+  constructor(lang) { this.lang = lang; this.pc = null; this.sender = null; this.track = null; this.alive = true; this.retries = 0; this.timer = null; }
+  setState(kind) {
+    const el = document.querySelector(`#row-${this.lang} .au`); if (!el) return;
+    el.className = "au " + kind;
+    el.textContent = kind ? "🎧" : "";
+    el.title = { on: "Audio en teléfonos: transmitiendo", busy: "Audio en teléfonos: conectando", err: "Audio en teléfonos: error" }[kind] || "";
+  }
+  setTrack(t) { this.track = t; if (this.sender) this.sender.replaceTrack(t).catch(() => {}); }
+  async start() {
+    this.setState("busy");
+    const pc = new RTCPeerConnection({ iceServers: ICE, bundlePolicy: "max-bundle" });
+    this.pc = pc;
+    const tr = pc.addTransceiver(this.track || "audio", { direction: "sendonly" });
+    this.sender = tr.sender;
+    pc.onconnectionstatechange = () => {
+      if (this.pc !== pc) return;
+      const s = pc.connectionState;
+      if (s === "connected") { clearTimeout(this.disc); this.retries = 0; this.setState("on"); log(LNAME[this.lang] + ": audio en teléfonos listo."); }
+      else if (s === "failed" || s === "closed") this.dropped();
+      else if (s === "disconnected") { clearTimeout(this.disc); this.disc = setTimeout(() => { if (this.pc === pc && pc.connectionState === "disconnected") this.dropped(); }, 5000); }
+    };
+    await pc.setLocalDescription(await pc.createOffer());
+    await iceDone(pc);
+    const r = await fetch(cfg().url + `/room/${room.code}/audio/publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Host-Token": room.hostToken },
+      body: JSON.stringify({ lang: this.lang, sdp: pc.localDescription.sdp, mid: tr.mid }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { const e = new Error(d.error || "Realtime respondió " + r.status); e.fatal = [400, 401, 503].includes(r.status); throw e; }
+    if (this.pc !== pc) return;
+    await pc.setRemoteDescription({ type: "answer", sdp: d.sdp });
+  }
+  run() {
+    this.start().catch((err) => {
+      log(LNAME[this.lang] + " (audio): " + err.message, true);
+      if (err.fatal) { this.closePc(); this.setState("err"); return; }
+      this.retry();
+    });
+  }
+  dropped() { if (!this.alive) return; this.closePc(); log(LNAME[this.lang] + ": se cayó el audio hacia los teléfonos, reconectando…", true); this.retry(); }
+  retry() {
+    if (!this.alive) return;
+    clearTimeout(this.timer);
+    if (this.retries >= 10) { this.setState("err"); log(LNAME[this.lang] + ": no pude reconectar el audio.", true); return; }
+    this.setState("busy");
+    this.timer = setTimeout(() => this.run(), [1000, 2000, 4000, 8000, 15000][Math.min(this.retries++, 4)]);
+  }
+  closePc() { const p = this.pc; this.pc = null; this.sender = null; clearTimeout(this.disc); try { p?.close(); } catch {} }
+  stop() { this.alive = false; clearTimeout(this.timer); this.closePc(); this.setState(""); }
+}
+
 
 $("#goBtn").onclick = () => running ? stopTranslation() : startTranslation();
 async function startTranslation() {
@@ -661,6 +745,10 @@ async function startTranslation() {
     setStatus("live", "En vivo · sala " + room.code);
     sendRoom({ t: "live", v: true });
     sessions = room.langs.map((l, i) => new LangSession(l, room.src && i === 0));
+    if (room.audio) {
+      pubs = Object.fromEntries(room.langs.map((l) => [l, new AudioPub(l)]));
+      Object.values(pubs).forEach((p, i) => setTimeout(() => { if (p.alive) p.run(); }, 200 + i * 300));
+    }
     // escalonado para no pedir todas las sesiones en el mismo instante
     sessions.forEach((s, i) => setTimeout(() => { if (s.alive) s.start(); }, i * 400));
   } catch (err) { log(err.message, true); stopTranslation(); }
@@ -668,6 +756,7 @@ async function startTranslation() {
 }
 function stopTranslation() {
   sessions.forEach((s) => s.stop()); sessions = [];
+  Object.values(pubs).forEach((p) => p.stop()); pubs = {};
   Object.keys(streams).forEach(closeLine);
   closeInput();
   if (running) sendRoom({ t: "live", v: false });

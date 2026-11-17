@@ -8,10 +8,17 @@
 //    GET  /room/:code/ws     → WebSocket: operador (?role=host&token=) o público (?lang=)
 //    Cada sala es un Durable Object que reenvía los subtítulos de cada idioma
 //    a todos los teléfonos conectados a ese idioma.
+// 3) Audio en los teléfonos (Cloudflare Realtime SFU):
+//    POST /room/:code/audio/publish → la consola publica la voz traducida de un idioma
+//    POST /room/:code/audio/listen  → un teléfono pide escuchar un idioma (recibe oferta SDP)
+//    POST /room/:code/audio/answer  → el teléfono devuelve su respuesta SDP
+//    El App Secret del SFU nunca sale de aquí.
 //
 // Secretos (wrangler secret put ...):
-//   OPENAI_API_KEY  — clave de la API de OpenAI
-//   ACCESS_CODE     — código que piden las páginas del operador
+//   OPENAI_API_KEY       — clave de la API de OpenAI
+//   ACCESS_CODE          — código que piden las páginas del operador
+//   REALTIME_APP_ID      — App ID de Cloudflare Realtime SFU (opcional: sin él no hay audio)
+//   REALTIME_APP_SECRET  — App Secret de Cloudflare Realtime SFU
 // Variables (wrangler.toml):
 //   ALLOWED_ORIGINS — orígenes permitidos, separados por coma
 
@@ -37,7 +44,7 @@ export default {
       ? {
           "Access-Control-Allow-Origin": origin,
           "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, X-Access-Code",
+          "Access-Control-Allow-Headers": "Content-Type, X-Access-Code, X-Host-Token",
           "Access-Control-Max-Age": "86400",
           Vary: "Origin",
         }
@@ -47,6 +54,12 @@ export default {
     if (url.pathname === "/health") return json({ ok: true }, 200, cors);
 
     const parts = url.pathname.split("/").filter(Boolean); // ["room", "ABC123", "ws"]
+
+    // ---------- audio de la sala (publicar: operador con token; escuchar: público) ----------
+    if (parts[0] === "room" && parts[2] === "audio" && parts.length === 4 && req.method === "POST") {
+      if (!okOrigin) return json({ error: "Origen no permitido" }, 403, cors);
+      return audioRoute(parts[1].toUpperCase(), parts[3], req, env, cors);
+    }
 
     // ---------- salas: rutas públicas (el público no lleva código) ----------
     if (parts[0] === "room" && parts.length >= 2 && req.method === "GET") {
@@ -117,6 +130,7 @@ async function createRoom(body, env, cors) {
   const title = String(body.title || "").trim().slice(0, 80);
   const langs = [...new Set(Array.isArray(body.langs) ? body.langs.map(String) : [])].filter((l) => LANGS.includes(l));
   const src = !!body.src;
+  const audio = !!body.audio && audioConfigured(env);
   if (!langs.length && !src) return json({ error: "Elige al menos un idioma" }, 400, cors);
   if (langs.length > MAX_LANGS) return json({ error: `Máximo ${MAX_LANGS} idiomas por sala` }, 400, cors);
 
@@ -125,10 +139,78 @@ async function createRoom(body, env, cors) {
   for (let i = 0; i < 6; i++) {
     const code = randomCode(6);
     const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
-    const meta = await stub.init({ title, langs, src, tokenHash, ttl: ROOM_TTL });
-    if (meta) return json({ code, hostToken, expires: meta.expires }, 200, cors);
+    const meta = await stub.init({ title, langs, src, audio, tokenHash, ttl: ROOM_TTL });
+    if (meta) return json({ code, hostToken, expires: meta.expires, audio, audioAvailable: audioConfigured(env) }, 200, cors);
   }
   return json({ error: "No pude generar un código de sala, intenta de nuevo" }, 500, cors);
+}
+
+// ---------- audio: puente con Cloudflare Realtime SFU ----------
+function audioConfigured(env) { return !!(env.REALTIME_APP_ID && env.REALTIME_APP_SECRET); }
+
+async function sfu(env, method, path, body) {
+  const base = (env.SFU_BASE || "https://rtc.live.cloudflare.com/v1").replace(/\/+$/, "");
+  const r = await fetch(`${base}/apps/${env.REALTIME_APP_ID}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${env.REALTIME_APP_SECRET}`, "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await r.json().catch(() => ({}));
+  const trackErr = data.tracks?.find?.((t) => t.errorCode);
+  if (!r.ok || data.errorCode || trackErr) {
+    const e = trackErr || data;
+    return { ok: false, error: e.errorDescription || e.errorCode || `Realtime respondió ${r.status}` };
+  }
+  return { ok: true, data };
+}
+
+const isSdp = (x) => typeof x === "string" && x.startsWith("v=") && x.length < 60000;
+
+async function audioRoute(code, action, req, env, cors) {
+  if (!CODE_RE.test(code)) return json({ error: "Sala no encontrada" }, 404, cors);
+  if (!audioConfigured(env)) return json({ error: "El audio no está configurado en el Worker" }, 503, cors);
+  let body = {};
+  try { body = await req.json(); } catch {}
+  const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+  const lang = String(body.lang || "");
+
+  if (action === "publish") {
+    const ok = await stub.canPublish(req.headers.get("X-Host-Token") || "", lang);
+    if (ok !== true) return json({ error: ok }, ok === "Token inválido" ? 401 : 400, cors);
+    if (!isSdp(body.sdp)) return json({ error: "SDP inválido" }, 400, cors);
+    const s = await sfu(env, "POST", "/sessions/new");
+    if (!s.ok) return json({ error: s.error }, 502, cors);
+    const sid = s.data.sessionId;
+    const t = await sfu(env, "POST", `/sessions/${sid}/tracks/new`, {
+      sessionDescription: { type: "offer", sdp: body.sdp },
+      tracks: [{ location: "local", mid: String(body.mid ?? "0"), trackName: lang }],
+    });
+    if (!t.ok) return json({ error: t.error }, 502, cors);
+    const rev = await stub.setAudio(lang, sid, lang);
+    return json({ sdp: t.data.sessionDescription.sdp, rev }, 200, cors);
+  }
+
+  if (action === "listen") {
+    const pub = await stub.getAudio(lang);
+    if (!pub) return json({ error: "Todavía no hay audio para este idioma" }, 404, cors);
+    const s = await sfu(env, "POST", "/sessions/new");
+    if (!s.ok) return json({ error: s.error }, 502, cors);
+    const sid = s.data.sessionId;
+    const t = await sfu(env, "POST", `/sessions/${sid}/tracks/new`, {
+      tracks: [{ location: "remote", sessionId: pub.sessionId, trackName: pub.trackName }],
+    });
+    if (!t.ok) return json({ error: t.error }, 502, cors);
+    return json({ sessionId: sid, sdp: t.data.sessionDescription.sdp, rev: pub.rev }, 200, cors);
+  }
+
+  if (action === "answer") {
+    const sid = String(body.sessionId || "");
+    if (!/^[A-Za-z0-9_-]{8,128}$/.test(sid) || !isSdp(body.sdp)) return json({ error: "Datos inválidos" }, 400, cors);
+    const r = await sfu(env, "PUT", `/sessions/${sid}/renegotiate`, { sessionDescription: { type: "answer", sdp: body.sdp } });
+    if (!r.ok) return json({ error: r.error }, 502, cors);
+    return json({ ok: true }, 200, cors);
+  }
+  return json({ error: "No encontrado" }, 404, cors);
 }
 
 // =====================================================================
@@ -148,10 +230,10 @@ export class Room extends DurableObject {
     return this.meta;
   }
 
-  async init({ title, langs, src, tokenHash, ttl }) {
+  async init({ title, langs, src, audio, tokenHash, ttl }) {
     if (await this.getMeta()) return null; // código ocupado
     const now = Date.now();
-    const meta = { title, langs, src, tokenHash, created: now, expires: now + ttl * 1000, live: false, ended: false };
+    const meta = { title, langs, src, audio: !!audio, tokenHash, created: now, expires: now + ttl * 1000, live: false, ended: false };
     await this.ctx.storage.put("meta", meta);
     await this.ctx.storage.setAlarm(meta.expires);
     this.meta = meta;
@@ -161,7 +243,30 @@ export class Room extends DurableObject {
   async info() {
     const m = await this.getMeta();
     if (!m) return null;
-    return { title: m.title, langs: m.langs, src: m.src, live: m.live, ended: m.ended, expires: m.expires };
+    return { title: m.title, langs: m.langs, src: m.src, audio: !!m.audio, live: m.live, ended: m.ended, expires: m.expires };
+  }
+
+  // ---------- audio ----------
+  async canPublish(token, lang) {
+    const m = await this.getMeta();
+    if (!m || m.ended) return "Sala no encontrada";
+    if (!m.audio) return "Esta sala no tiene audio";
+    if ((await sha256(token)) !== m.tokenHash) return "Token inválido";
+    if (!m.langs.includes(lang)) return "Idioma no disponible";
+    return true;
+  }
+  async setAudio(lang, sessionId, trackName) {
+    const audio = (await this.ctx.storage.get("audio")) || {};
+    const rev = (audio[lang]?.rev || 0) + 1;
+    audio[lang] = { sessionId, trackName, rev };
+    await this.ctx.storage.put("audio", audio);
+    this.broadcast("l:" + lang, { t: "audio", rev }); // los teléfonos que escuchan se reconectan
+    return rev;
+  }
+  async getAudio(lang) {
+    const m = await this.getMeta();
+    if (!m || m.ended || !m.audio) return null;
+    return ((await this.ctx.storage.get("audio")) || {})[lang] || null;
   }
 
   async fetch(req) {
@@ -186,10 +291,11 @@ export class Room extends DurableObject {
 
     if (att.role === "listener") {
       const lines = m.ended ? [] : (await this.ctx.storage.get("lines:" + att.lang)) || [];
-      server.send(JSON.stringify({ t: "init", title: m.title, lang: att.lang, lines, partial: this.partial[att.lang] || "", live: m.live, ended: m.ended }));
+      const pub = m.audio && !m.ended ? ((await this.ctx.storage.get("audio")) || {})[att.lang] : null;
+      server.send(JSON.stringify({ t: "init", title: m.title, lang: att.lang, lines, partial: this.partial[att.lang] || "", live: m.live, ended: m.ended, audio: !!m.audio, audioRev: pub ? pub.rev : 0 }));
       if (m.ended) { server.close(1000, "Sala terminada"); return new Response(null, { status: 101, webSocket: client }); }
     } else {
-      server.send(JSON.stringify({ t: "hello", title: m.title, langs: m.langs, src: m.src, expires: m.expires }));
+      server.send(JSON.stringify({ t: "hello", title: m.title, langs: m.langs, src: m.src, audio: !!m.audio, expires: m.expires }));
     }
     this.sendCounts();
     return new Response(null, { status: 101, webSocket: client });
@@ -240,6 +346,7 @@ export class Room extends DurableObject {
       m.ended = true; m.live = false;
       await this.ctx.storage.put("meta", m);
       for (const l of [...m.langs, "src"]) await this.ctx.storage.delete("lines:" + l);
+      await this.ctx.storage.delete("audio");
     }
     this.partial = {};
     for (const ws of this.ctx.getWebSockets()) {
