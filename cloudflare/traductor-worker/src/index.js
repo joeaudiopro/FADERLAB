@@ -13,6 +13,14 @@
 //    POST /room/:code/audio/listen  → un teléfono pide escuchar un idioma (recibe oferta SDP)
 //    POST /room/:code/audio/answer  → el teléfono devuelve su respuesta SDP
 //    El App Secret del SFU nunca sale de aquí.
+// 4) Clientes (marca propia y enlace fijo):
+//    GET  /clients              → lista de clientes (operador)
+//    PUT  /client/:slug         → crear / editar perfil (operador)
+//    PUT  /client/:slug/logo    → subir logo PNG/WebP/JPEG (operador); DELETE lo quita
+//    GET  /client/:slug         → perfil público + sala activa (público, enlace del QR)
+//    GET  /client/:slug/logo    → imagen del logo (público)
+//    Un cliente "permanente" (iglesia, escuela) nunca vence; uno "por evento" tiene fechas.
+//    Cada sala nueva de un cliente reemplaza a la anterior: el QR del cliente nunca cambia.
 //
 // Secretos (wrangler secret put ...):
 //   OPENAI_API_KEY       — clave de la API de OpenAI
@@ -32,6 +40,10 @@ const MAX_LANGS = 8;
 const KEEP_LINES = 40;           // renglones que recibe quien llega tarde
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // sin 0/O, 1/I/L
 const CODE_RE = /^[A-HJ-NP-Z2-9]{6}$/;
+const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const LOGO_MAX = 400 * 1024;
+const CLIENT_CACHE_S = 8; // el público consulta seguido mientras espera: respuesta en caché unos segundos
 
 export default {
   async fetch(req, env) {
@@ -43,7 +55,7 @@ export default {
     const cors = okOrigin
       ? {
           "Access-Control-Allow-Origin": origin,
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
           "Access-Control-Allow-Headers": "Content-Type, X-Access-Code, X-Host-Token",
           "Access-Control-Max-Age": "86400",
           Vary: "Origin",
@@ -59,6 +71,28 @@ export default {
     if (parts[0] === "room" && parts[2] === "audio" && parts.length === 4 && req.method === "POST") {
       if (!okOrigin) return json({ error: "Origen no permitido" }, 403, cors);
       return audioRoute(parts[1].toUpperCase(), parts[3], req, env, cors);
+    }
+
+    // ---------- clientes: rutas públicas ----------
+    if (parts[0] === "client" && parts.length >= 2 && req.method === "GET") {
+      const slug = parts[1].toLowerCase();
+      if (!SLUG_RE.test(slug)) return json({ error: "Cliente no encontrado" }, 404, cors);
+      if (parts[2] === "logo") {
+        const logo = await directory(env).getLogo(slug);
+        if (!logo) return new Response("", { status: 404 });
+        return new Response(logo.data, { headers: { "Content-Type": logo.type, "Cache-Control": "public, max-age=86400", "Access-Control-Allow-Origin": "*", "X-Content-Type-Options": "nosniff" } });
+      }
+      if (!okOrigin) return json({ error: "Origen no permitido" }, 403, cors);
+      const cache = caches.default, key = new Request(`https://cache.invalid/client/${slug}`);
+      let data = null;
+      const hit = await cache.match(key);
+      if (hit) data = await hit.json();
+      else {
+        data = await publicClient(slug, env);
+        await cache.put(key, new Response(JSON.stringify(data), { headers: { "Cache-Control": `max-age=${CLIENT_CACHE_S}` } }));
+      }
+      if (!data) return json({ error: "Cliente no encontrado" }, 404, cors);
+      return json(data, 200, cors);
     }
 
     // ---------- salas: rutas públicas (el público no lleva código) ----------
@@ -77,15 +111,19 @@ export default {
     }
 
     // ---------- de aquí en adelante: solo el operador ----------
-    if (req.method !== "POST" || (url.pathname !== "/session" && url.pathname !== "/room")) {
-      return json({ error: "No encontrado" }, 404, cors);
-    }
+    const isClientRoute = parts[0] === "client" && parts.length >= 2 && (
+      (parts.length === 2 && req.method === "PUT") || (parts[2] === "logo" && parts.length === 3 && (req.method === "PUT" || req.method === "DELETE")));
+    const isOperatorRoute = (req.method === "POST" && (url.pathname === "/session" || url.pathname === "/room")) ||
+      (req.method === "GET" && url.pathname === "/clients") || isClientRoute;
+    if (!isOperatorRoute) return json({ error: "No encontrado" }, 404, cors);
     if (!okOrigin) return json({ error: "Origen no permitido" }, 403, cors);
     // Falla cerrado: sin código configurado no se entrega nada.
     if (!env.OPENAI_API_KEY || !env.ACCESS_CODE) return json({ error: "Worker sin configurar (faltan secretos)" }, 500, cors);
     if (!(await sameText(req.headers.get("X-Access-Code") || "", env.ACCESS_CODE))) {
       return json({ error: "Código de acceso incorrecto" }, 401, cors);
     }
+    if (url.pathname === "/clients") return json({ clients: await directory(env).list() }, 200, cors);
+    if (isClientRoute) return clientRoute(parts[1].toLowerCase(), parts[2], req, env, cors);
     let body = {};
     try { body = await req.json(); } catch { /* cuerpo vacío = valores por defecto */ }
 
@@ -127,7 +165,17 @@ async function createSession(body, env, cors) {
 }
 
 async function createRoom(body, env, cors) {
-  const title = String(body.title || "").trim().slice(0, 80);
+  // sala de un cliente: valida vigencia y usa su nombre si no viene título
+  let client = null;
+  if (body.client) {
+    const slug = String(body.client).toLowerCase();
+    client = SLUG_RE.test(slug) ? await directory(env).get(slug) : null;
+    if (!client) return json({ error: "Cliente no encontrado" }, 404, cors);
+    const st = clientStatus(client);
+    if (st === "archived") return json({ error: "Este cliente está archivado" }, 400, cors);
+    if (st === "expired") return json({ error: "La vigencia de este cliente ya terminó; edita sus fechas para volver a usarlo" }, 400, cors);
+  }
+  const title = (String(body.title || "").trim() || client?.name || "").slice(0, 80);
   const langs = [...new Set(Array.isArray(body.langs) ? body.langs.map(String) : [])].filter((l) => LANGS.includes(l));
   const src = !!body.src;
   const audio = !!body.audio && audioConfigured(env);
@@ -139,10 +187,121 @@ async function createRoom(body, env, cors) {
   for (let i = 0; i < 6; i++) {
     const code = randomCode(6);
     const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
-    const meta = await stub.init({ title, langs, src, audio, tokenHash, ttl: ROOM_TTL });
-    if (meta) return json({ code, hostToken, expires: meta.expires, audio, audioAvailable: audioConfigured(env) }, 200, cors);
+    const meta = await stub.init({ title, langs, src, audio, tokenHash, ttl: ROOM_TTL, client: client?.slug || null });
+    if (meta) {
+      if (client) {
+        // el enlace del cliente apunta a la sala nueva; la anterior se cierra
+        const old = await directory(env).setRoom(client.slug, code);
+        if (old && old !== code) { try { await env.ROOMS.get(env.ROOMS.idFromName(old)).end(); } catch {} }
+        await purgeClient(client.slug);
+      }
+      return json({ code, hostToken, expires: meta.expires, audio, audioAvailable: audioConfigured(env), client: client?.slug || null }, 200, cors);
+    }
   }
   return json({ error: "No pude generar un código de sala, intenta de nuevo" }, 500, cors);
+}
+
+// ---------- clientes ----------
+function directory(env) { return env.DIRECTORY.get(env.DIRECTORY.idFromName("clientes")); }
+async function purgeClient(slug) { try { await caches.default.delete(new Request(`https://cache.invalid/client/${slug}`)); } catch {} }
+
+function clientStatus(p, now = Date.now()) {
+  if (p.archived) return "archived";
+  if (p.type === "event" && p.validUntil && now > p.validUntil) return "expired";
+  if (p.type === "event" && p.validFrom && now < p.validFrom) return "upcoming";
+  return "active";
+}
+
+async function publicClient(slug, env) {
+  const p = await directory(env).get(slug);
+  if (!p) return null;
+  let status = clientStatus(p);
+  let room = null;
+  if (status === "active" && p.room) {
+    const info = await env.ROOMS.get(env.ROOMS.idFromName(p.room)).info();
+    if (info && !info.ended) room = { code: p.room, langs: info.langs, src: info.src, audio: info.audio, live: info.live };
+  }
+  if (status === "active") status = room ? "open" : "waiting";
+  return {
+    slug: p.slug, name: p.name, type: p.type, message: p.message, bg: p.bg, accent: p.accent,
+    poweredBy: p.poweredBy, logo: p.logoRev ? `/client/${p.slug}/logo?v=${p.logoRev}` : null,
+    validFrom: p.validFrom || null, validUntil: p.validUntil || null, status, room,
+  };
+}
+
+function cleanProfile(b, slug, prev) {
+  const str = (x, n) => String(x ?? "").trim().slice(0, n);
+  const name = str(b.name, 80);
+  if (!name) return { error: "Falta el nombre del cliente" };
+  const type = b.type === "event" ? "event" : "permanent";
+  const num = (x) => (Number.isFinite(+x) && +x > 0 ? Math.round(+x) : null);
+  const validFrom = type === "event" ? num(b.validFrom) : null;
+  const validUntil = type === "event" ? num(b.validUntil) : null;
+  if (type === "event" && !validUntil) return { error: "Un cliente por evento necesita fecha de fin" };
+  if (validFrom && validUntil && validFrom > validUntil) return { error: "La fecha de inicio es posterior a la de fin" };
+  const langs = [...new Set(Array.isArray(b.langs) ? b.langs.map(String) : [])].filter((l) => LANGS.includes(l)).slice(0, MAX_LANGS);
+  const now = Date.now();
+  return {
+    profile: {
+      logoRev: 0, room: null, ...prev,
+      slug, name, type, validFrom, validUntil,
+      message: str(b.message, 240),
+      bg: HEX_RE.test(b.bg) ? b.bg.toLowerCase() : "#0a0a0a",
+      accent: HEX_RE.test(b.accent) ? b.accent.toLowerCase() : "#20c8e8",
+      langs, src: b.src !== false, audio: b.audio !== false, poweredBy: b.poweredBy !== false,
+      archived: !!b.archived, created: prev?.created || now, updated: now,
+    },
+  };
+}
+
+function sniffImage(buf) {
+  const b = new Uint8Array(buf.slice(0, 12));
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return "image/webp";
+  return null;
+}
+
+async function clientRoute(slug, sub, req, env, cors) {
+  if (!SLUG_RE.test(slug)) return json({ error: "Enlace inválido: usa minúsculas, números y guiones (2 a 40)" }, 400, cors);
+  const dir = directory(env);
+  if (sub === "logo") {
+    if (!(await dir.get(slug))) return json({ error: "Cliente no encontrado" }, 404, cors);
+    if (req.method === "DELETE") { const p = await dir.setLogo(slug, null, null); await purgeClient(slug); return json({ client: p }, 200, cors); }
+    const buf = await req.arrayBuffer();
+    if (buf.byteLength > LOGO_MAX) return json({ error: "El logo pesa demasiado (máximo 400 KB)" }, 413, cors);
+    const type = sniffImage(buf);
+    if (!type) return json({ error: "El logo debe ser PNG, WebP o JPEG" }, 415, cors);
+    const p = await dir.setLogo(slug, type, buf);
+    await purgeClient(slug);
+    return json({ client: p }, 200, cors);
+  }
+  let body = {};
+  try { body = await req.json(); } catch {}
+  const prev = await dir.get(slug);
+  const r = cleanProfile(body, slug, prev);
+  if (r.error) return json({ error: r.error }, 400, cors);
+  await dir.put(slug, r.profile);
+  await purgeClient(slug);
+  return json({ client: r.profile, created: !prev }, 200, cors);
+}
+
+// Directorio de clientes: un solo Durable Object con todos los perfiles y logos.
+export class Directory extends DurableObject {
+  async list() { return [...(await this.ctx.storage.list({ prefix: "c:" })).values()].sort((a, b) => a.name.localeCompare(b.name, "es")); }
+  async get(slug) { return (await this.ctx.storage.get("c:" + slug)) || null; }
+  async put(slug, p) { await this.ctx.storage.put("c:" + slug, p); return p; }
+  async setRoom(slug, code) {
+    const p = await this.get(slug); if (!p) return null;
+    const old = p.room || null; p.room = code; await this.put(slug, p); return old;
+  }
+  async setLogo(slug, type, data) {
+    const p = await this.get(slug); if (!p) return null;
+    if (data) { await this.ctx.storage.put("logo:" + slug, { type, data }); p.logoRev = (p.logoRev || 0) + 1; }
+    else { await this.ctx.storage.delete("logo:" + slug); p.logoRev = 0; }
+    await this.put(slug, p); return p;
+  }
+  async getLogo(slug) { return (await this.ctx.storage.get("logo:" + slug)) || null; }
 }
 
 // ---------- audio: puente con Cloudflare Realtime SFU ----------
@@ -230,10 +389,10 @@ export class Room extends DurableObject {
     return this.meta;
   }
 
-  async init({ title, langs, src, audio, tokenHash, ttl }) {
+  async init({ title, langs, src, audio, tokenHash, ttl, client }) {
     if (await this.getMeta()) return null; // código ocupado
     const now = Date.now();
-    const meta = { title, langs, src, audio: !!audio, tokenHash, created: now, expires: now + ttl * 1000, live: false, ended: false };
+    const meta = { title, langs, src, audio: !!audio, client: client || null, tokenHash, created: now, expires: now + ttl * 1000, live: false, ended: false };
     await this.ctx.storage.put("meta", meta);
     await this.ctx.storage.setAlarm(meta.expires);
     this.meta = meta;
@@ -243,7 +402,7 @@ export class Room extends DurableObject {
   async info() {
     const m = await this.getMeta();
     if (!m) return null;
-    return { title: m.title, langs: m.langs, src: m.src, audio: !!m.audio, live: m.live, ended: m.ended, expires: m.expires };
+    return { title: m.title, langs: m.langs, src: m.src, audio: !!m.audio, client: m.client || null, live: m.live, ended: m.ended, expires: m.expires };
   }
 
   // ---------- audio ----------

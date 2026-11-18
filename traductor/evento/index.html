@@ -18,6 +18,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0;min-height:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:15px}
 button,select,input{font:inherit;color:inherit}
@@ -116,13 +117,41 @@ dialog::backdrop{background:rgba(0,0,0,.7)}
 dialog h3{font-family:var(--f-head);font-weight:400;font-size:24px;letter-spacing:.08em;margin:0 0 4px}
 dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px 0 0}
 
+/* clientes */
+.row2{display:flex;gap:8px;align-items:center}
+.row2 select{flex:1;min-width:0}
+.cliinfo{display:flex;gap:10px;align-items:center;margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);font-size:13px;line-height:1.35}
+.cliinfo img{width:38px;height:38px;object-fit:contain;border-radius:6px;flex:none}
+.cliinfo .sw{width:38px;height:38px;border-radius:6px;flex:none;border:1px solid var(--border)}
+.cliinfo b{display:block;color:#fff;font-weight:500}
+.cliinfo small{color:var(--dim);font-family:var(--f-mono);font-size:11px;word-break:break-all}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:999px;border:1px solid var(--border);color:var(--dim);margin-left:4px;vertical-align:1px}
+.tag.ok{color:var(--green);border-color:#1a5a3a}.tag.warn{color:var(--accent)}.tag.bad{color:#ff7a6a;border-color:#5a1a1a}
+#cliDlg{width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 32px);overflow:auto}
+#cliDlg .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){#cliDlg .grid2{grid-template-columns:1fr}}
+#cliDlg textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;min-height:64px;resize:vertical;font:inherit;color:inherit}
+#cliDlg input[type=date]{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:inherit;font:inherit;color-scheme:dark}
+.colorrow{display:flex;align-items:center;gap:8px}
+.colorrow input[type=color]{width:44px;height:36px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer}
+.colorrow input[type=text]{font-family:var(--f-mono)}
+.radios{display:flex;gap:6px;flex-wrap:wrap}
+.logobox{display:flex;gap:12px;align-items:center}
+.logoprev{width:88px;height:88px;object-fit:contain;border-radius:8px;border:1px solid var(--border);background:repeating-conic-gradient(#1c1c1c 0 25%,#262626 0 50%) 0 0/14px 14px;flex:none}
+.dlgmsg{color:#ff7a6a;font-size:13px;min-height:1.3em;margin-top:10px}
+.mini{display:block;margin-top:6px;border-radius:10px;padding:14px;text-align:center;border:1px solid var(--border)}
+.mini img{max-height:44px;max-width:60%;display:block;margin:0 auto 6px}
+.mini .n{font-weight:700;font-size:16px}
+.mini .b{display:inline-block;margin-top:8px;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700}
+
 /* QR a pantalla completa (proyector / pantalla de bienvenida) */
 #qrFull{position:fixed;inset:0;z-index:20;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:3vh;padding:4vh 4vw;text-align:center;cursor:none}
 #qrFull.on{display:flex}
-#qrFull .t{font-family:var(--f-head);font-size:clamp(28px,6vh,72px);letter-spacing:.06em;color:#fff;line-height:1}
+#qrFull .lg{max-height:14vh;max-width:50vw;object-fit:contain}
+#qrFull .t{font-family:var(--f-head);font-size:clamp(28px,6vh,72px);letter-spacing:.06em;color:inherit;line-height:1}
 #qrFull .qr{width:min(58vh,80vw);padding:2.4vh}
-#qrFull .msg{font-size:clamp(16px,2.8vh,30px);color:#ddd;line-height:1.35}
-#qrFull .msg span{display:block;color:#888;font-size:.8em}
+#qrFull .msg{font-size:clamp(16px,2.8vh,30px);color:inherit;opacity:.85;line-height:1.35}
+#qrFull .msg span{display:block;opacity:.7;font-size:.8em}
 #qrFull .u{font-family:var(--f-mono);font-size:clamp(14px,2.4vh,26px);color:var(--accent2)}
 </style>
 </head>
@@ -143,6 +172,10 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
     <section class="card" id="roomCard">
       <h2>1 · Sala <small id="roomState">nueva</small></h2>
       <div id="roomNew">
+        <div class="field"><label for="cliSel">Cliente</label>
+          <div class="row2"><select id="cliSel"><option value="">— Sin cliente (sala suelta) —</option></select><button class="ghost" id="cliNew" type="button">Nuevo</button><button class="ghost" id="cliEdit" type="button" disabled>Editar</button></div>
+          <div class="cliinfo" id="cliInfo" hidden></div>
+        </div>
         <div class="field"><label for="title">Nombre del evento (lo ve el público)</label><input type="text" id="title" maxlength="80" placeholder="Congreso Anual 2026"></div>
         <div class="field"><span class="lbl">Idiomas que ofreces</span><div class="chips" id="langChips"></div></div>
         <div class="field"><span class="lbl">Además</span><div class="chips"><label class="chip"><input type="checkbox" id="srcOpt" checked><span>Original (subtítulos del idioma que se habla)</span></label><label class="chip"><input type="checkbox" id="audioOpt" checked><span>Audio en teléfonos (con audífonos)</span></label></div></div>
@@ -152,6 +185,7 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
       <div id="roomOn" hidden>
         <div class="roomcode" id="roomCode">——————</div>
         <dl class="kv">
+          <dt>Cliente</dt><dd id="roomClient">—</dd>
           <dt>Evento</dt><dd id="roomTitle">—</dd>
           <dt>Idiomas</dt><dd id="roomLangs">—</dd>
           <dt>Audio</dt><dd id="roomAudio">—</dd>
@@ -203,6 +237,7 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
             <button class="ghost" id="fullBtn" disabled>Pantalla completa</button>
             <button class="ghost" id="copyBtn" disabled>Copiar enlace</button>
             <button class="ghost" id="svgBtn" disabled>Descargar QR (SVG)</button>
+            <button class="ghost" id="pngBtn" disabled>Descargar QR (PNG)</button>
             <a class="ghost" id="openBtn" target="_blank" rel="noopener" aria-disabled="true">Ver como público</a>
           </div>
           <div class="hint">Para imprimir en mesas o gafetes, descarga el SVG: escala sin perder calidad. En pantalla completa, doble clic o Esc para salir.</div>
@@ -225,11 +260,50 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
 </main>
 
 <div id="qrFull" title="Doble clic para salir">
+  <img class="lg" id="qfLogo" alt="" hidden>
   <div class="t" id="qfTitle"></div>
   <div class="qr" id="qfQr"></div>
   <div class="msg">Escanea para ver la traducción en tu teléfono<span>Scan to follow the live translation on your phone</span></div>
   <div class="u" id="qfUrl"></div>
 </div>
+
+<dialog id="cliDlg">
+  <form method="dialog" id="cliForm">
+    <h3 id="cliDlgTitle">Nuevo cliente</h3>
+    <div class="hint">El público ve su logo, colores y mensaje al escanear el QR. Su enlace no cambia aunque abras salas nuevas.</div>
+    <div class="grid2">
+      <div class="field"><label for="cfName">Nombre (lo ve el público)</label><input type="text" id="cfName" maxlength="80" placeholder="Iglesia Vida Nueva" required></div>
+      <div class="field"><label for="cfSlug">Enlace</label><input type="text" id="cfSlug" maxlength="40" placeholder="iglesia-vida" autocomplete="off" spellcheck="false"></div>
+    </div>
+    <div class="hint" id="cfLink">faderlab.mx/traductor/escucha/?c=…</div>
+    <div class="field"><span class="lbl">Tipo</span><div class="radios">
+      <label class="chip"><input type="radio" name="cfType" value="permanent" checked><span>Permanente (iglesia, escuela, auditorio)</span></label>
+      <label class="chip"><input type="radio" name="cfType" value="event"><span>Por evento (con fechas)</span></label>
+    </div></div>
+    <div class="grid2" id="cfDates" hidden>
+      <div class="field"><label for="cfFrom">Desde</label><input type="date" id="cfFrom"></div>
+      <div class="field"><label for="cfUntil">Hasta (después muestra "evento terminado")</label><input type="date" id="cfUntil"></div>
+    </div>
+    <div class="field"><label for="cfMsg">Mensaje de bienvenida (opcional)</label><textarea id="cfMsg" maxlength="240" placeholder="Bienvenidos. Elige tu idioma para seguir el servicio."></textarea></div>
+    <div class="grid2">
+      <div class="field"><span class="lbl">Color de fondo</span><div class="colorrow"><input type="color" id="cfBg" value="#0a0a0a"><input type="text" id="cfBgT" value="#0a0a0a" maxlength="7"></div></div>
+      <div class="field"><span class="lbl">Color de acento (botones)</span><div class="colorrow"><input type="color" id="cfAc" value="#20c8e8"><input type="text" id="cfAcT" value="#20c8e8" maxlength="7"></div></div>
+    </div>
+    <div class="field"><span class="lbl">Logo (PNG, JPG, WebP o SVG; mejor con fondo transparente)</span>
+      <div class="logobox"><img class="logoprev" id="cfLogoPrev" alt="" hidden><div><input type="file" id="cfLogo" accept="image/png,image/jpeg,image/webp,image/svg+xml"><div class="btns" style="margin-top:6px"><button class="ghost danger" id="cfLogoDel" type="button" hidden>Quitar logo</button></div></div></div>
+    </div>
+    <div class="field"><span class="lbl">Vista previa del teléfono</span><div class="mini" id="cfMini"><img id="cfMiniLogo" alt="" hidden><div class="n" id="cfMiniName">Nombre</div><div class="b" id="cfMiniBtn">English</div></div></div>
+    <div class="field"><span class="lbl">Idiomas por defecto al abrir sala</span><div class="chips" id="cfLangs"></div></div>
+    <div class="field"><span class="lbl">Además</span><div class="chips">
+      <label class="chip"><input type="checkbox" id="cfSrc" checked><span>Original</span></label>
+      <label class="chip"><input type="checkbox" id="cfAudio" checked><span>Audio en teléfonos</span></label>
+      <label class="chip"><input type="checkbox" id="cfPowered" checked><span>Mostrar "Con tecnología de FaderLab"</span></label>
+      <label class="chip" id="cfArchWrap" hidden><input type="checkbox" id="cfArch"><span>Archivado (su enlace muestra "terminado")</span></label>
+    </div></div>
+    <div class="dlgmsg" id="cfErr"></div>
+    <menu><a class="ghost" id="cfPreview" target="_blank" rel="noopener" hidden>Ver como público</a><button class="ghost" value="cancel" formnovalidate>Cancelar</button><button class="ghost" id="cfSave" type="button" style="border-color:var(--accent);color:var(--accent)">Guardar</button></menu>
+  </form>
+</dialog>
 
 <dialog id="cfg">
   <form method="dialog">
@@ -252,6 +326,7 @@ const LNAME = Object.fromEntries([...LANGS, ["src", "Original"]]);
 const MAX_LANGS = 8;
 let sessions = [], running = false, startedAt = 0, langMs = 0, lastTick = 0; // estado de la traducción
 let pubs = {}; // idioma -> AudioPub (voz traducida hacia los teléfonos)
+let clients = []; // perfiles de clientes (marca + enlace fijo)
 const PAUSE_MS = 2200;   // silencio que cierra un renglón
 const SOFT_MAX = 170;    // renglón largo: se cierra en el siguiente punto
 
@@ -300,6 +375,16 @@ let room = null;     // {code, hostToken, expires, title, langs, src}
 let hostWs = null, hostRetry = 0, hostTimer = null, pingTimer = null;
 const listeners = {}; // lang -> n
 
+async function opApi(method, path, body, binary) {
+  const { url, code } = cfg();
+  const headers = { "X-Access-Code": code };
+  if (body !== undefined && !binary) headers["Content-Type"] = "application/json";
+  const r = await fetch(url + path, { method, headers, body: body === undefined ? undefined : binary ? body : JSON.stringify(body) });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(data.error || "El Worker respondió " + r.status); e.status = r.status; throw e; }
+  return data;
+}
+
 async function api(path, body) {
   const { url, code } = cfg();
   const r = await fetch(url + path, {
@@ -321,8 +406,10 @@ $("#createBtn").onclick = async () => {
     const title = $("#title").value.trim();
     const src = $("#srcOpt").checked;
     const wantAudio = $("#audioOpt").checked;
-    const r = await api("/room", { title, langs, src, audio: wantAudio });
-    room = { code: r.code, hostToken: r.hostToken, expires: r.expires, title, langs, src, audio: !!r.audio };
+    const cli = clients.find((c) => c.slug === $("#cliSel").value) || null;
+    const r = await api("/room", { title, langs, src, audio: wantAudio, client: cli?.slug });
+    room = { code: r.code, hostToken: r.hostToken, expires: r.expires, title: title || cli?.name || "", langs, src, audio: !!r.audio,
+      client: r.client || null, brand: cli ? { name: cli.name, bg: cli.bg, accent: cli.accent, logo: cli.logoRev ? `/client/${cli.slug}/logo?v=${cli.logoRev}` : null } : null };
     if (wantAudio && !r.audio) log("El Worker todavía no tiene configurado el audio (Cloudflare Realtime): esta sala tendrá solo subtítulos.", true);
     store.set("evento.room", room);
     log("Sala creada: " + room.code);
@@ -348,7 +435,7 @@ function clearRoom() {
   $("#roomNew").hidden = false; $("#roomOn").hidden = true; $("#roomState").textContent = "nueva";
   $("#qrBox").className = "qr off"; $("#qrBox").textContent = "Crea la sala para generar el QR";
   $("#qrUrl").textContent = "—";
-  ["#fullBtn", "#copyBtn", "#svgBtn"].forEach((s) => $(s).disabled = true);
+  ["#fullBtn", "#copyBtn", "#svgBtn", "#pngBtn"].forEach((s) => $(s).disabled = true);
   $("#openBtn").removeAttribute("href"); $("#openBtn").setAttribute("aria-disabled", "true");
   $("#goBtn").disabled = true;
   $("#langRows").innerHTML = '<div class="hint">Aquí verás cada idioma, lo que se está diciendo y cuántas personas lo siguen.</div>';
@@ -360,17 +447,47 @@ function clearRoom() {
 
 function listenerUrl() {
   const u = new URL("../escucha/", location.href);
-  u.searchParams.set("s", room.code);
+  if (room.client) u.searchParams.set("c", room.client); // enlace fijo del cliente: el QR impreso nunca cambia
+  else u.searchParams.set("s", room.code);
   // Solo para pruebas en local: el público usa siempre el Worker oficial.
   if (/^(localhost|127\.)/.test(location.hostname) && cfg().url !== DEFAULT_WORKER) u.searchParams.set("api", cfg().url);
   return u.toString();
 }
 
-function qrSvg(text) {
-  const qr = qrcode(0, "M");
+// QR propio en SVG; con logo usa corrección de errores alta (H) para que el centro tapado no impida leerlo.
+function qrSvg(text, logo) {
+  const qr = qrcode(0, logo ? "H" : "M");
   qr.addData(text); qr.make();
-  return qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+  const n = qr.getModuleCount(), m = 3, size = n + m * 2;
+  let d = "";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
+  let extra = "";
+  if (logo) {
+    const w = Math.round(n * 0.22), x = (size - w) / 2, pad = 0.8;
+    extra = `<rect x="${x - pad}" y="${x - pad}" width="${w + pad * 2}" height="${w + pad * 2}" rx="1.4" fill="#fff"/><image href="${logo}" x="${x}" y="${x}" width="${w}" height="${w}" preserveAspectRatio="xMidYMid meet"/>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges"><rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#000"/>${extra}</svg>`;
 }
+const logoCache = {};
+async function logoDataUrl(path) {
+  if (!path) return null;
+  if (logoCache[path]) return logoCache[path];
+  try {
+    const b = await (await fetch(cfg().url + path)).blob();
+    return (logoCache[path] = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); }));
+  } catch { return null; }
+}
+async function currentQr() { return qrSvg(listenerUrl(), room.brand?.logo ? await logoDataUrl(room.brand.logo) : null); }
+async function svgToPng(svg, px = 2048) {
+  const img = new Image();
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  await img.decode();
+  const c = document.createElement("canvas"); c.width = c.height = px;
+  c.getContext("2d").drawImage(img, 0, 0, px, px);
+  return new Promise((res) => c.toBlob(res, "image/png"));
+}
+function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+const qrName = (ext) => `qr-${room.client || "sala-" + room.code}.${ext}`;
 
 function showRoom() {
   $("#roomNew").hidden = true; $("#roomOn").hidden = false;
@@ -380,12 +497,19 @@ function showRoom() {
   $("#roomLangs").textContent = [...room.langs.map((l) => LNAME[l]), ...(room.src ? ["Original"] : [])].join(", ");
   $("#roomExp").textContent = new Date(room.expires).toLocaleString();
   $("#roomAudio").textContent = room.audio ? "Sí · el público puede escuchar con audífonos" : "No · solo subtítulos";
+  $("#roomClient").textContent = room.client ? `${room.brand?.name || room.client} · enlace fijo` : "— (sala suelta)";
   const url = listenerUrl();
   const svg = qrSvg(url);
   $("#qrBox").className = "qr"; $("#qrBox").innerHTML = svg;
   $("#qrUrl").textContent = url;
   $("#qfQr").innerHTML = svg; $("#qfUrl").textContent = url.replace(/^https?:\/\//, ""); $("#qfTitle").textContent = room.title || "";
-  ["#fullBtn", "#copyBtn", "#svgBtn"].forEach((s) => $(s).disabled = false);
+  // marca del cliente: QR con logo y pantalla completa con sus colores
+  const b = room.brand;
+  $("#qrFull").style.background = b?.bg || "#000";
+  $("#qrFull").style.color = b && isLight(b.bg) ? "#111" : "#fff";
+  $("#qfLogo").hidden = !b?.logo; if (b?.logo) $("#qfLogo").src = cfg().url + b.logo;
+  if (b?.logo) currentQr().then((s2) => { if (!room) return; $("#qrBox").innerHTML = s2; $("#qfQr").innerHTML = s2; });
+  ["#fullBtn", "#copyBtn", "#svgBtn", "#pngBtn"].forEach((s) => $(s).disabled = false);
   $("#openBtn").href = url; $("#openBtn").removeAttribute("aria-disabled");
   $("#goBtn").disabled = false;
   // filas por idioma + monitor
@@ -398,11 +522,8 @@ function showRoom() {
 }
 
 $("#copyBtn").onclick = async () => { try { await navigator.clipboard.writeText(listenerUrl()); log("Enlace copiado."); } catch { log("No pude copiar; selecciona el enlace a mano.", true); } };
-$("#svgBtn").onclick = () => {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([qrSvg(listenerUrl())], { type: "image/svg+xml" }));
-  a.download = `qr-sala-${room.code}.svg`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-};
+$("#svgBtn").onclick = async () => download(new Blob([await currentQr()], { type: "image/svg+xml" }), qrName("svg"));
+$("#pngBtn").onclick = async () => { try { download(await svgToPng(await currentQr()), qrName("png")); } catch (err) { log("No pude generar el PNG: " + err.message, true); } };
 $("#fullBtn").onclick = () => { $("#qrFull").classList.add("on"); document.documentElement.requestFullscreen?.().catch(() => {}); };
 const exitFull = () => { $("#qrFull").classList.remove("on"); if (document.fullscreenElement) document.exitFullscreen(); };
 $("#qrFull").addEventListener("dblclick", exitFull);
@@ -779,6 +900,167 @@ setInterval(() => {
   updateTotals();
 }, 1000);
 addEventListener("beforeunload", (e) => { if (running) { e.preventDefault(); e.returnValue = ""; } });
+
+/* ================= clientes (marca propia + enlace fijo) ================= */
+function isLight(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return false;
+  const n = parseInt(m[1], 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6;
+}
+function clientStatus(p, now = Date.now()) {
+  if (p.archived) return "archived";
+  if (p.type === "event" && p.validUntil && now > p.validUntil) return "expired";
+  if (p.type === "event" && p.validFrom && now < p.validFrom) return "upcoming";
+  return "active";
+}
+const fmtDate = (ms) => new Date(ms).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
+function statusTag(p) {
+  const st = clientStatus(p);
+  if (st === "archived") return '<span class="tag bad">archivado</span>';
+  if (st === "expired") return '<span class="tag bad">vencido</span>';
+  if (p.type === "event") return `<span class="tag ${st === "upcoming" ? "warn" : "ok"}">evento · ${p.validFrom ? fmtDate(p.validFrom) + " – " : "hasta "}${fmtDate(p.validUntil)}</span>`;
+  return '<span class="tag ok">permanente</span>';
+}
+function clientLink(slug) {
+  const u = new URL("../escucha/", location.href); u.searchParams.set("c", slug);
+  if (/^(localhost|127\.)/.test(location.hostname) && cfg().url !== DEFAULT_WORKER) u.searchParams.set("api", cfg().url);
+  return u.toString();
+}
+
+async function loadClients() {
+  if (!cfg().code) return;
+  try { clients = (await opApi("GET", "/clients")).clients || []; }
+  catch (err) { log("No pude cargar los clientes: " + err.message, true); return; }
+  const sel = $("#cliSel"), want = sel.value || store.get("evento.client", "");
+  const usable = clients.filter((c) => ["active", "upcoming"].includes(clientStatus(c)));
+  const other = clients.filter((c) => !usable.includes(c));
+  sel.innerHTML = '<option value="">— Sin cliente (sala suelta) —</option>' +
+    (usable.length ? `<optgroup label="Clientes">${usable.map((c) => `<option value="${esc(c.slug)}">${esc(c.name)}</option>`).join("")}</optgroup>` : "") +
+    (other.length ? `<optgroup label="Vencidos / archivados">${other.map((c) => `<option value="${esc(c.slug)}">${esc(c.name)}</option>`).join("")}</optgroup>` : "");
+  sel.value = clients.some((c) => c.slug === want) ? want : "";
+  onClientPick(false);
+}
+function onClientPick(applyDefaults) {
+  const c = clients.find((x) => x.slug === $("#cliSel").value);
+  store.set("evento.client", c?.slug || "");
+  $("#cliEdit").disabled = !c;
+  $("#cliInfo").hidden = !c;
+  if (!c) { $("#createBtn").disabled = false; return; }
+  const logo = c.logoRev ? `<img src="${esc(cfg().url)}/client/${esc(c.slug)}/logo?v=${c.logoRev}" alt="">` : `<span class="sw" style="background:${esc(c.bg)}"></span>`;
+  $("#cliInfo").innerHTML = `${logo}<div><b>${esc(c.name)} ${statusTag(c)}</b><small>${esc(clientLink(c.slug).replace(/^https?:\/\//, ""))}</small></div>`;
+  const st = clientStatus(c);
+  $("#createBtn").disabled = st === "archived" || st === "expired";
+  if (st === "expired") log(`La vigencia de ${c.name} terminó; edita sus fechas para volver a usarlo.`, true);
+  if (applyDefaults) {
+    $("#title").value = c.name;
+    if (c.langs?.length) document.querySelectorAll("#langChips input").forEach((i) => { i.checked = c.langs.includes(i.value); });
+    $("#srcOpt").checked = c.src !== false; $("#audioOpt").checked = c.audio !== false;
+  }
+}
+$("#cliSel").addEventListener("change", () => onClientPick(true));
+
+/* ---------- formulario de cliente ---------- */
+let editing = null, slugTouched = false, logoBlob = null, logoRemove = false;
+$("#cfLangs").innerHTML = LANGS.map(([c, n]) => `<label class="chip"><input type="checkbox" value="${c}"><span>${n}</span></label>`).join("");
+const slugify = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "");
+const dateIn = (ms) => { if (!ms) return ""; const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const dateOut = (v, end) => { if (!v) return null; const [y, m, d] = v.split("-").map(Number); return end ? new Date(y, m - 1, d, 23, 59, 59).getTime() : new Date(y, m - 1, d, 0, 0, 0).getTime(); };
+
+function openClient(c) {
+  editing = c || null; slugTouched = !!c; logoBlob = null; logoRemove = false;
+  $("#cliDlgTitle").textContent = c ? "Editar cliente" : "Nuevo cliente";
+  $("#cfName").value = c?.name || ""; $("#cfSlug").value = c?.slug || ""; $("#cfSlug").disabled = !!c;
+  document.querySelector(`input[name=cfType][value=${c?.type === "event" ? "event" : "permanent"}]`).checked = true;
+  $("#cfFrom").value = dateIn(c?.validFrom); $("#cfUntil").value = dateIn(c?.validUntil);
+  $("#cfMsg").value = c?.message || "";
+  setColor("Bg", c?.bg || "#0a0a0a"); setColor("Ac", c?.accent || "#20c8e8");
+  document.querySelectorAll("#cfLangs input").forEach((i) => { i.checked = (c?.langs || pickedLangs()).includes(i.value); });
+  $("#cfSrc").checked = c ? c.src !== false : true; $("#cfAudio").checked = c ? c.audio !== false : true;
+  $("#cfPowered").checked = c ? c.poweredBy !== false : true;
+  $("#cfArchWrap").hidden = !c; $("#cfArch").checked = !!c?.archived;
+  $("#cfLogo").value = "";
+  const lp = c?.logoRev ? `${cfg().url}/client/${c.slug}/logo?v=${c.logoRev}` : "";
+  $("#cfLogoPrev").hidden = !lp; $("#cfLogoPrev").src = lp; $("#cfLogoDel").hidden = !lp;
+  $("#cfPreview").hidden = !c; if (c) $("#cfPreview").href = clientLink(c.slug);
+  $("#cfErr").textContent = "";
+  syncClientForm();
+  $("#cliDlg").showModal();
+}
+function setColor(k, v) { $("#cf" + k).value = v; $("#cf" + k + "T").value = v; }
+["Bg", "Ac"].forEach((k) => {
+  $("#cf" + k).addEventListener("input", () => { $("#cf" + k + "T").value = $("#cf" + k).value; syncClientForm(); });
+  $("#cf" + k + "T").addEventListener("input", () => { const v = $("#cf" + k + "T").value.trim(); if (/^#[0-9a-f]{6}$/i.test(v)) { $("#cf" + k).value = v; syncClientForm(); } });
+});
+function syncClientForm() {
+  if (!editing && !slugTouched) $("#cfSlug").value = slugify($("#cfName").value);
+  $("#cfLink").textContent = "Enlace del QR: " + clientLink($("#cfSlug").value || "…").replace(/^https?:\/\//, "");
+  $("#cfDates").hidden = document.querySelector("input[name=cfType]:checked").value !== "event";
+  const bg = $("#cfBg").value, ac = $("#cfAc").value;
+  $("#cfMini").style.background = bg; $("#cfMini").style.color = isLight(bg) ? "#141414" : "#f2f2f2";
+  $("#cfMiniName").textContent = $("#cfName").value || "Nombre";
+  $("#cfMiniBtn").style.background = ac; $("#cfMiniBtn").style.color = isLight(ac) ? "#111" : "#fff";
+  const src = $("#cfLogoPrev").hidden ? "" : $("#cfLogoPrev").src;
+  $("#cfMiniLogo").hidden = !src; $("#cfMiniLogo").src = src;
+}
+$("#cfName").addEventListener("input", syncClientForm);
+$("#cfSlug").addEventListener("input", () => { slugTouched = true; syncClientForm(); });
+document.querySelectorAll("input[name=cfType]").forEach((r) => r.addEventListener("change", syncClientForm));
+
+// logo: se redimensiona en el navegador (máx. 512 px) y se convierte a PNG; así nunca se guarda un SVG
+async function prepLogo(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    const w0 = img.naturalWidth || 512, h0 = img.naturalHeight || 512, k = Math.min(1, 512 / Math.max(w0, h0));
+    const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w0 * k)); c.height = Math.max(1, Math.round(h0 * k));
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    let b = await new Promise((res) => c.toBlob(res, "image/png"));
+    if (b.size > 380 * 1024) b = await new Promise((res) => c.toBlob(res, "image/webp", 0.9));
+    return b;
+  } finally { URL.revokeObjectURL(url); }
+}
+$("#cfLogo").addEventListener("change", async () => {
+  const f = $("#cfLogo").files[0]; if (!f) return;
+  try {
+    logoBlob = await prepLogo(f); logoRemove = false;
+    $("#cfLogoPrev").src = URL.createObjectURL(logoBlob); $("#cfLogoPrev").hidden = false; $("#cfLogoDel").hidden = false;
+    syncClientForm();
+  } catch { $("#cfErr").textContent = "No pude leer esa imagen. Prueba con un PNG o JPG."; }
+});
+$("#cfLogoDel").onclick = () => { logoBlob = null; logoRemove = true; $("#cfLogo").value = ""; $("#cfLogoPrev").hidden = true; $("#cfLogoDel").hidden = true; syncClientForm(); };
+
+$("#cfSave").onclick = async () => {
+  const slug = $("#cfSlug").value.trim();
+  const type = document.querySelector("input[name=cfType]:checked").value;
+  const body = {
+    name: $("#cfName").value.trim(), type,
+    validFrom: type === "event" ? dateOut($("#cfFrom").value, false) : null,
+    validUntil: type === "event" ? dateOut($("#cfUntil").value, true) : null,
+    message: $("#cfMsg").value.trim(), bg: $("#cfBg").value, accent: $("#cfAc").value,
+    langs: [...document.querySelectorAll("#cfLangs input:checked")].map((i) => i.value),
+    src: $("#cfSrc").checked, audio: $("#cfAudio").checked, poweredBy: $("#cfPowered").checked, archived: $("#cfArch").checked,
+  };
+  if (!body.name) { $("#cfErr").textContent = "Falta el nombre."; return; }
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(slug)) { $("#cfErr").textContent = "El enlace solo puede llevar minúsculas, números y guiones (2 a 40)."; return; }
+  if (!editing && clients.some((c) => c.slug === slug)) { $("#cfErr").textContent = "Ya existe un cliente con ese enlace."; return; }
+  if (type === "event" && !body.validUntil) { $("#cfErr").textContent = "Un cliente por evento necesita fecha de fin."; return; }
+  $("#cfSave").disabled = true; $("#cfErr").textContent = "";
+  try {
+    await opApi("PUT", "/client/" + slug, body);
+    if (logoBlob) await opApi("PUT", `/client/${slug}/logo`, logoBlob, true);
+    else if (logoRemove) await opApi("DELETE", `/client/${slug}/logo`);
+    log(`Cliente guardado: ${body.name}`);
+    $("#cliDlg").close();
+    $("#cliSel").value = slug; store.set("evento.client", slug);
+    await loadClients();
+    onClientPick(!editing);
+  } catch (err) { $("#cfErr").textContent = err.message; }
+  finally { $("#cfSave").disabled = false; }
+};
+$("#cliNew").onclick = () => { if (!cfg().code) { $("#cfgBtn").click(); return; } openClient(null); };
+$("#cliEdit").onclick = () => { const c = clients.find((x) => x.slug === $("#cliSel").value); if (c) openClient(c); };
+$("#cfg").addEventListener("close", () => { if ($("#cfg").returnValue === "ok") loadClients(); });
+loadClients();
 
 /* ---------- retomar sala guardada ---------- */
 (async () => {
