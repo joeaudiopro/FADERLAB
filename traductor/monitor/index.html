@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="robots" content="noindex">
+<title>Monitor · Traductor FaderLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Mismo lenguaje visual que la consola. Pensado para revisarse desde el teléfono. */
+:root{
+  --bg:#0a0a0a; --bg2:#111; --bg3:#181818; --border:#242424;
+  --accent:#e8a020; --accent2:#20c8e8; --green:#20e880; --red:#e82020;
+  --text:#d4d4d4; --dim:#6a6a6a;
+  --f-head:"Bebas Neue",Impact,sans-serif; --f-mono:"Share Tech Mono",ui-monospace,monospace; --f-ui:"DM Sans",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:15px}
+button,input{font:inherit;color:inherit}
+a{color:var(--accent2)}
+header{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.brand{font-family:var(--f-head);font-size:26px;letter-spacing:.06em;line-height:1;white-space:nowrap}
+.brand b{color:var(--accent);font-weight:400}
+.brand span{color:var(--dim);font-size:18px;margin-left:6px}
+.spacer{flex:1}
+.upd{font-family:var(--f-mono);font-size:11px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.ghost{background:none;border:1px solid var(--border);border-radius:6px;padding:7px 12px;cursor:pointer;font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text);text-decoration:none;white-space:nowrap}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+main{max-width:1100px;margin:0 auto;padding:16px 20px 40px;display:flex;flex-direction:column;gap:14px}
+@media (max-width:640px){main{padding:12px 16px 32px}header{padding:10px 16px}}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:640px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.tile .k{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.tile .v{font-family:var(--f-head);font-size:38px;letter-spacing:.04em;line-height:1.05;color:#fff;margin-top:4px}
+.tile .v small{font-family:var(--f-ui);font-size:13px;color:var(--dim);letter-spacing:0;margin-left:4px}
+h2{font-family:var(--f-head);font-weight:400;font-size:22px;letter-spacing:.08em;margin:10px 0 0}
+.rooms{display:flex;flex-direction:column;gap:10px}
+.room{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:start}
+.room.live{border-color:#3a1414}
+.room .lg{width:52px;height:52px;border-radius:8px;object-fit:contain;background:var(--bg3)}
+.room .sw{width:52px;height:52px;border-radius:8px;background:var(--bg3);display:grid;place-items:center;font-family:var(--f-head);font-size:22px;color:var(--dim)}
+.room .nm{font-weight:700;font-size:17px;color:#fff;line-height:1.2}
+.room .sub{font-family:var(--f-mono);font-size:12px;color:var(--dim);margin-top:3px;word-break:break-all}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--border);color:var(--dim);white-space:nowrap}
+.chip.live{color:#fff;border-color:#5a1a1a;background:#2a0b0b}
+.chip.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:6px;vertical-align:1px;box-shadow:0 0 8px var(--red);animation:blink 1.4s infinite}
+.chip.ok{color:var(--green);border-color:#1a5a3a}
+.chip.warn{color:var(--accent);border-color:#5a3d10}
+.chip.bad{color:#ff7a6a;border-color:#5a1a1a}
+@keyframes blink{50%{opacity:.35}}
+.langs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.lang{font-size:13px;padding:4px 10px;border-radius:6px;background:var(--bg3);border:1px solid var(--border)}
+.lang b{color:var(--accent2);font-family:var(--f-mono);font-weight:400;margin-left:6px}
+.room .num{text-align:right}
+.room .num .v{font-family:var(--f-head);font-size:34px;line-height:1;color:var(--accent2)}
+.room .num small{display:block;font-family:var(--f-mono);font-size:10px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.room .meta{font-size:12px;color:var(--dim);margin-top:8px;line-height:1.5}
+@media (max-width:520px){.room{grid-template-columns:44px 1fr}.room .num{grid-column:1/-1;display:flex;gap:16px;align-items:baseline;text-align:left}.room .lg,.room .sw{width:44px;height:44px}}
+.empty{background:var(--bg2);border:1px dashed var(--border);border-radius:10px;padding:26px;text-align:center;color:var(--dim)}
+table{width:100%;border-collapse:collapse;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:14px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+th{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:400}
+td.n,th.n{text-align:right;font-family:var(--f-mono)}
+tr:last-child td{border-bottom:none}
+.hint{font-size:12px;color:var(--dim);line-height:1.5}
+.err{color:#ff7a6a;font-size:13px}
+.login{max-width:420px;margin:40px auto;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px}
+.login label{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:12px 0 5px}
+.login input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 10px}
+.login input:focus{outline:none;border-color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><b>FADER</b>LAB<span>· MONITOR</span></div>
+  <div class="spacer"></div>
+  <span class="upd" id="upd">—</span>
+  <a class="ghost" href="../evento/">Consola</a>
+</header>
+
+<section class="login" id="login" hidden>
+  <div class="brand" style="font-size:24px">Monitor del traductor</div>
+  <div class="hint" style="margin-top:6px">Necesita el <b>código maestro</b> (los códigos de operador no tienen acceso). Si ya lo escribiste en la consola de este navegador, se usa solo.</div>
+  <label for="lgUrl">URL del Worker</label><input type="url" id="lgUrl">
+  <label for="lgCode">Código maestro</label><input type="password" id="lgCode" autocomplete="off">
+  <div class="err" id="lgErr" style="margin-top:10px"></div>
+  <button class="ghost" id="lgBtn" style="margin-top:12px;border-color:var(--accent);color:var(--accent)">Entrar</button>
+</section>
+
+<main id="app" hidden>
+  <div class="tiles">
+    <div class="tile"><div class="k">Salas en vivo</div><div class="v" id="tLive">0</div></div>
+    <div class="tile"><div class="k">Salas abiertas</div><div class="v" id="tOpen">0</div></div>
+    <div class="tile"><div class="k">Personas conectadas</div><div class="v" id="tPeople">0</div></div>
+    <div class="tile"><div class="k">Minutos-idioma este mes</div><div class="v" id="tMonth">0</div></div>
+  </div>
+
+  <h2>Salas abiertas</h2>
+  <div class="rooms" id="rooms"></div>
+
+  <h2>Uso por cliente</h2>
+  <div class="hint">Minutos-idioma: tiempo en vivo × número de idiomas. Es lo que cobra OpenAI (cada idioma es una sesión) y te sirve para facturar a cada cliente.</div>
+  <table><thead><tr><th>Cliente</th><th class="n" id="thM0">Este mes</th><th class="n" id="thM1">Mes anterior</th></tr></thead><tbody id="usage"></tbody></table>
+  <div class="err" id="err"></div>
+</main>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const DEFAULT_WORKER = "https://traductor-api.faderlab.mx";
+const LNAME = { en: "Inglés", es: "Español", pt: "Portugués", fr: "Francés", de: "Alemán", it: "Italiano", ja: "Japonés", zh: "Chino", ko: "Coreano", ru: "Ruso", hi: "Hindi", id: "Indonesio", vi: "Vietnamita", src: "Original" };
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const cfg = () => ({ url: (store.get("trad.workerUrl", "") || DEFAULT_WORKER).replace(/\/+$/, ""), code: store.get("trad.code", "") });
+const ago = (ms, now) => { const s = Math.max(0, Math.round((now - ms) / 1000)); return s < 60 ? `${s} s` : s < 3600 ? `${Math.floor(s / 60)} min` : `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`; };
+const dur = (ms) => { const m = Math.floor(ms / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
+const monthName = (k) => { const [y, m] = k.split("-").map(Number); return new Date(y, m - 1, 15).toLocaleDateString("es-MX", { month: "long", year: "numeric" }); };
+const fmtMin = (v) => (v || 0).toLocaleString("es-MX", { maximumFractionDigits: 1 });
+
+let timer = null;
+async function load() {
+  clearTimeout(timer);
+  const { url, code } = cfg();
+  if (!code) return showLogin();
+  let data;
+  try {
+    const r = await fetch(url + "/monitor", { headers: { "X-Access-Code": code } });
+    data = await r.json().catch(() => ({}));
+    if (r.status === 401 || r.status === 403) return showLogin(r.status === 403 ? "Ese es un código de operador: el monitor necesita el código maestro." : "Código incorrecto.");
+    if (!r.ok) throw new Error(data.error || "HTTP " + r.status);
+  } catch (err) {
+    $("#err").textContent = "No pude actualizar (" + err.message + "). Reintento en unos segundos.";
+    $("#upd").textContent = "sin conexión";
+    timer = setTimeout(load, 8000); return;
+  }
+  $("#err").textContent = "";
+  $("#login").hidden = true; $("#app").hidden = false;
+  render(data, url);
+  $("#upd").textContent = "actualizado " + new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  timer = setTimeout(load, document.hidden ? 30000 : 8000);
+}
+function render(d, api) {
+  const now = d.now;
+  const live = d.rooms.filter((r) => r.live);
+  $("#tLive").textContent = live.length;
+  $("#tOpen").textContent = d.rooms.length;
+  $("#tPeople").textContent = d.rooms.reduce((a, r) => a + r.total, 0);
+  const m0 = { ...(d.usage[d.months[0]] || {}) }, m1 = d.usage[d.months[1]] || {};
+  // suma lo que va corriendo en las salas en vivo (el servidor lo registra al pausar o terminar)
+  for (const r of d.rooms) if (r.live && r.liveSince) {
+    const k = r.client || "_sueltas", n = Math.max(1, r.langs.length);
+    m0[k] = Math.round(((m0[k] || 0) + (now - r.liveSince) * n / 60000) * 10) / 10;
+  }
+  $("#tMonth").innerHTML = `${fmtMin(Object.values(m0).reduce((a, b) => a + b, 0))}`;
+
+  $("#rooms").innerHTML = d.rooms.length ? d.rooms.map((r) => {
+    const keys = [...r.langs, ...(r.src ? ["src"] : [])];
+    const chips = [];
+    if (r.live) chips.push('<span class="chip live">En vivo</span>');
+    else chips.push('<span class="chip">En pausa</span>');
+    chips.push(r.host ? '<span class="chip ok">Operador conectado</span>' : '<span class="chip bad">⚠ Operador desconectado</span>');
+    if (r.audio) chips.push('<span class="chip">🎧 Audio</span>');
+    if (r.live && r.lastText && now - r.lastText > 120000) chips.push(`<span class="chip warn">⚠ Sin texto hace ${ago(r.lastText, now)}</span>`);
+    if (r.live && !r.lastText) chips.push('<span class="chip warn">Sin texto todavía</span>');
+    const meta = [
+      r.liveSince ? `En vivo desde hace ${dur(now - r.liveSince)}` : null,
+      `${fmtMin(r.usedMin)} min-idioma en esta sala`,
+      r.lastText ? `último texto hace ${ago(r.lastText, now)}` : null,
+      `abierta hace ${dur(now - r.created)}`,
+    ].filter(Boolean).join(" · ");
+    const pub = r.client ? `../escucha/?c=${encodeURIComponent(r.client)}` : `../escucha/?s=${encodeURIComponent(r.code)}`;
+    const logo = r.logo ? `<img class="lg" src="${esc(api + r.logo)}" alt="">` : `<div class="sw">${esc((r.clientName || r.title || "S").slice(0, 1))}</div>`;
+    return `<div class="room${r.live ? " live" : ""}">${logo}
+      <div><div class="nm">${esc(r.clientName || r.title || "Sala suelta")}</div>
+        <div class="sub">Sala ${esc(r.code)}${r.client ? " · enlace " + esc(r.client) : " · sala suelta"} · <a href="${esc(pub)}" target="_blank" rel="noopener">ver como público</a></div>
+        <div class="chips">${chips.join("")}</div>
+        <div class="langs">${keys.map((k) => `<span class="lang">${esc(LNAME[k] || k)}<b>${r.counts[k] || 0}</b></span>`).join("")}</div>
+        <div class="meta">${esc(meta)}</div></div>
+      <div class="num"><div class="v">${r.total}</div><small>personas</small></div></div>`;
+  }).join("") : '<div class="empty">No hay salas abiertas en este momento.</div>';
+
+  $("#thM0").textContent = monthName(d.months[0]); $("#thM1").textContent = monthName(d.months[1]);
+  const names = Object.fromEntries(d.clients.map((c) => [c.slug, c.name]));
+  names._sueltas = "Salas sueltas (sin cliente)";
+  const slugs = [...new Set([...Object.keys(m0), ...Object.keys(m1)])].sort((a, b) => (m0[b] || 0) - (m0[a] || 0));
+  $("#usage").innerHTML = slugs.length
+    ? slugs.map((s) => `<tr><td>${esc(names[s] || s + " (eliminado)")}</td><td class="n">${fmtMin(m0[s])}</td><td class="n">${fmtMin(m1[s])}</td></tr>`).join("")
+    : '<tr><td colspan="3" class="hint">Todavía no hay uso registrado.</td></tr>';
+}
+function showLogin(msg) {
+  clearTimeout(timer);
+  $("#app").hidden = true; $("#login").hidden = false;
+  $("#lgUrl").value = store.get("trad.workerUrl", "") || DEFAULT_WORKER;
+  $("#lgErr").textContent = msg || "";
+  $("#upd").textContent = "—";
+}
+$("#lgBtn").onclick = () => { store.set("trad.workerUrl", $("#lgUrl").value.trim()); store.set("trad.code", $("#lgCode").value); load(); };
+$("#lgCode").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#lgBtn").click(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("#app").hidden) load(); });
+load();
+</script>
+</body>
+</html>

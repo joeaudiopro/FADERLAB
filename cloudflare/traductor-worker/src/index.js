@@ -22,6 +22,14 @@
 //    GET  /client/:slug/logo    → imagen del logo (público)
 //    Un cliente "permanente" (iglesia, escuela) nunca vence; uno "por evento" tiene fechas.
 //    Cada sala nueva de un cliente reemplaza a la anterior: el QR del cliente nunca cambia.
+// 5) Códigos de operador y monitoreo:
+//    Un código de operador pertenece a un cliente: con él solo se abre y opera la sala de ese
+//    cliente (y se piden sesiones de traducción). El código maestro (ACCESS_CODE) puede todo.
+//    GET    /me                         → quién soy (maestro u operador de qué cliente)
+//    POST   /client/:slug/codes         → crear código de operador {label} (maestro; se muestra una vez)
+//    GET    /client/:slug/codes         → listar códigos del cliente (maestro)
+//    DELETE /client/:slug/codes/:id     → revocar (maestro)
+//    GET    /monitor                    → salas abiertas, oyentes, operador conectado y minutos por cliente (maestro)
 //
 // Secretos (wrangler secret put ...):
 //   OPENAI_API_KEY       — clave de la API de OpenAI
@@ -75,7 +83,7 @@ export default {
     }
 
     // ---------- clientes: rutas públicas ----------
-    if (parts[0] === "client" && parts.length >= 2 && req.method === "GET") {
+    if (parts[0] === "client" && req.method === "GET" && (parts.length === 2 || (parts.length === 3 && parts[2] === "logo"))) {
       const slug = parts[1].toLowerCase();
       if (!SLUG_RE.test(slug)) return json({ error: "Cliente no encontrado" }, 404, cors);
       if (parts[2] === "logo") {
@@ -111,24 +119,36 @@ export default {
       return json({ code, ...info }, 200, cors);
     }
 
-    // ---------- de aquí en adelante: solo el operador ----------
+    // ---------- de aquí en adelante: solo con código (maestro u operador) ----------
     const isClientRoute = parts[0] === "client" && parts.length >= 2 && (
-      (parts.length === 2 && (req.method === "PUT" || req.method === "DELETE")) || (parts[2] === "logo" && parts.length === 3 && (req.method === "PUT" || req.method === "DELETE")));
+      (parts.length === 2 && (req.method === "PUT" || req.method === "DELETE")) ||
+      (parts[2] === "logo" && parts.length === 3 && (req.method === "PUT" || req.method === "DELETE")) ||
+      (parts[2] === "codes" && ((parts.length === 3 && (req.method === "GET" || req.method === "POST")) || (parts.length === 4 && req.method === "DELETE"))));
     const isOperatorRoute = (req.method === "POST" && (url.pathname === "/session" || url.pathname === "/room")) ||
-      (req.method === "GET" && url.pathname === "/clients") || isClientRoute;
+      (req.method === "GET" && (url.pathname === "/clients" || url.pathname === "/me" || url.pathname === "/monitor")) || isClientRoute;
     if (!isOperatorRoute) return json({ error: "No encontrado" }, 404, cors);
     if (!okOrigin) return json({ error: "Origen no permitido" }, 403, cors);
     // Falla cerrado: sin código configurado no se entrega nada.
     if (!env.OPENAI_API_KEY || !env.ACCESS_CODE) return json({ error: "Worker sin configurar (faltan secretos)" }, 500, cors);
-    if (!(await sameText(req.headers.get("X-Access-Code") || "", env.ACCESS_CODE))) {
-      return json({ error: "Código de acceso incorrecto" }, 401, cors);
+    const who = await whoIs(req.headers.get("X-Access-Code") || "", env);
+    if (!who) return json({ error: "Código de acceso incorrecto" }, 401, cors);
+    if (url.pathname === "/me") {
+      if (who.role === "master") return json({ role: "master" }, 200, cors);
+      return json({ role: "operator", label: who.label, client: await directory(env).get(who.client) }, 200, cors);
     }
+    // lo que solo puede hacer el maestro
+    const masterOnly = url.pathname === "/clients" || url.pathname === "/monitor" || isClientRoute;
+    if (masterOnly && who.role !== "master") return json({ error: "Este código solo puede operar la sala de su cliente" }, 403, cors);
     if (url.pathname === "/clients") return json({ clients: await directory(env).list() }, 200, cors);
-    if (isClientRoute) return clientRoute(parts[1].toLowerCase(), parts[2], req, env, cors);
+    if (url.pathname === "/monitor") return json(await monitor(env), 200, cors);
+    if (isClientRoute) return clientRoute(parts[1].toLowerCase(), parts[2], req, env, cors, parts[3]);
     let body = {};
     try { body = await req.json(); } catch { /* cuerpo vacío = valores por defecto */ }
 
-    if (url.pathname === "/room") return createRoom(body, env, cors);
+    if (url.pathname === "/room") {
+      if (who.role === "operator") body.client = who.client; // un operador solo abre salas de su cliente
+      return createRoom(body, env, cors);
+    }
     return createSession(body, env, cors);
   },
 };
@@ -193,9 +213,11 @@ async function createRoom(body, env, cors) {
       if (client) {
         // el enlace del cliente apunta a la sala nueva; la anterior se cierra
         const old = await directory(env).setRoom(client.slug, code);
+        if (old && old !== code) await directory(env).untrackRoom(old);
         if (old && old !== code) { try { await env.ROOMS.get(env.ROOMS.idFromName(old)).end(); } catch {} }
         await purgeClient(client.slug);
       }
+      await directory(env).trackRoom(code, { code, client: client?.slug || null, title, langs, src, audio, created: Date.now(), expires: meta.expires });
       return json({ code, hostToken, expires: meta.expires, audio, audioAvailable: audioConfigured(env), client: client?.slug || null }, 200, cors);
     }
   }
@@ -263,9 +285,20 @@ function sniffImage(buf) {
   return null;
 }
 
-async function clientRoute(slug, sub, req, env, cors) {
+async function clientRoute(slug, sub, req, env, cors, id) {
   if (!SLUG_RE.test(slug)) return json({ error: "Enlace inválido: usa minúsculas, números y guiones (2 a 40)" }, 400, cors);
   const dir = directory(env);
+  if (sub === "codes") {
+    if (!(await dir.get(slug))) return json({ error: "Cliente no encontrado" }, 404, cors);
+    if (req.method === "GET") return json({ codes: await dir.listCodes(slug) }, 200, cors);
+    if (req.method === "DELETE") return json({ revoked: await dir.revokeCode(slug, String(id || "")) }, 200, cors);
+    let body = {};
+    try { body = await req.json(); } catch {}
+    const label = String(body.label || "").trim().slice(0, 60) || "Operador";
+    const code = operatorCode();
+    const rec = await dir.addCode(slug, await sha256(normCode(code)), label);
+    return json({ code, ...rec }, 200, cors); // el código en claro solo viaja esta vez
+  }
   if (sub === "logo") {
     if (!(await dir.get(slug))) return json({ error: "Cliente no encontrado" }, 404, cors);
     if (req.method === "DELETE") { const p = await dir.setLogo(slug, null, null); await purgeClient(slug); return json({ client: p }, 200, cors); }
@@ -282,6 +315,7 @@ async function clientRoute(slug, sub, req, env, cors) {
     const p = await dir.get(slug);
     if (!p) return json({ error: "Cliente no encontrado" }, 404, cors);
     if (p.room) { try { await env.ROOMS.get(env.ROOMS.idFromName(p.room)).end(); } catch {} }
+    if (p.room) await dir.untrackRoom(p.room);
     await dir.remove(slug);
     await purgeClient(slug);
     return json({ deleted: slug }, 200, cors);
@@ -294,6 +328,43 @@ async function clientRoute(slug, sub, req, env, cors) {
   await dir.put(slug, r.profile);
   await purgeClient(slug);
   return json({ client: r.profile, created: !prev }, 200, cors);
+}
+
+// ---------- códigos y monitoreo ----------
+const OP_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const normCode = (c) => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+function operatorCode() {
+  // 12 símbolos (~59 bits) en grupos de 4: FXK7-2MQP-9RTA
+  let out = "";
+  while (out.length < 12) for (const b of crypto.getRandomValues(new Uint8Array(24))) if (b < 248 && out.length < 12) out += OP_ALPHABET[b % 31];
+  return out.match(/.{4}/g).join("-");
+}
+async function whoIs(code, env) {
+  if (!code) return null;
+  if (await sameText(code, env.ACCESS_CODE)) return { role: "master" };
+  const n = normCode(code);
+  if (n.length !== 12) return null;
+  const op = await directory(env).checkCode(await sha256(n));
+  return op ? { role: "operator", client: op.slug, label: op.label, id: op.id } : null;
+}
+// mes calendario en hora del centro de México (UTC−6, sin horario de verano)
+const monthKey = (ms = Date.now()) => new Date(ms - 6 * 3600e3).toISOString().slice(0, 7);
+async function monitor(env) {
+  const dir = directory(env);
+  const [index, clients] = await Promise.all([dir.listRooms(), dir.list()]);
+  const names = Object.fromEntries(clients.map((c) => [c.slug, c]));
+  const rooms = [];
+  await Promise.all(index.map(async (r) => {
+    if (r.expires < Date.now()) { await dir.untrackRoom(r.code); return; }
+    const st = await env.ROOMS.get(env.ROOMS.idFromName(r.code)).status();
+    if (!st || st.ended) { await dir.untrackRoom(r.code); return; }
+    const c = r.client ? names[r.client] : null;
+    rooms.push({ ...r, clientName: c?.name || null, logo: c?.logoRev ? `/client/${c.slug}/logo?v=${c.logoRev}` : null, ...st });
+  }));
+  rooms.sort((a, b) => (b.live - a.live) || (b.created - a.created));
+  const now = Date.now(), m0 = monthKey(now), d = new Date(now - 6 * 3600e3);
+  const m1 = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 15)).toISOString().slice(0, 7);
+  return { now, months: [m0, m1], usage: await dir.usage([m0, m1]), clients: clients.map((c) => ({ slug: c.slug, name: c.name })), rooms };
 }
 
 // Directorio de clientes: un solo Durable Object con todos los perfiles y logos.
@@ -312,7 +383,49 @@ export class Directory extends DurableObject {
     await this.put(slug, p); return p;
   }
   async getLogo(slug) { return (await this.ctx.storage.get("logo:" + slug)) || null; }
-  async remove(slug) { await this.ctx.storage.delete(["c:" + slug, "logo:" + slug]); return true; }
+  async remove(slug) {
+    await this.ctx.storage.delete(["c:" + slug, "logo:" + slug]);
+    for (const [k, v] of await this.ctx.storage.list({ prefix: "op:" })) if (v.slug === slug) await this.ctx.storage.delete(k);
+    return true;
+  }
+  // códigos de operador: se guarda solo el hash
+  async addCode(slug, hash, label) {
+    const rec = { id: hash.slice(0, 10), slug, label, created: Date.now(), lastUsed: null };
+    await this.ctx.storage.put("op:" + hash, rec);
+    return rec;
+  }
+  async listCodes(slug) {
+    return [...(await this.ctx.storage.list({ prefix: "op:" })).values()].filter((r) => r.slug === slug).sort((a, b) => a.created - b.created);
+  }
+  async revokeCode(slug, id) {
+    for (const [k, v] of await this.ctx.storage.list({ prefix: "op:" })) if (v.slug === slug && v.id === id) { await this.ctx.storage.delete(k); return true; }
+    return false;
+  }
+  async checkCode(hash) {
+    const rec = await this.ctx.storage.get("op:" + hash);
+    if (!rec) return null;
+    const c = await this.get(rec.slug);
+    if (!c) return null;
+    if (!rec.lastUsed || Date.now() - rec.lastUsed > 3600e3) { rec.lastUsed = Date.now(); await this.ctx.storage.put("op:" + hash, rec); }
+    return rec;
+  }
+  // índice de salas abiertas (para el monitoreo)
+  async trackRoom(code, r) { await this.ctx.storage.put("room:" + code, r); }
+  async untrackRoom(code) { await this.ctx.storage.delete("room:" + code); }
+  async listRooms() { return [...(await this.ctx.storage.list({ prefix: "room:" })).values()]; }
+  // minutos-idioma por cliente y mes (lo que cobra OpenAI)
+  async addUsage(slug, month, ms) {
+    const k = `use:${month}:${slug}`;
+    await this.ctx.storage.put(k, ((await this.ctx.storage.get(k)) || 0) + ms);
+  }
+  async usage(months) {
+    const out = {};
+    for (const m of months) {
+      out[m] = {};
+      for (const [k, v] of await this.ctx.storage.list({ prefix: `use:${m}:` })) out[m][k.slice(`use:${m}:`.length)] = Math.round(v / 60000 * 10) / 10;
+    }
+    return out;
+  }
 }
 
 // ---------- audio: puente con Cloudflare Realtime SFU ----------
@@ -480,6 +593,7 @@ export class Room extends DurableObject {
     const ok = (l) => m.langs.includes(l) || (l === "src" && m.src);
 
     if (msg.t === "d" && ok(msg.l) && typeof msg.x === "string") {
+      this.lastText = Date.now();
       const x = msg.x.slice(0, 2000);
       this.partial[msg.l] = ((this.partial[msg.l] || "") + x).slice(-4000);
       this.broadcast("l:" + msg.l, { t: "d", x });
@@ -494,7 +608,10 @@ export class Room extends DurableObject {
       await this.ctx.storage.put(key, lines.slice(-KEEP_LINES));
       this.broadcast("l:" + msg.l, { t: "s", x: line });
     } else if (msg.t === "live") {
-      m.live = !!msg.v;
+      const v = !!msg.v;
+      if (v && !m.liveSince) m.liveSince = Date.now();
+      if (!v) await this.closeUsage(m);
+      m.live = v;
       await this.ctx.storage.put("meta", m);
       this.broadcastListeners({ t: "live", v: m.live });
     } else if (msg.t === "end") {
@@ -505,6 +622,33 @@ export class Room extends DurableObject {
   async webSocketClose(ws, code) {
     try { ws.close(code === 1005 ? 1000 : code); } catch {}
     this.sendCounts();
+    // si se fue el último operador, deja de contar minutos (vuelve a contar cuando reconecte y mande live)
+    if ((ws.deserializeAttachment() || {}).role === "host" && !this.hostConnected()) {
+      const m = await this.getMeta();
+      if (m && m.live && !m.ended) { await this.closeUsage(m); m.live = false; await this.ctx.storage.put("meta", m); this.broadcastListeners({ t: "live", v: false }); }
+    }
+  }
+  hostConnected() {
+    return this.ctx.getWebSockets("host").some((w) => w.readyState === 1);
+  }
+  async closeUsage(m) {
+    if (!m.liveSince) return;
+    const ms = Math.max(0, Date.now() - m.liveSince) * Math.max(1, m.langs.length);
+    m.usedMs = (m.usedMs || 0) + ms;
+    m.liveSince = null;
+    try { await this.env.DIRECTORY.get(this.env.DIRECTORY.idFromName("clientes")).addUsage(m.client || "_sueltas", monthKey(), ms); } catch {}
+  }
+  async status() {
+    const m = await this.getMeta();
+    if (!m) return null;
+    const counts = {}; let total = 0;
+    for (const ws of this.ctx.getWebSockets()) {
+      if (ws.readyState !== 1) continue;
+      const a = ws.deserializeAttachment() || {};
+      if (a.role === "listener") { counts[a.lang] = (counts[a.lang] || 0) + 1; total++; }
+    }
+    const usedMs = (m.usedMs || 0) + (m.liveSince ? (Date.now() - m.liveSince) * Math.max(1, m.langs.length) : 0);
+    return { live: m.live, ended: m.ended, host: this.hostConnected(), counts, total, liveSince: m.liveSince || null, usedMin: Math.round(usedMs / 6000) / 10, lastText: this.lastText || null };
   }
   async webSocketError() { this.sendCounts(); }
 
@@ -513,6 +657,7 @@ export class Room extends DurableObject {
   async end() {
     const m = await this.getMeta();
     if (m && !m.ended) {
+      await this.closeUsage(m);
       m.ended = true; m.live = false;
       await this.ctx.storage.put("meta", m);
       for (const l of [...m.langs, "src"]) await this.ctx.storage.delete("lines:" + l);
