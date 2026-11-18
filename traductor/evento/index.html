@@ -144,6 +144,14 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
 .mini .n{font-weight:700;font-size:16px}
 .mini .b{display:inline-block;margin-top:8px;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700}
 
+.codes{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.crow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);font-size:13px}
+.crow div{flex:1;min-width:0}.crow b{font-weight:500;color:#fff}.crow small{display:block;color:var(--dim);font-family:var(--f-mono);font-size:11px}
+.newcode{margin-top:10px;padding:12px;border:1px solid #6b4a10;border-radius:8px;background:#1a1204;font-size:13px;line-height:1.45}
+.newcode .code{font-family:var(--f-mono);font-size:24px;letter-spacing:.12em;color:var(--accent);margin:6px 0}
+.who{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.who b{color:var(--accent2);font-weight:400}
+
 /* QR a pantalla completa (proyector / pantalla de bienvenida) */
 #qrFull{position:fixed;inset:0;z-index:20;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:3vh;padding:4vh 4vw;text-align:center;cursor:none}
 #qrFull.on{display:flex}
@@ -162,6 +170,8 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
   <div class="pill" id="status"><i></i><span>Sin sala</span></div>
   <div class="clock" id="clock">00:00:00</div>
   <div class="spacer"></div>
+  <span class="who" id="whoami"></span>
+  <a class="ghost" id="monLink" href="../monitor/" target="_blank" rel="noopener" hidden>Monitor</a>
   <a class="ghost" href="../">Traductor sencillo</a>
   <button class="ghost" id="cfgBtn">Configuración</button>
 </header>
@@ -301,6 +311,12 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
       <label class="chip"><input type="checkbox" id="cfPowered" checked><span>Mostrar "Con tecnología de FaderLab"</span></label>
       <label class="chip" id="cfArchWrap" hidden><input type="checkbox" id="cfArch"><span>Archivado (su enlace muestra "terminado")</span></label>
     </div></div>
+    <div class="field" id="cfCodesBox" hidden><span class="lbl">Códigos de operador</span>
+      <div class="hint">Dale un código al técnico del lugar: con él abre y opera <b>solo la sala de este cliente</b>, sin ver ni editar nada más. Lo escribe en Configuración de esta misma página. Puedes revocarlo cuando quieras.</div>
+      <div class="codes" id="cfCodes"></div>
+      <div class="row2" style="margin-top:8px"><input type="text" id="cfCodeLabel" maxlength="60" placeholder="Para quién (ej. Técnico de domingo)"><button class="ghost" id="cfCodeNew" type="button">Crear código</button></div>
+      <div class="newcode" id="cfCodeShow" hidden></div>
+    </div>
     <div class="dlgmsg" id="cfErr"></div>
     <menu><button class="ghost danger" id="cfDelete" type="button" hidden style="margin-right:auto">Eliminar cliente</button><a class="ghost" id="cfPreview" target="_blank" rel="noopener" hidden>Ver como público</a><button class="ghost" value="cancel" formnovalidate>Cancelar</button><button class="ghost" id="cfSave" type="button" style="border-color:var(--accent);color:var(--accent)">Guardar</button></menu>
   </form>
@@ -328,6 +344,7 @@ const MAX_LANGS = 8;
 let sessions = [], running = false, startedAt = 0, langMs = 0, lastTick = 0; // estado de la traducción
 let pubs = {}; // idioma -> AudioPub (voz traducida hacia los teléfonos)
 let clients = []; // perfiles de clientes (marca + enlace fijo)
+let me = null;    // quién usa la consola: { role: "master" } o { role: "operator", client, label }
 const PAUSE_MS = 2200;   // silencio que cierra un renglón
 const SOFT_MAX = 170;    // renglón largo: se cierra en el siguiente punto
 
@@ -930,7 +947,7 @@ function clientLink(slug) {
 }
 
 async function loadClients() {
-  if (!cfg().code) return;
+  if (!cfg().code || me?.role === "operator") return;
   try { clients = (await opApi("GET", "/clients")).clients || []; }
   catch (err) { log("No pude cargar los clientes: " + err.message, true); return; }
   const sel = $("#cliSel"), want = sel.value || store.get("evento.client", "");
@@ -985,6 +1002,8 @@ function openClient(c) {
   $("#cfLogoPrev").hidden = !lp; $("#cfLogoPrev").src = lp; $("#cfLogoDel").hidden = !lp;
   $("#cfPreview").hidden = !c; if (c) $("#cfPreview").href = clientLink(c.slug);
   $("#cfDelete").hidden = !c;
+  $("#cfCodesBox").hidden = !c; $("#cfCodeShow").hidden = true; $("#cfCodeLabel").value = "";
+  if (c) loadCodes(c.slug);
   $("#cfErr").textContent = "";
   syncClientForm();
   $("#cliDlg").showModal();
@@ -1075,8 +1094,63 @@ $("#cfDelete").onclick = async () => {
 };
 $("#cliNew").onclick = () => { if (!cfg().code) { $("#cfgBtn").click(); return; } openClient(null); };
 $("#cliEdit").onclick = () => { const c = clients.find((x) => x.slug === $("#cliSel").value); if (c) openClient(c); };
-$("#cfg").addEventListener("close", () => { if ($("#cfg").returnValue === "ok") loadClients(); });
-loadClients();
+/* ---------- códigos de operador (solo el maestro) ---------- */
+const fmtWhen = (ms) => ms ? new Date(ms).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "nunca";
+async function loadCodes(slug) {
+  $("#cfCodes").innerHTML = '<div class="hint">Cargando…</div>';
+  try {
+    const { codes } = await opApi("GET", `/client/${slug}/codes`);
+    $("#cfCodes").innerHTML = codes.length
+      ? codes.map((c) => `<div class="crow"><div><b>${esc(c.label)}</b><small>creado ${esc(fmtWhen(c.created))} · último uso ${esc(fmtWhen(c.lastUsed))}</small></div><button class="ghost danger" type="button" data-id="${esc(c.id)}" data-label="${esc(c.label)}">Revocar</button></div>`).join("")
+      : '<div class="hint">Este cliente aún no tiene códigos de operador.</div>';
+  } catch (err) { $("#cfCodes").innerHTML = `<div class="hint">${esc(err.message)}</div>`; }
+}
+$("#cfCodes").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-id]"); if (!b || !editing) return;
+  if (!confirm(`¿Revocar el código "${b.dataset.label}"? Quien lo use ya no podrá entrar.`)) return;
+  try { await opApi("DELETE", `/client/${editing.slug}/codes/${b.dataset.id}`); log(`Código revocado: ${b.dataset.label}`); loadCodes(editing.slug); }
+  catch (err) { $("#cfErr").textContent = err.message; }
+});
+$("#cfCodeNew").onclick = async () => {
+  if (!editing) return;
+  const label = $("#cfCodeLabel").value.trim() || "Operador";
+  try {
+    const r = await opApi("POST", `/client/${editing.slug}/codes`, { label });
+    const consola = new URL(location.href); consola.search = ""; consola.hash = "";
+    $("#cfCodeShow").innerHTML = `Código para <b>${esc(r.label)}</b>. <b>Cópialo ahora</b>: no se vuelve a mostrar.<div class="code">${esc(r.code)}</div>Dáselo junto con esta dirección: <b>${esc(consola.toString().replace(/^https?:\/\//, ""))}</b> → Configuración → código.<div class="btns"><button class="ghost" type="button" id="cfCodeCopy">Copiar código</button></div>`;
+    $("#cfCodeShow").hidden = false; $("#cfCodeLabel").value = "";
+    $("#cfCodeCopy").onclick = async () => { try { await navigator.clipboard.writeText(r.code); $("#cfCodeCopy").textContent = "Copiado ✓"; } catch {} };
+    log(`Código de operador creado para ${editing.name}: ${r.label}`);
+    loadCodes(editing.slug);
+  } catch (err) { $("#cfErr").textContent = err.message; }
+};
+
+/* ---------- quién soy: maestro u operador de un cliente ---------- */
+async function loadMe() {
+  me = null;
+  $("#whoami").innerHTML = ""; $("#monLink").hidden = true;
+  if (!cfg().code) return;
+  try { me = await opApi("GET", "/me"); }
+  catch (err) { log(err.status === 401 ? "Código de acceso incorrecto: revisa Configuración." : "No pude verificar el código: " + err.message, true); return; }
+  const op = me.role === "operator";
+  $("#cliNew").hidden = op; $("#cliEdit").hidden = op;
+  $("#monLink").hidden = op;
+  $("#whoami").innerHTML = op ? `Operador · <b>${esc(me.client?.name || "")}</b>` : "<b>Maestro</b>";
+  if (op) {
+    // el operador solo ve y usa su cliente
+    clients = me.client ? [me.client] : [];
+    const c = me.client;
+    $("#cliSel").innerHTML = c ? `<option value="${esc(c.slug)}">${esc(c.name)}</option>` : "";
+    $("#cliSel").disabled = true;
+    $("#cliSel").value = c?.slug || "";
+    onClientPick(!room);
+  } else {
+    $("#cliSel").disabled = false;
+    await loadClients();
+  }
+}
+$("#cfg").addEventListener("close", () => { if ($("#cfg").returnValue === "ok") loadMe(); });
+loadMe();
 
 /* ---------- salas guardadas: cada pestaña recuerda la suya ----------
    La sala de ESTA pestaña va en sessionStorage (sobrevive a recargar, es distinta en cada pestaña).
