@@ -16,6 +16,7 @@
 // 4) Clientes (marca propia y enlace fijo):
 //    GET  /clients              → lista de clientes (operador)
 //    PUT  /client/:slug         → crear / editar perfil (operador)
+//    DELETE /client/:slug       → borrar cliente (operador)
 //    PUT  /client/:slug/logo    → subir logo PNG/WebP/JPEG (operador); DELETE lo quita
 //    GET  /client/:slug         → perfil público + sala activa (público, enlace del QR)
 //    GET  /client/:slug/logo    → imagen del logo (público)
@@ -112,7 +113,7 @@ export default {
 
     // ---------- de aquí en adelante: solo el operador ----------
     const isClientRoute = parts[0] === "client" && parts.length >= 2 && (
-      (parts.length === 2 && req.method === "PUT") || (parts[2] === "logo" && parts.length === 3 && (req.method === "PUT" || req.method === "DELETE")));
+      (parts.length === 2 && (req.method === "PUT" || req.method === "DELETE")) || (parts[2] === "logo" && parts.length === 3 && (req.method === "PUT" || req.method === "DELETE")));
     const isOperatorRoute = (req.method === "POST" && (url.pathname === "/session" || url.pathname === "/room")) ||
       (req.method === "GET" && url.pathname === "/clients") || isClientRoute;
     if (!isOperatorRoute) return json({ error: "No encontrado" }, 404, cors);
@@ -276,6 +277,15 @@ async function clientRoute(slug, sub, req, env, cors) {
     await purgeClient(slug);
     return json({ client: p }, 200, cors);
   }
+  if (req.method === "DELETE") {
+    // borrar cliente: cierra su sala si estaba abierta; su QR mostrará "no encontrado"
+    const p = await dir.get(slug);
+    if (!p) return json({ error: "Cliente no encontrado" }, 404, cors);
+    if (p.room) { try { await env.ROOMS.get(env.ROOMS.idFromName(p.room)).end(); } catch {} }
+    await dir.remove(slug);
+    await purgeClient(slug);
+    return json({ deleted: slug }, 200, cors);
+  }
   let body = {};
   try { body = await req.json(); } catch {}
   const prev = await dir.get(slug);
@@ -302,6 +312,7 @@ export class Directory extends DurableObject {
     await this.put(slug, p); return p;
   }
   async getLogo(slug) { return (await this.ctx.storage.get("logo:" + slug)) || null; }
+  async remove(slug) { await this.ctx.storage.delete(["c:" + slug, "logo:" + slug]); return true; }
 }
 
 // ---------- audio: puente con Cloudflare Realtime SFU ----------

@@ -181,6 +181,7 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
         <div class="field"><span class="lbl">Además</span><div class="chips"><label class="chip"><input type="checkbox" id="srcOpt" checked><span>Original (subtítulos del idioma que se habla)</span></label><label class="chip"><input type="checkbox" id="audioOpt" checked><span>Audio en teléfonos (con audífonos)</span></label></div></div>
         <div class="hint">No marques el idioma en que habla el orador: el modelo no "traduce" lo que ya está en ese idioma y esos oyentes se quedarían sin texto. Para ellos está <b>Original</b>.<br>Cada idioma es una sesión de traducción aparte: el costo crece por idioma, no por persona.<br>Con <b>Audio en teléfonos</b> el público también puede escuchar la voz traducida de su idioma (no aplica a Original).</div>
         <button class="big small" id="createBtn" style="margin-top:14px">CREAR SALA</button>
+        <div class="field" id="resumeBox" hidden><span class="lbl">Salas abiertas en este navegador</span><div class="btns" style="margin-top:4px"></div></div>
       </div>
       <div id="roomOn" hidden>
         <div class="roomcode" id="roomCode">——————</div>
@@ -301,7 +302,7 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
       <label class="chip" id="cfArchWrap" hidden><input type="checkbox" id="cfArch"><span>Archivado (su enlace muestra "terminado")</span></label>
     </div></div>
     <div class="dlgmsg" id="cfErr"></div>
-    <menu><a class="ghost" id="cfPreview" target="_blank" rel="noopener" hidden>Ver como público</a><button class="ghost" value="cancel" formnovalidate>Cancelar</button><button class="ghost" id="cfSave" type="button" style="border-color:var(--accent);color:var(--accent)">Guardar</button></menu>
+    <menu><button class="ghost danger" id="cfDelete" type="button" hidden style="margin-right:auto">Eliminar cliente</button><a class="ghost" id="cfPreview" target="_blank" rel="noopener" hidden>Ver como público</a><button class="ghost" value="cancel" formnovalidate>Cancelar</button><button class="ghost" id="cfSave" type="button" style="border-color:var(--accent);color:var(--accent)">Guardar</button></menu>
   </form>
 </dialog>
 
@@ -411,7 +412,7 @@ $("#createBtn").onclick = async () => {
     room = { code: r.code, hostToken: r.hostToken, expires: r.expires, title: title || cli?.name || "", langs, src, audio: !!r.audio,
       client: r.client || null, brand: cli ? { name: cli.name, bg: cli.bg, accent: cli.accent, logo: cli.logoRev ? `/client/${cli.slug}/logo?v=${cli.logoRev}` : null } : null };
     if (wantAudio && !r.audio) log("El Worker todavía no tiene configurado el audio (Cloudflare Realtime): esta sala tendrá solo subtítulos.", true);
-    store.set("evento.room", room);
+    saveRoom(room);
     log("Sala creada: " + room.code);
     showRoom();
   } catch (err) { log(err.message, true); }
@@ -428,7 +429,8 @@ $("#endBtn").onclick = () => {
 };
 
 function clearRoom() {
-  room = null; store.del("evento.room");
+  if (room) forgetRoom(room.code);
+  room = null; setTimeout(drawResume, 0);
   clearTimeout(hostTimer); clearInterval(pingTimer);
   const ws = hostWs; hostWs = null; try { ws?.close(); } catch {}
   for (const k in listeners) delete listeners[k];
@@ -982,6 +984,7 @@ function openClient(c) {
   const lp = c?.logoRev ? `${cfg().url}/client/${c.slug}/logo?v=${c.logoRev}` : "";
   $("#cfLogoPrev").hidden = !lp; $("#cfLogoPrev").src = lp; $("#cfLogoDel").hidden = !lp;
   $("#cfPreview").hidden = !c; if (c) $("#cfPreview").href = clientLink(c.slug);
+  $("#cfDelete").hidden = !c;
   $("#cfErr").textContent = "";
   syncClientForm();
   $("#cliDlg").showModal();
@@ -1057,24 +1060,68 @@ $("#cfSave").onclick = async () => {
   } catch (err) { $("#cfErr").textContent = err.message; }
   finally { $("#cfSave").disabled = false; }
 };
+$("#cfDelete").onclick = async () => {
+  if (!editing) return;
+  const c = editing;
+  if (!confirm(`¿Eliminar a "${c.name}"?\n\nSe borran su perfil y su logo, y se cierra su sala si está abierta. Su QR dejará de funcionar (mostrará "no encontrado"). No se puede deshacer.\n\nSi solo quieres que muestre "terminado", usa "Archivado".`)) return;
+  try {
+    await opApi("DELETE", "/client/" + c.slug);
+    log(`Cliente eliminado: ${c.name}`);
+    $("#cliDlg").close();
+    if (room?.client === c.slug) { stopTranslation(); clearRoom(); }
+    if ($("#cliSel").value === c.slug) { $("#cliSel").value = ""; store.set("evento.client", ""); }
+    await loadClients();
+  } catch (err) { $("#cfErr").textContent = err.message; }
+};
 $("#cliNew").onclick = () => { if (!cfg().code) { $("#cfgBtn").click(); return; } openClient(null); };
 $("#cliEdit").onclick = () => { const c = clients.find((x) => x.slug === $("#cliSel").value); if (c) openClient(c); };
 $("#cfg").addEventListener("close", () => { if ($("#cfg").returnValue === "ok") loadClients(); });
 loadClients();
 
-/* ---------- retomar sala guardada ---------- */
-(async () => {
-  const saved = store.get("evento.room", null);
-  if (!saved) { if (!cfg().code) log("Primero abre Configuración y escribe el código de acceso del Worker."); return; }
-  if (saved.expires < Date.now()) { store.del("evento.room"); return; }
+/* ---------- salas guardadas: cada pestaña recuerda la suya ----------
+   La sala de ESTA pestaña va en sessionStorage (sobrevive a recargar, es distinta en cada pestaña).
+   Todas las salas abiertas en el navegador van en localStorage, para poder retomarlas desde otra pestaña. */
+const tabStore = {
+  get(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k) { try { sessionStorage.removeItem(k); } catch {} },
+};
+function allRooms() {
+  const all = store.get("evento.rooms", {}) || {};
+  const old = store.get("evento.room", null); // versión anterior: una sola sala por navegador
+  if (old?.code) { all[old.code] = old; store.del("evento.room"); }
+  for (const k in all) if (!all[k] || all[k].expires < Date.now()) delete all[k];
+  store.set("evento.rooms", all);
+  return all;
+}
+function saveRoom(r) { tabStore.set("evento.cur", r.code); const all = allRooms(); all[r.code] = r; store.set("evento.rooms", all); drawResume(); }
+function forgetRoom(code) { if (tabStore.get("evento.cur") === code) tabStore.del("evento.cur"); const all = allRooms(); delete all[code]; store.set("evento.rooms", all); drawResume(); }
+function drawResume() {
+  const box = $("#resumeBox"); if (!box) return;
+  const list = Object.values(allRooms()).filter((r) => !room || r.code !== room.code);
+  box.hidden = !list.length || !!room;
+  box.querySelector(".btns").innerHTML = list.map((r) => `<button class="ghost" type="button" data-code="${esc(r.code)}">${esc(r.brand?.name || r.title || "Sala")} · ${esc(r.code)}</button>`).join("");
+}
+async function resumeRoom(saved, quiet) {
   try {
     const info = await api("/room/" + saved.code);
-    if (info.ended) { store.del("evento.room"); log("La sala " + saved.code + " ya había terminado."); return; }
-    room = saved; showRoom(); log("Sala " + room.code + " recuperada.");
+    if (info.ended) { forgetRoom(saved.code); if (!quiet) log("La sala " + saved.code + " ya había terminado."); return; }
   } catch (err) {
-    if (err.status === 404) { store.del("evento.room"); return; }
-    room = saved; showRoom(); log("No pude verificar la sala (" + err.message + "); la muestro de todos modos.", true);
+    if (err.status === 404) { forgetRoom(saved.code); return; }
+    log("No pude verificar la sala (" + err.message + "); la muestro de todos modos.", true);
   }
+  room = saved; saveRoom(room); showRoom(); log("Sala " + room.code + " recuperada.");
+}
+$("#resumeBox").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-code]"); if (!b || room) return;
+  const saved = allRooms()[b.dataset.code];
+  if (saved) { if (confirm("Si esa sala sigue abierta en otra pestaña o computadora, opérala solo desde un lugar a la vez. ¿Retomarla aquí?")) resumeRoom(saved); }
+});
+(async () => {
+  if (!cfg().code) log("Primero abre Configuración y escribe el código de acceso del Worker.");
+  const cur = tabStore.get("evento.cur"), saved = cur && allRooms()[cur];
+  if (saved) await resumeRoom(saved, true);
+  drawResume();
 })();
 </script>
 </body>
