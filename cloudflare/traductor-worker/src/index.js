@@ -147,7 +147,7 @@ export default {
 
     if (url.pathname === "/room") {
       if (who.role === "operator") body.client = who.client; // un operador solo abre salas de su cliente
-      return createRoom(body, env, cors);
+      return createRoom(body, env, cors, who);
     }
     return createSession(body, env, cors);
   },
@@ -185,7 +185,9 @@ async function createSession(body, env, cors) {
   return json({ value: data.value, expires_at: data.expires_at }, 200, cors);
 }
 
-async function createRoom(body, env, cors) {
+const BUSY_MSG = "Esta sala ya se está usando en otra computadora. Si necesitas operar otra sala al mismo tiempo, contacta a FaderLab para contratar un servicio adicional.";
+
+async function createRoom(body, env, cors, who = { role: "master" }) {
   // sala de un cliente: valida vigencia y usa su nombre si no viene título
   let client = null;
   if (body.client) {
@@ -195,6 +197,13 @@ async function createRoom(body, env, cors) {
     const st = clientStatus(client);
     if (st === "archived") return json({ error: "Este cliente está archivado" }, 400, cors);
     if (st === "expired") return json({ error: "La vigencia de este cliente ya terminó; edita sus fechas para volver a usarlo" }, 400, cors);
+    // ¿ya hay otro operador transmitiendo esta sala? Un operador no puede quitársela; el maestro puede forzar.
+    if (client.room) {
+      const cur = await env.ROOMS.get(env.ROOMS.idFromName(client.room)).status();
+      if (cur && !cur.ended && cur.host && !(who.role === "master" && body.force)) {
+        return json({ error: BUSY_MSG, busy: true, canForce: who.role === "master", room: client.room, live: cur.live }, 409, cors);
+      }
+    }
   }
   const title = (String(body.title || "").trim() || client?.name || "").slice(0, 80);
   const langs = [...new Set(Array.isArray(body.langs) ? body.langs.map(String) : [])].filter((l) => LANGS.includes(l));
