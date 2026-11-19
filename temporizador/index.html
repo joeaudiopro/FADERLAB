@@ -36,6 +36,7 @@
   --f-ui:"Barlow",system-ui,-apple-system,sans-serif;
   color-scheme:dark;
 }
+[hidden]{display:none!important}
 html,body{height:100%}
 *{box-sizing:border-box}
 body{margin:0;background:var(--ink);color:var(--text);font-family:var(--f-ui);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
@@ -125,6 +126,27 @@ input[type=color]{width:44px;height:36px;padding:0;border:1px solid var(--line);
 #toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translate(-50%,-20px);opacity:0;z-index:40;background:var(--chrome-2);border:1px solid var(--line);padding:10px 16px;border-radius:10px;font-size:14px;transition:.3s;pointer-events:none}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 
+/* Mensaje rápido en la barra */
+.quick{display:flex;gap:6px;align-items:center;flex:0 1 300px;min-width:0}
+.quick input{min-height:44px;font-size:15px}
+button.msgon{background:var(--tally);color:#1a1205;border-color:var(--tally)}
+
+/* Ventana de salida (pantalla extendida) */
+body.out #bar,body.out #panel{display:none}
+body.out{cursor:none}
+body.out.hinting{cursor:auto}
+#outhint{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(5,6,8,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#outhint .card{display:grid;gap:14px;justify-items:center;text-align:center;max-width:440px;padding:28px 24px;background:var(--chrome);border:1px solid var(--line);border-radius:14px}
+#outhint h1{font-family:var(--f-digits);font-weight:600;font-size:28px;margin:0}
+#outhint p{margin:0;color:var(--muted);line-height:1.5;font-size:15px}
+#outhint .go{font-size:17px;padding:12px 22px}
+
+/* Ventana de control con salida conectada: el lienzo se vuelve vista previa con la forma de la otra pantalla */
+body.linked{background:#050607}
+body.linked #stage{inset:auto;outline:1px solid var(--line);box-shadow:0 0 0 1px #000,0 18px 60px rgba(0,0,0,.6)}
+#linklabel{position:fixed;z-index:15;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--tally);display:flex;gap:8px;align-items:center}
+#linklabel::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--tally);box-shadow:0 0 8px var(--tally)}
+
 @media (max-width:640px){
   body.edit #bar{right:0;display:none}
   #panel{width:100%}
@@ -149,16 +171,29 @@ input[type=color]{width:44px;height:36px;padding:0;border:1px solid var(--line);
   <button id="b-minus">−1 min</button>
   <button id="b-plus">+1 min</button>
   <span class="sep"></span>
+  <div class="quick"><input type="text" id="q-msg" placeholder="Mensaje para el orador" aria-label="Mensaje para el orador" enterkeyhint="send"><button id="b-msg">Mostrar</button></div>
+  <span class="sep"></span>
+  <button id="b-out" title="Abre una ventana limpia para la pantalla extendida"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg><span>Pantalla de salida</span></button>
   <button id="b-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar</button>
-  <button id="b-fs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Pantalla completa</button>
+  <button id="b-fs" title="Pantalla completa" aria-label="Pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 </div>
 
 <aside id="panel" aria-label="Edición"></aside>
+<div id="linklabel" hidden>Pantalla de salida conectada</div>
+<div id="outhint" hidden><div class="card">
+  <h1>Pantalla de salida</h1>
+  <p>Arrastra esta ventana a la pantalla extendida y toca el botón. Todo se controla desde la ventana principal.</p>
+  <button class="go" id="o-fs">Pantalla completa</button>
+  <p style="font-size:13px">Doble clic en cualquier momento para entrar o salir de pantalla completa.</p>
+</div></div>
 <input type="file" id="logo-file" accept="image/*" hidden>
 <div id="toast"></div>
 
 <script>
 const KEY='temporizador-escenario-v1';
+const OUT=new URLSearchParams(location.search).has('salida');   // ventana de salida para la pantalla extendida
+const bc=('BroadcastChannel' in window)?new BroadcastChannel('temporizador-escenario'):null;
+let linked=false;   // ventana de control con una salida conectada
 const NAMES={timer:'Temporizador',clock:'Hora',logo:'Logo',msg:'Mensaje'};
 const LIM={timer:[4,45],clock:[1,15],logo:[3,80],msg:[1.5,20]};
 const COLORS=['#f4f1e8','#ffb020','#ff4d3d','#3ddc84','#4cc9f0','#8a8f98'];
@@ -175,7 +210,7 @@ function merge(a,b){for(const k in b){if(b[k]&&typeof b[k]==='object'&&a[k]&&typ
 function load(){try{const r=localStorage.getItem(KEY);return r?merge(clone(DEF),JSON.parse(r)):null}catch(e){return null}}
 let S=load()||clone(DEF);
 let saveT;
-function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('No se pudo guardar: el logo es muy pesado')}},300)}
+function save(){if(OUT)return;clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('No se pudo guardar: el logo es muy pesado')}},300)}
 
 const $=s=>document.querySelector(s);
 const stage=$('#stage'),panel=$('#panel'),body=document.body;
@@ -202,7 +237,9 @@ function render(){
     }
   }
   W.msg.querySelector('.txt').textContent=S.msg.text||' ';
+  if(!OUT)syncQuick();
   tick();
+  broadcast();
 }
 
 function remainMs(){return rt.running?rt.endAt-Date.now():rt.remain}
@@ -246,10 +283,10 @@ function updateGo(){
 function toggleRun(){
   if(rt.running){rt.remain=rt.endAt-Date.now();rt.running=false}
   else{if(rt.remain<=0&&!S.timer.overtime)rt.remain=S.timer.duration*1000;rt.endAt=Date.now()+rt.remain;rt.running=true;keepAwake()}
-  updateGo();tick();
+  updateGo();tick();broadcast();
 }
-function reset(){rt.running=false;rt.remain=S.timer.duration*1000;updateGo();tick()}
-function nudge(d){if(rt.running)rt.endAt+=d;else rt.remain=Math.max(rt.remain+d,0);if(!rt.running)updateGo();tick()}
+function reset(){rt.running=false;rt.remain=S.timer.duration*1000;updateGo();tick();broadcast()}
+function nudge(d){if(rt.running)rt.endAt+=d;else rt.remain=Math.max(rt.remain+d,0);if(!rt.running)updateGo();tick();broadcast()}
 $('#b-go').onclick=toggleRun;$('#b-reset').onclick=reset;
 $('#b-plus').onclick=()=>nudge(60000);$('#b-minus').onclick=()=>nudge(-60000);
 $('#b-edit').onclick=()=>setEdit(!edit);
@@ -260,7 +297,7 @@ $('#b-fs').onclick=()=>{
   try{const p=cur?(document.exitFullscreen||document.webkitExitFullscreen).call(document):fsReq.call(de);if(p&&p.catch)p.catch(()=>toast('Pantalla completa no disponible aquí'))}catch(e){toast('Pantalla completa no disponible aquí')}
 };
 document.addEventListener('keydown',e=>{
-  if(e.target.matches('input'))return;
+  if(OUT||e.target.matches('input'))return;
   if(e.code==='Space'){e.preventDefault();toggleRun()}
   else if(e.key==='r'||e.key==='R')reset();
   else if(e.key==='e'||e.key==='E')setEdit(!edit);
@@ -268,13 +305,13 @@ document.addEventListener('keydown',e=>{
 
 /* ---------- barra que se oculta ---------- */
 let idleT;
-function wakeBar(){body.classList.remove('idle');clearTimeout(idleT);if(!edit)idleT=setTimeout(()=>body.classList.add('idle'),4000)}
+function wakeBar(){body.classList.remove('idle');clearTimeout(idleT);if(!edit&&!linked&&!OUT)idleT=setTimeout(()=>body.classList.add('idle'),4000)}
 ['pointermove','pointerdown','keydown'].forEach(ev=>window.addEventListener(ev,wakeBar));
 wakeBar();
 
 /* ---------- modo edición ---------- */
 function setEdit(v){edit=v;body.classList.toggle('edit',v);$('#b-edit').classList.toggle('on',v);
-  $('#b-edit').lastChild.textContent=v?'Listo':'Editar';buildPanel();render();wakeBar()}
+  $('#b-edit').lastChild.textContent=v?'Listo':'Editar';buildPanel();render();wakeBar();layoutStage()}
 function select(k){sel=k;buildPanel();render()}
 
 stage.addEventListener('pointerdown',e=>{
@@ -393,6 +430,98 @@ $('#logo-file').addEventListener('change',e=>{
   };
   rd.readAsDataURL(f);
 });
+
+/* ---------- mensaje rápido ---------- */
+const qMsg=$('#q-msg'),bMsg=$('#b-msg');
+function syncQuick(){
+  if(document.activeElement!==qMsg)qMsg.value=S.msg.text||'';
+  bMsg.textContent=S.msg.on?'Ocultar':'Mostrar';bMsg.classList.toggle('msgon',S.msg.on);
+}
+qMsg.addEventListener('input',()=>{S.msg.text=qMsg.value;const f=panel.querySelector('#f-msg-text');if(f)f.value=qMsg.value;render();save()});
+qMsg.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();S.msg.on=true;buildPanel();render();save();qMsg.blur()}});
+bMsg.onclick=()=>{S.msg.on=!S.msg.on;buildPanel();render();save()};
+
+/* ---------- pantalla de salida (dos ventanas sincronizadas) ---------- */
+let lastLogo,lastPing=0,outWin=null;
+function broadcast(full){
+  if(!bc||OUT)return;
+  const st=clone({...S,logo:{...S.logo,src:undefined}});
+  const m={t:'state',S:st,rt:{...rt}};
+  if(full||S.logo.src!==lastLogo){m.logo=S.logo.src||null;lastLogo=S.logo.src}
+  try{bc.postMessage(m)}catch(e){}
+}
+function layoutStage(){
+  if(OUT)return;
+  const lab=$('#linklabel');
+  if(!linked||!window.outAspect){stage.removeAttribute('style');stage.style.background=S.bg;lab.hidden=true;return}
+  const bar=$('#bar'),side=(edit&&innerWidth>640)?Math.min(340,innerWidth):0;
+  const top=44,pad=24,availW=innerWidth-side-pad*2,availH=innerHeight-top-(edit&&innerWidth<=640?0:bar.offsetHeight)-pad;
+  let w=availW,h=w/window.outAspect;if(h>availH){h=availH;w=h*window.outAspect}
+  const l=pad+(availW-w)/2;
+  Object.assign(stage.style,{left:l+'px',top:top+'px',width:w+'px',height:h+'px'});
+  lab.hidden=false;lab.style.left=l+'px';lab.style.top='14px';
+}
+function setLinked(v){
+  if(v===linked)return;
+  linked=v;body.classList.toggle('linked',v);
+  const b=$('#b-out');b.classList.toggle('on',v);b.querySelector('span').textContent=v?'Salida conectada':'Pantalla de salida';
+  layoutStage();wakeBar();
+  if(!v)toast('Se cerró la pantalla de salida');
+}
+window.addEventListener('resize',layoutStage);
+
+if(OUT){
+  body.classList.add('out','hinting');
+  document.title='Salida · Temporizador';
+  const hint=$('#outhint');hint.hidden=false;
+  const goFs=()=>{try{const p=fsReq&&fsReq.call(de);if(p&&p.catch)p.catch(()=>{})}catch(e){}keepAwake()};
+  const toggleFs=()=>{const cur=document.fullscreenElement||document.webkitFullscreenElement;if(cur){try{(document.exitFullscreen||document.webkitExitFullscreen).call(document)}catch(e){}}else goFs()};
+  $('#o-fs').onclick=()=>{hint.hidden=true;body.classList.remove('hinting');goFs()};
+  hint.addEventListener('click',e=>{if(e.target===hint){hint.hidden=true;body.classList.remove('hinting')}});
+  document.addEventListener('dblclick',toggleFs);
+  const fsChange=()=>{if(document.fullscreenElement||document.webkitFullscreenElement){hint.hidden=true;body.classList.remove('hinting')}};
+  document.addEventListener('fullscreenchange',fsChange);document.addEventListener('webkitfullscreenchange',fsChange);
+  const ping=t=>{try{bc&&bc.postMessage({t,w:innerWidth,h:innerHeight})}catch(e){}};
+  if(bc){
+    bc.onmessage=e=>{
+      const m=e.data;if(!m||m.t!=='state')return;
+      const src='logo' in m?m.logo:S.logo.src;
+      S=merge(clone(DEF),m.S);S.logo.src=src;rt=m.rt;
+      render();
+    };
+    ping('hello');setInterval(()=>ping('ping'),1500);
+    window.addEventListener('resize',()=>ping('ping'));
+    window.addEventListener('pagehide',()=>ping('bye'));
+  }
+  keepAwake();
+}else{
+  if(bc){
+    bc.onmessage=e=>{
+      const m=e.data;if(!m)return;
+      if(m.t==='hello'||m.t==='ping'){
+        lastPing=Date.now();window.outAspect=m.w/m.h;
+        const was=linked;setLinked(true);layoutStage();
+        if(m.t==='hello'||!was)broadcast(true);
+      }else if(m.t==='bye'){setLinked(false)}
+    };
+    setInterval(()=>{if(linked&&Date.now()-lastPing>5000)setLinked(false)},1000);
+  }
+  const coarseOnly=matchMedia('(pointer:coarse)').matches&&!matchMedia('(any-pointer:fine)').matches;
+  if(!bc||coarseOnly)$('#b-out').hidden=true;
+  $('#b-out').onclick=async()=>{
+    if(outWin&&!outWin.closed){outWin.focus();return}
+    outWin=window.open(location.pathname+'?salida','temporizador-salida','popup,width=960,height=540,left=80,top=80');
+    if(!outWin){toast('El navegador bloqueó la ventana. Permite ventanas emergentes para este sitio');return}
+    // Chrome y Edge: si hay una segunda pantalla, mueve la ventana allá
+    try{
+      if('getScreenDetails' in window){
+        const d=await window.getScreenDetails();
+        const other=d.screens.find(s=>s!==d.currentScreen);
+        if(other){outWin.moveTo(other.availLeft,other.availTop);outWin.resizeTo(other.availWidth,other.availHeight)}
+      }
+    }catch(e){}
+  };
+}
 
 let toastT;
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
