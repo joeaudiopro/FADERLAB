@@ -1027,7 +1027,8 @@ function setColor(k, v) { $("#cf" + k).value = v; $("#cf" + k + "T").value = v; 
 });
 function syncClientForm() {
   if (!editing && !slugTouched) $("#cfSlug").value = slugify($("#cfName").value);
-  $("#cfLink").textContent = "Enlace del QR: " + clientLink($("#cfSlug").value || "…").replace(/^https?:\/\//, "");
+  const sl = $("#cfSlug").value.trim();
+  $("#cfLink").textContent = "Enlace del QR: " + (sl ? clientLink(sl).replace(/^https?:\/\//, "") : new URL("../escucha/?c=", location.href).toString().replace(/^https?:\/\//, "") + "(escribe el nombre)");
   $("#cfDates").hidden = document.querySelector("input[name=cfType]:checked").value !== "event";
   const bg = $("#cfBg").value, ac = $("#cfAc").value;
   $("#cfMini").style.background = bg; $("#cfMini").style.color = isLight(bg) ? "#141414" : "#f2f2f2";
