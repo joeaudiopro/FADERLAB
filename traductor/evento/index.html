@@ -172,8 +172,9 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
   <div class="spacer"></div>
   <span class="who" id="whoami"></span>
   <a class="ghost" id="monLink" href="../monitor/" target="_blank" rel="noopener" hidden>Monitor</a>
-  <a class="ghost" href="../">Traductor sencillo</a>
+  <a class="ghost" id="simpleLink" href="../">Traductor sencillo</a>
   <button class="ghost" id="cfgBtn">Configuración</button>
+  <button class="ghost" id="logoutBtn" hidden>Salir</button>
 </header>
 
 <main>
@@ -312,7 +313,7 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
       <label class="chip" id="cfArchWrap" hidden><input type="checkbox" id="cfArch"><span>Archivado (su enlace muestra "terminado")</span></label>
     </div></div>
     <div class="field" id="cfCodesBox" hidden><span class="lbl">Códigos de operador</span>
-      <div class="hint">Dale un código al técnico del lugar: con él abre y opera <b>solo la sala de este cliente</b>, sin ver ni editar nada más. Lo escribe en Configuración de esta misma página. Puedes revocarlo cuando quieras.</div>
+      <div class="hint">Dale un código al técnico del lugar: entra en <b>faderlab.mx/traductor/operador</b> y abre y opera <b>solo la sala de este cliente</b>, sin ver ni editar nada más. Puedes revocarlo cuando quieras.</div>
       <div class="codes" id="cfCodes"></div>
       <div class="row2" style="margin-top:8px"><input type="text" id="cfCodeLabel" maxlength="60" placeholder="Para quién (ej. Técnico de domingo)"><button class="ghost" id="cfCodeNew" type="button">Crear código</button></div>
       <div class="newcode" id="cfCodeShow" hidden></div>
@@ -345,6 +346,17 @@ let sessions = [], running = false, startedAt = 0, langMs = 0, lastTick = 0; // 
 let pubs = {}; // idioma -> AudioPub (voz traducida hacia los teléfonos)
 let clients = []; // perfiles de clientes (marca + enlace fijo)
 let me = null;    // quién usa la consola: { role: "master" } o { role: "operator", client, label }
+// Modo operador (entrada desde /traductor/operador): consola simplificada para el técnico de un cliente.
+const OP_MODE = new URLSearchParams(location.search).get("modo") === "operador";
+if (OP_MODE) {
+  ["#cfgBtn", "#simpleLink", "#cliNew", "#cliEdit"].forEach((sel) => { const el = document.querySelector(sel); if (el) el.hidden = true; });
+  document.querySelector("#logoutBtn").hidden = false;
+}
+document.querySelector("#logoutBtn").onclick = () => {
+  if (running && !confirm("La traducción está en curso. ¿Salir de todos modos? Se detendrá en esta computadora.")) return;
+  try { localStorage.removeItem("trad.code"); } catch {}
+  location.href = "../operador/";
+};
 const PAUSE_MS = 2200;   // silencio que cierra un renglón
 const SOFT_MAX = 170;    // renglón largo: se cierra en el siguiente punto
 
@@ -1116,10 +1128,13 @@ $("#cfCodeNew").onclick = async () => {
   const label = $("#cfCodeLabel").value.trim() || "Operador";
   try {
     const r = await opApi("POST", `/client/${editing.slug}/codes`, { label });
-    const consola = new URL(location.href); consola.search = ""; consola.hash = "";
-    $("#cfCodeShow").innerHTML = `Código para <b>${esc(r.label)}</b>. <b>Cópialo ahora</b>: no se vuelve a mostrar.<div class="code">${esc(r.code)}</div>Dáselo junto con esta dirección: <b>${esc(consola.toString().replace(/^https?:\/\//, ""))}</b> → Configuración → código.<div class="btns"><button class="ghost" type="button" id="cfCodeCopy">Copiar código</button></div>`;
+    const entrada = new URL("../operador/", location.href);
+    if (/^(localhost|127\.)/.test(location.hostname) && cfg().url !== DEFAULT_WORKER) entrada.searchParams.set("api", cfg().url);
+    const direct = entrada.toString() + "#" + r.code;
+    $("#cfCodeShow").innerHTML = `Código para <b>${esc(r.label)}</b>. <b>Cópialo ahora</b>: no se vuelve a mostrar.<div class="code">${esc(r.code)}</div>El técnico entra en <b>${esc(entrada.toString().replace(/^https?:\/\//, "").replace(/\?.*$/, ""))}</b> y escribe el código. O mándale el <b>enlace directo</b>, que ya lo incluye (trátalo como una contraseña).<div class="btns"><button class="ghost" type="button" id="cfCodeCopy">Copiar código</button><button class="ghost" type="button" id="cfLinkCopy">Copiar enlace directo</button></div>`;
     $("#cfCodeShow").hidden = false; $("#cfCodeLabel").value = "";
     $("#cfCodeCopy").onclick = async () => { try { await navigator.clipboard.writeText(r.code); $("#cfCodeCopy").textContent = "Copiado ✓"; } catch {} };
+    $("#cfLinkCopy").onclick = async () => { try { await navigator.clipboard.writeText(direct); $("#cfLinkCopy").textContent = "Copiado ✓"; } catch {} };
     log(`Código de operador creado para ${editing.name}: ${r.label}`);
     loadCodes(editing.slug);
   } catch (err) { $("#cfErr").textContent = err.message; }
@@ -1129,9 +1144,12 @@ $("#cfCodeNew").onclick = async () => {
 async function loadMe() {
   me = null;
   $("#whoami").innerHTML = ""; $("#monLink").hidden = true;
-  if (!cfg().code) return;
+  if (!cfg().code) { if (OP_MODE) location.replace("../operador/"); return; }
   try { me = await opApi("GET", "/me"); }
-  catch (err) { log(err.status === 401 ? "Código de acceso incorrecto: revisa Configuración." : "No pude verificar el código: " + err.message, true); return; }
+  catch (err) {
+    if (OP_MODE && err.status === 401) { location.replace("../operador/"); return; } // código revocado: vuelve a la entrada
+    log(err.status === 401 ? "Código de acceso incorrecto: revisa Configuración." : "No pude verificar el código: " + err.message, true); return;
+  }
   const op = me.role === "operator";
   $("#cliNew").hidden = op; $("#cliEdit").hidden = op;
   $("#monLink").hidden = op;
