@@ -1,6 +1,6 @@
 // KVA (calculadora de planta): guarda todo en el dispositivo para usarse sin conexión.
 // Cambia VERSION cada vez que subas una versión nueva del index.html.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CORE = 'kva-' + VERSION;
 const FONTS = 'kva-fuentes';
 const FILES = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable.png'];

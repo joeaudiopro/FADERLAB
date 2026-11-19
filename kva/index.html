@@ -87,8 +87,9 @@ select{cursor:pointer}
 .cat-h .sum small{font-size:13px;color:var(--muted);font-weight:500;margin-left:3px}
 
 .items{display:grid;gap:6px}
-.ihead,.item{display:grid;grid-template-columns:minmax(0,1fr) 64px 84px 86px 34px;gap:6px;align-items:center}
-body.ninja .ihead,body.ninja .item{grid-template-columns:minmax(0,1fr) 64px 84px 62px 74px 86px 34px}
+.ihead,.item{display:grid;grid-template-columns:minmax(0,1fr) 64px 84px 84px 86px 34px;gap:6px;align-items:center}
+body.ninja .ihead,body.ninja .item{grid-template-columns:minmax(0,1fr) 58px 78px 56px 84px 80px 84px 34px}
+.item .ph-all{font-size:13px;color:var(--muted);text-align:center;display:block}
 .ihead{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 2px}
 .ihead span:not(:first-child){text-align:right}
 .ihead span.c{text-align:center}
@@ -110,11 +111,11 @@ body.ninja .conds label.nj{display:grid}
 
 @media (max-width:620px){
   .ihead{display:none}
-  .item,body.ninja .item{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(78px,auto);grid-template-areas:"nm nm del" "q w tot";background:var(--chrome-2);border:1px solid var(--line);border-radius:12px;padding:8px}
-  body.ninja .item{grid-template-areas:"nm nm del" "q w tot" "pf ph ph"}
+  .item,body.ninja .item{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(78px,auto);grid-template-areas:"nm nm del" "q w tot" "v v v";background:var(--chrome-2);border:1px solid var(--line);border-radius:12px;padding:8px}
+  body.ninja .item{grid-template-areas:"nm nm del" "q w tot" "v pf ph"}
   .item .nm{grid-area:nm;background:transparent;border-color:transparent;padding-left:4px}
   .item .q{grid-area:q}.item .w{grid-area:w}.item .tot{grid-area:tot;align-self:center}.item .del{grid-area:del;justify-self:end}
-  .item .pf{grid-area:pf}.item .ph{grid-area:ph}
+  .item .pf{grid-area:pf}.item .ph{grid-area:ph}.item .v{grid-area:v}
   .item .num{background:var(--chrome)}
   .item select{background:var(--chrome)}
   .item label.mini{display:grid;gap:2px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -372,6 +373,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       <p><b>4. Lugar.</b> El motor pierde potencia con la altura y el calor (aprox. 1.2% por cada 100 m arriba de 1,000 m y 0.4% por °C arriba de 30 °C). En CDMX eso es cerca de 15% menos planta. La curva exacta depende del fabricante.</p>
       <p><b>5. Margen.</b> Una planta no debe trabajar arriba de ~80% continuo: deja aire para picos de los amplificadores, arranques y el calor. <code>kVA planta = demanda ÷ (0.8 × factor del lugar)</code>.</p>
       <p><b>6. Fases.</b> En trifásico 220/127 V cada fase da <code>A = kVA × 1000 ÷ (3 × 127)</code>. Si las fases quedan desbalanceadas, la fase más cargada manda: la calculadora reparte los equipos para emparejarlas y, si aun así una se pasa, sube la planta.</p>
+      <p><b>7. 127 V o 220 V.</b> En México los equipos de 127 V van entre una fase y el neutro; los de 220 V (como muchos aires acondicionados) van entre dos fases. El mismo equipo a 220 V jala menos amperes (<code>A = VA ÷ 220</code>), pero los jala de dos fases a la vez. La calculadora lo cuenta así, del lado seguro.</p>
       <p><b>Ojo:</b> esto es una guía de planeación, no sustituye al electricista responsable ni la ficha técnica real de cada equipo y de la planta.</p>
     </div>
   </details>
@@ -416,7 +418,8 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
 
   // ───────── Datos ─────────
   // Biblioteca genérica: W = consumo máximo típico de ficha por equipo; pf = factor de potencia.
-  // m: motor (pico de arranque) · nl: carga electrónica no lineal (fuentes conmutadas) · ph:'3F' equipo trifásico.
+  // m: motor (pico de arranque) · nl: carga electrónica no lineal (fuentes conmutadas)
+  // v: conexión — '1' entre fase y neutro (127 V), '2' entre dos fases (220 V), '3' trifásico. Si no se indica, '1'.
   const CATS = [
     { id:'audio', name:'Audio', color:'#ffb020', lib:[
       // pa: amplificación; su consumo depende del tipo de evento (w8 = a 1/8 de potencia, w3 = a 1/3).
@@ -427,7 +430,9 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       { n:'Amplificador clase AB (antiguo)', w8:900, w3:1800, pf:.7, pa:1 },
       { n:'Consola digital', w:300, pf:.95, nl:1 },
       { n:'Stagebox / rack digital', w:150, pf:.95, nl:1 },
-      { n:'Rack de inalámbricos / in-ears', w:250, pf:.95, nl:1 },
+      { n:'Receptor inalámbrico (por unidad)', w:25, pf:.95, nl:1 },
+      { n:'Transmisor de in-ears (por unidad)', w:20, pf:.95, nl:1 },
+      { n:'Distribuidor de antenas / combinador', w:30, pf:.95, nl:1 },
       { n:'Amplificador de bajo', w:500, pf:.9, nl:1 },
       { n:'Amplificador de guitarra', w:150, pf:.9 },
       { n:'Teclado / sintetizador', w:60, pf:.9, nl:1 },
@@ -456,8 +461,8 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       { n:'Seguidor (follow spot) LED', w:800, pf:.95, nl:1 },
     ]},
     { id:'otros', name:'Otros', color:'#5fd38d', lib:[
-      { n:'Polipasto / motor de cadena 1 t (3F)', w:1500, pf:.8, m:1, ph:'3F' },
-      { n:'Aire acondicionado minisplit 1.5 t', w:1800, pf:.85, m:1 },
+      { n:'Polipasto / motor de cadena 1 t', w:1500, pf:.8, m:1, v:'3' },
+      { n:'Aire acondicionado minisplit 1.5 t', w:1800, pf:.85, m:1, v:'2' },
       { n:'Ventilador industrial', w:400, pf:.8, m:1 },
       { n:'Iluminación de trabajo / backstage', w:500, pf:.95, nl:1 },
       { n:'Contactos camerinos / producción', w:1000, pf:.9 },
@@ -500,7 +505,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     S.ver = 2;
     if (!SHOWS[S.show]) S.show = 'concierto';
     S.items = (S.items || []).filter(i => CAT[i.cat]);
-    S.items.forEach(i => uid = Math.max(uid, (i.id || 0) + 1));
+    S.items.forEach(i => { uid = Math.max(uid, (i.id || 0) + 1); if (i.ph === '3F') { i.v = '3'; i.ph = 'A'; } if (!i.v) i.v = '1'; });
   } catch (_) {}
   if (!SYSTEMS[S.sys]) S.sys = '3f220';
   const save = () => { try { localStorage.setItem('fl-kva', JSON.stringify(S)); } catch (_) {} };
@@ -513,6 +518,9 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   // Watts por equipo que usa el cálculo: la amplificación depende del tipo de evento.
   const effW = it => it.pa ? Math.round((it.w8 + (it.w3 - it.w8) * SHOWS[S.show].k) / 10) * 10 : (it.w || 0);
+  // Etiquetas de voltaje según el sistema (127/220 en México; 254/440 en industrial).
+  const vLabel = (v, sys) => v === '3' ? 'Trifásico' : (v === '2' ? sys.vll : sys.vln) + ' V';
+  const PAIRS = { L12:[0, 1], L23:[1, 2], L13:[0, 2] };
   const wLabel = p => p.pa ? `${nf(p.w8)}–${nf(p.w3)} W` : `${nf(p.w)} W`;
 
   // Valores efectivos: en Normal se usan los de fábrica; en Ninja, los tuyos.
@@ -548,23 +556,38 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       res.inst += P; res.instVA += VA; res.P += Pd; res.VA += VAd; res.n++;
       if (it.nl) res.nlP += Pd;
       if (it.m) res.motors.push({ n:it.n, kva: w / pf / 1000 });
-      // Fases
-      const ph = S.ninja ? it.ph : (it.ph === '3F' ? '3F' : 'A');
-      if (NP === 1) { res.phases[0].VA += VAd; res.phases[0].by[it.cat] += VAd; }
-      else if (ph === '3F') res.phases.forEach(p => { p.VA += VAd / NP; p.by[it.cat] += VAd / NP; });
-      else if (/^L[123]$/.test(ph)) { const p = res.phases[+ph[1] - 1]; p.VA += VAd; p.by[it.cat] += VAd; }
+      // Fases: todo se lleva a "VA equivalentes por fase" (amperes de esa fase × voltaje fase-neutro).
+      const v = it.v || '1';
+      const add = (k, va) => { res.phases[k].VA += va; res.phases[k].by[it.cat] += va; };
+      if (v === '2') res.has220 = true;
+      if (NP === 1) { add(0, VAd); if (v !== '1') res.badV = true; }
+      else if (v === '3') res.phases.forEach((p, k) => add(k, VAd / 3));
       else {
-        // Reparto automático: cada equipo es una unidad; muchos m² de LED se parten en trozos.
-        const count = Math.min(Math.ceil(q), 300), per = VAd / q, chunk = q / count;
-        for (let k = 0; k < count; k++) { const qq = Math.min(chunk, q - k * chunk); units.push({ va: per * qq, cat: it.cat }); }
+        // Un equipo de 220 V jala A = VA ÷ 220 por CADA una de sus dos fases.
+        const share = v === '2' ? sys.vln / sys.vll : 1;
+        const fix = S.ninja ? it.ph : 'A';
+        if (v === '1' && /^L[123]$/.test(fix)) add(+fix[1] - 1, VAd);
+        else if (v === '2' && PAIRS[fix]) PAIRS[fix].forEach(k => add(k, VAd * share));
+        else {
+          // Reparto automático: cada equipo es una unidad; muchos m² de LED se parten en trozos.
+          const count = Math.min(Math.ceil(q), 300), per = VAd / q, chunk = q / count;
+          for (let k = 0; k < count; k++) { const qq = Math.min(chunk, q - k * chunk); units.push({ va: per * qq * share, cat: it.cat, two: v === '2' }); }
+        }
       }
     }
-    // Balanceo: del más grande al más chico, siempre a la fase con menos carga.
-    units.sort((a, b) => b.va - a.va);
+    // Balanceo: del más grande al más chico. 127 V va a la fase más libre; 220 V al par de fases más libre.
+    units.sort((a, b) => b.va * (b.two ? 2 : 1) - a.va * (a.two ? 2 : 1));
     for (const u of units) {
-      let best = res.phases[0];
-      for (const p of res.phases) if (p.VA < best.VA) best = p;
-      best.VA += u.va; best.by[u.cat] += u.va;
+      const P = res.phases;
+      if (u.two) {
+        let best = null;
+        for (const pr of Object.values(PAIRS)) if (!best || P[pr[0]].VA + P[pr[1]].VA < P[best[0]].VA + P[best[1]].VA) best = pr;
+        best.forEach(k => { P[k].VA += u.va; P[k].by[u.cat] += u.va; });
+      } else {
+        let best = P[0];
+        for (const p of P) if (p.VA < best.VA) best = p;
+        best.VA += u.va; best.by[u.cat] += u.va;
+      }
     }
 
     const maxPh = Math.max(...res.phases.map(p => p.VA));
@@ -619,7 +642,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     $('dfs').innerHTML = CATS.map(c => `<label>${c.name}<input class="num" data-df="${c.id}" inputmode="numeric" value="${S.df[c.id]}"></label>`).join('');
   }
   ['city', 'city2'].forEach(id => $(id).addEventListener('change', e => { if (e.target.value !== 'custom') { S.alt = +e.target.value; fillSelects(); update(); save(); } }));
-  ['sys', 'sys2'].forEach(id => $(id).addEventListener('change', e => { S.sys = e.target.value; fillSelects(); update(); save(); }));
+  ['sys', 'sys2'].forEach(id => $(id).addEventListener('change', e => { S.sys = e.target.value; fillSelects(); renderCats(); update(); save(); }));
   [['alt', 'alt', 0, 5000], ['alt2', 'alt', 0, 5000], ['temp', 'temp', -10, 55], ['temp2', 'temp', -10, 55], ['limit', 'limit', 40, 100], ['limit2', 'limit', 40, 100]].forEach(([id, key, a, b]) => {
     $(id).addEventListener('input', () => { const v = parse($(id).value); if (isFinite(v)) { S[key] = clamp(v, a, b); update(); save(); } });
     $(id).addEventListener('blur', () => fillSelects());
@@ -631,7 +654,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     $('cats').innerHTML = CATS.map(c => `
       <section class="card" data-cat="${c.id}">
         <div class="cat-h"><span class="dot" style="background:${c.color}"></span><h2>${c.name}</h2><span class="sum" data-sum="${c.id}">0<small>W</small></span></div>
-        <div class="ihead"${S.items.some(i => i.cat === c.id) ? '' : ' hidden'}><span>Equipo</span><span>Cant.</span><span>W c/u</span><span class="nj">FP</span><span class="nj c">Fase</span><span>Total</span><span></span></div>
+        <div class="ihead"${S.items.some(i => i.cat === c.id) ? '' : ' hidden'}><span>Equipo</span><span>Cant.</span><span>W c/u</span><span class="nj">FP</span><span class="c">Voltaje</span><span class="nj c">Fase</span><span>Total</span><span></span></div>
         <div class="items" data-items="${c.id}">${itemsHTML(c.id)}</div>
         <div class="add">
           <select data-add="${c.id}" aria-label="Agregar equipo de ${c.name}">
@@ -642,6 +665,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
         </div>
       </section>`).join('');
   }
+  const sysNow = () => SYSTEMS[eff().sys];
   function itemsHTML(cat) {
     const list = S.items.filter(i => i.cat === cat);
     if (!list.length) return '<p class="empty">Sin equipos.</p>';
@@ -651,9 +675,12 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
         <label class="mini q"><span>Cant.</span><input class="num" data-f="q" value="${i.q}" inputmode="decimal" aria-label="Cantidad" autocomplete="off"></label>
         <label class="mini w"><span>W c/u</span><input class="num${i.pa ? ' auto' : ''}" data-f="w" value="${effW(i)}"${i.pa ? ' title="Cambia con el tipo de evento"' : ''} inputmode="decimal" aria-label="Watts por equipo" autocomplete="off"></label>
         <label class="mini pf nj"><span>FP</span><input class="num" data-f="pf" value="${i.pf}" inputmode="decimal" aria-label="Factor de potencia" autocomplete="off"></label>
-        <label class="mini ph nj"><span>Fase</span><select data-f="ph" aria-label="Fase">
-          ${['A', 'L1', 'L2', 'L3', '3F'].map(o => `<option value="${o}"${i.ph === o ? ' selected' : ''}>${o === 'A' ? 'Auto' : o}</option>`).join('')}
+        <label class="mini v"><span>Voltaje</span><select data-f="v" aria-label="Voltaje de conexión">
+          ${(sysNow().ph === 1 ? ['1'] : ['1', '2', '3']).map(o => `<option value="${o}"${(i.v || '1') === o ? ' selected' : ''}>${vLabel(o, sysNow())}</option>`).join('')}
         </select></label>
+        <label class="mini ph nj"><span>Fase</span>${(i.v || '1') === '3' || sysNow().ph === 1 ? '<span class="ph-all">Todas</span>' : `<select data-f="ph" aria-label="Fase">
+          ${((i.v || '1') === '2' ? ['A', 'L12', 'L23', 'L13'] : ['A', 'L1', 'L2', 'L3']).map(o => `<option value="${o}"${i.ph === o ? ' selected' : ''}>${o === 'A' ? 'Auto' : o.length === 3 ? 'L' + o[1] + '-L' + o[2] : o}</option>`).join('')}
+        </select>`}</label>
         <span class="tot" data-tot="${i.id}"></span>
         <button class="del" data-del="${i.id}" aria-label="Quitar ${esc(i.n)}" title="Quitar">✕</button>
       </div>`).join('');
@@ -670,7 +697,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       const v = e.target.value; e.target.value = '';
       if (v === '') return;
       const p = v === 'custom' ? { n:'', w:100, pf:.9 } : CAT[add].lib[+v];
-      const it = { id:uid++, cat:add, n:p.n, q:1, w:p.w || 0, pf:p.pf, ph:p.ph || 'A' };
+      const it = { id:uid++, cat:add, n:p.n, q:1, w:p.w || 0, pf:p.pf, v:p.v || '1', ph:'A' };
       if (p.m) it.m = 1; if (p.nl) it.nl = 1;
       if (p.pa) { it.pa = 1; it.w8 = p.w8; it.w3 = p.w3; }
       S.items.push(it);
@@ -684,9 +711,13 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       const it = S.items.find(i => i.id === +e.target.closest('.item').dataset.id);
       if (it) { it.ph = e.target.value; update(); save(); }
     }
+    if (e.target.dataset.f === 'v') {
+      const it = S.items.find(i => i.id === +e.target.closest('.item').dataset.id);
+      if (it) { it.v = e.target.value; it.ph = 'A'; refreshCat(it.cat); update(); save(); }
+    }
   });
   $('cats').addEventListener('input', e => {
-    const f = e.target.dataset.f; if (!f || f === 'ph') return;
+    const f = e.target.dataset.f; if (!f || f === 'ph' || f === 'v') return;
     const it = S.items.find(i => i.id === +e.target.closest('.item').dataset.id); if (!it) return;
     if (f === 'n') it.n = e.target.value;
     else { const v = parse(e.target.value); if (isFinite(v) && v >= 0) { it[f] = f === 'pf' ? clamp(v, .3, 1) : v; if (f === 'w' && it.pa) { it.pa = 0; e.target.classList.remove('auto'); e.target.removeAttribute('title'); } } }
@@ -694,7 +725,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
   });
   $('cats').addEventListener('focusin', e => { if (e.target.classList.contains('num')) e.target.select(); });
   $('cats').addEventListener('focusout', e => {
-    const f = e.target.dataset.f; if (!f || f === 'n' || f === 'ph') return;
+    const f = e.target.dataset.f; if (!f || f === 'n' || f === 'ph' || f === 'v') return;
     const it = S.items.find(i => i.id === +e.target.closest('.item')?.dataset.id);
     if (it) e.target.value = f === 'w' ? effW(it) : it[f];
   });
@@ -758,6 +789,8 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     if (r.bind === 'kw') N.push(['', `Tu carga es casi toda electrónica (FP promedio ${nf(r.pfAvg, 2)}), así que el límite son los <b>kW</b>: las plantas dan 80% de sus kVA en kW.`]);
     if (r.bind === 'ph') N.push(['warn', `La fase más cargada es la que define el tamaño. Balancea mejor las fases y podrías bajar de planta.`]);
     if (r.sys.ph > 1 && r.imb > 15) N.push(['warn', `Desbalance de fases de <b>${nf(r.imb)}%</b>. Lo sano es menos de 10–15%.`]);
+    if (r.badV) N.push(['bad', `Tienes equipos de ${r.sys.vll === 127 ? '220 V' : 'dos fases'} o trifásicos, pero elegiste una planta monofásica de ${r.sys.vln} V: no se pueden conectar. Cambia a trifásico o revisa esos equipos.`]);
+    else if (r.has220) N.push(['', `Los equipos de ${r.sys.vll} V van entre dos fases: jalan menos amperes (A = VA ÷ ${r.sys.vll}) pero cargan las dos fases a la vez. Ya están considerados en el reparto.`]);
     if (r.motors.length) {
       const big = Math.max(...r.motors.map(m => m.kva));
       const startKva = r.VA / 1000 + 5 * big;
@@ -837,7 +870,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       const list = S.items.filter(i => i.cat === c.id && i.q > 0 && effW(i) > 0);
       if (!list.length) continue;
       L.push(`\n${c.name.toUpperCase()} · ${nf(r.cats[c.id].P)} W`);
-      list.forEach(i => L.push(`  ${nf(i.q, i.q % 1 ? 1 : 0)} × ${i.n || 'Equipo'} · ${nf(effW(i))} W = ${nf(i.q * effW(i))} W`));
+      list.forEach(i => L.push(`  ${nf(i.q, i.q % 1 ? 1 : 0)} × ${i.n || 'Equipo'} · ${nf(effW(i))} W${(i.v || '1') !== '1' ? ' · ' + vLabel(i.v, r.sys) : ''} = ${nf(i.q * effW(i))} W`));
     }
     L.push(`\nTipo de evento: ${SHOWS[S.show].n}`);
     L.push(`Instalado: ${nf(r.inst / 1000, 1)} kW · Demanda real: ${nf(r.P / 1000, 1)} kW / ${nf(r.VA / 1000, 1)} kVA`);
@@ -862,8 +895,8 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     const rows = CATS.map(c => {
       const list = S.items.filter(i => i.cat === c.id && i.q > 0 && effW(i) > 0);
       if (!list.length) return '';
-      return `<tr class="cat"><td colspan="4">${c.name}</td><td class="r">${nf(r.cats[c.id].P)} W</td></tr>` +
-        list.map(i => `<tr><td>${esc(i.n || 'Equipo')}</td><td class="r">${nf(i.q, i.q % 1 ? 1 : 0)}</td><td class="r">${nf(effW(i))} W</td><td class="r">${nf(i.pf, 2)}</td><td class="r">${nf(i.q * effW(i))} W</td></tr>`).join('');
+      return `<tr class="cat"><td colspan="5">${c.name}</td><td class="r">${nf(r.cats[c.id].P)} W</td></tr>` +
+        list.map(i => `<tr><td>${esc(i.n || 'Equipo')}</td><td class="r">${nf(i.q, i.q % 1 ? 1 : 0)}</td><td class="r">${nf(effW(i))} W</td><td class="r">${nf(i.pf, 2)}</td><td class="r">${vLabel(i.v || '1', r.sys)}</td><td class="r">${nf(i.q * effW(i))} W</td></tr>`).join('');
     }).join('');
     const d = new Date().toLocaleDateString('es-MX', { day:'numeric', month:'long', year:'numeric' });
     $('sheet').innerHTML = `
@@ -872,7 +905,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       <div class="box"><small>Planta sugerida</small><b>${r.size ? r.size + ' kVA' : (r.n ? '+1,000 kVA' : '—')}</b><small>prime / continua</small></div>
       <div class="box"><small>Límite seguro por fase</small><b>${A ? nfa(A.safe) + ' A' : '—'}</b><small>a ${nf(r.E.limit)}% · rinde ${nf(r.der * 100)}%</small></div>
       <div class="box"><small>Demanda real</small><b>${nf(r.P / 1000, 1)} kW</b><small>${nf(r.VA / 1000, 1)} kVA · instalado ${nf(r.inst / 1000, 1)} kW</small></div>
-      <table><thead><tr><th>Equipo</th><th class="r">Cant.</th><th class="r">W c/u</th><th class="r">FP</th><th class="r">Total</th></tr></thead><tbody>${rows || '<tr><td colspan="5">Sin equipos</td></tr>'}</tbody></table>
+      <table><thead><tr><th>Equipo</th><th class="r">Cant.</th><th class="r">W c/u</th><th class="r">FP</th><th class="r">Voltaje</th><th class="r">Total</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Sin equipos</td></tr>'}</tbody></table>
       ${r.n ? `<p><b>Carga por fase:</b> ${r.phases.map((p, k) => `${r.sys.ph === 1 ? 'F' : 'L' + (k + 1)} ${nfa(p.VA / r.sys.vln)} A`).join(' · ')}</p>` : ''}
       <ul>${notesFor(r, A ? { ...A, kvaDer: r.size * r.der } : null).map(([, t]) => `<li>${t}</li>`).join('')}</ul>
       <p class="foot">Audio calculado para «${esc(SHOWS[S.show].n)}». Simultaneidad: ${CATS.map(c => `${c.name} ${nf(r.E.df[c.id])}%`).join(' · ')}. Guía de planeación; confirma con el electricista responsable y las fichas técnicas reales.</p>`;
