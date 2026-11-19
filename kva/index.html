@@ -131,6 +131,34 @@ label.mini{display:block}
 .dfs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .dfs label{font-size:11px}
 .hint{font-size:13px;color:var(--muted);margin:10px 2px 0}
+/* Tipo de evento */
+.shows{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.shows button{flex-direction:column;align-items:flex-start;text-align:left;gap:2px;padding:10px 12px;min-height:68px}
+.shows button b{font-family:var(--f-digits);font-size:19px;font-weight:600;line-height:1.1}
+.shows button span{font-size:12.5px;font-weight:500;color:var(--muted);line-height:1.25}
+.shows button.on span{color:#d9b778}
+@media (max-width:620px){.shows{grid-template-columns:minmax(0,1fr)}.shows button{min-height:0}}
+.show-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.show-foot p{margin:0;font-size:13px;color:var(--muted)}
+.why{background:transparent;border:0;padding:4px 0;min-height:0;color:var(--tally);font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.item .num.auto{border-color:rgba(255,176,32,.35)}
+/* Ventana de explicación */
+.modal{position:fixed;inset:0;background:rgba(5,6,8,.78);display:none;align-items:center;justify-content:center;padding:18px;z-index:20}
+.modal.open{display:flex}
+.modal-box{background:var(--chrome);border:1px solid var(--line);border-radius:16px;max-width:620px;width:100%;max-height:calc(100vh - 36px);overflow:auto;padding:20px 22px;font-size:15px;color:#d6d2c9}
+.modal-box h3{font-family:var(--f-digits);font-weight:600;font-size:26px;margin:0 0 10px;color:var(--text)}
+.modal-box h4{font-family:var(--f-digits);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+.modal-box p{margin:0 0 10px}
+.modal-box b{color:var(--text)}
+.modal-box ul{margin:0 0 10px;padding-left:18px}
+.modal-box li{margin-bottom:6px}
+.ex{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 6px}
+.ex div{background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.ex small{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.ex b{font-family:var(--f-digits);font-size:26px;font-weight:600;white-space:nowrap}
+@media (max-width:440px){.ex{gap:6px}.ex div{padding:7px 8px}.ex b{font-size:21px}}
+.modal-box .tip{border-left:3px solid var(--tally);padding:8px 12px;background:var(--tally-dim);border-radius:0 8px 8px 0;color:#e8dcc4}
+.modal-close{position:sticky;top:0;float:right;margin:-6px -8px 0 10px}
 @media (max-width:620px){.conds{grid-template-columns:minmax(0,1fr)}.dfs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .hint b{color:var(--tally);font-weight:600}
 
@@ -247,6 +275,14 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
   <!-- ─────────── Vista: calcular planta ─────────── -->
   <div class="grid" id="vCalc">
     <div>
+      <section class="card" id="showCard">
+        <h2>Tipo de evento</h2>
+        <div class="shows" id="shows" role="radiogroup" aria-label="Tipo de evento"></div>
+        <div class="show-foot">
+          <p>Ajusta cuánto consumen las bocinas activas y los amplificadores.</p>
+          <button class="why" id="whyBtn">¿Por qué debo seleccionar esto?</button>
+        </div>
+      </section>
       <div id="cats"></div>
 
       <section class="card">
@@ -331,7 +367,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     <summary><h2>¿Cómo se calcula?</h2><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
     <div class="how">
       <p><b>1. Watts a kVA.</b> Cada equipo consume watts reales (W), pero la planta se mide en potencia aparente (VA). La diferencia es el factor de potencia: <code>VA = W ÷ FP</code>. Un amplificador clase D moderno anda en 0.95; uno clase AB viejo en 0.7, así que pide más planta por el mismo watt.</p>
-      <p><b>2. Simultaneidad.</b> Nunca está todo al máximo a la vez: la pantalla LED casi nunca está en blanco total y las cabezas no están todas a full. Por eso se multiplica cada área por un factor (audio 70%, video 80%, iluminación 90%, otros 100%). En Ninja puedes ajustarlo.</p>
+      <p><b>2. Simultaneidad.</b> Nunca está todo al máximo a la vez: la pantalla LED casi nunca está en blanco total y las cabezas no están todas a full. Por eso video se multiplica por 80%, iluminación por 90% y otros por 100% (en Ninja puedes ajustarlo). En audio manda el <b>tipo de evento</b>: las bocinas activas y amplificadores usan su consumo a 1/8 de potencia en una conferencia, a 1/3 en un show a tope y un punto intermedio en un concierto.</p>
       <p><b>3. kW y kVA a la vez.</b> Las plantas se fabrican para FP 0.8: una de 100 kVA sólo da 80 kW. Si tu carga es casi toda LED y clase D (FP alto), el límite real son los kW, no los kVA. La calculadora revisa los dos y usa el más exigente.</p>
       <p><b>4. Lugar.</b> El motor pierde potencia con la altura y el calor (aprox. 1.2% por cada 100 m arriba de 1,000 m y 0.4% por °C arriba de 30 °C). En CDMX eso es cerca de 15% menos planta. La curva exacta depende del fabricante.</p>
       <p><b>5. Margen.</b> Una planta no debe trabajar arriba de ~80% continuo: deja aire para picos de los amplificadores, arranques y el calor. <code>kVA planta = demanda ÷ (0.8 × factor del lugar)</code>.</p>
@@ -341,6 +377,35 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
   </details>
 
   <footer>FaderLab · Herramientas para producción de eventos</footer>
+</div>
+
+<div class="modal" id="whyModal" role="dialog" aria-modal="true" aria-labelledby="whyTitle">
+  <div class="modal-box">
+    <button class="modal-close" id="whyClose" aria-label="Cerrar">✕</button>
+    <h3 id="whyTitle">¿Por qué importa el tipo de evento?</h3>
+    <p>Las bocinas activas y los amplificadores <b>no consumen siempre lo mismo</b>. Su consumo depende de qué tan fuerte y qué tan comprimido suene el show. Por eso las fichas técnicas dan varios consumos:</p>
+    <ul>
+      <li><b>A 1/8 de potencia:</b> voz o música con dinámica, con golpes fuertes y momentos bajos. Es el dato estándar de las fichas.</li>
+      <li><b>A 1/3 de potencia:</b> música muy comprimida y pegada al limitador, como rock pesado, EDM o un show a tope toda la noche.</li>
+      <li><b>Máximo:</b> tono continuo a full. En un show real no pasa, pero es lo que dice la placa.</li>
+    </ul>
+    <h4>Mismo equipo, distinto evento</h4>
+    <p>10 amplificadores clase D de 4 canales (genéricos):</p>
+    <div class="ex">
+      <div><small>Conferencia o culto</small><b>10 kW</b></div>
+      <div><small>Concierto</small><b>17 kW</b></div>
+      <div><small>Rock / EDM</small><b>24 kW</b></div>
+    </div>
+    <p>Con el mismo sistema de audio, un show de EDM puede consumir <b>más del doble</b> que una conferencia. Eso cambia la planta que tienes que rentar.</p>
+    <h4>¿Cuál elijo?</h4>
+    <ul>
+      <li><b>Conferencia o culto:</b> congresos, conferencias, misas y cultos, bodas, ceremonias, graduaciones, música de fondo.</li>
+      <li><b>Concierto o espectáculo:</b> banda en vivo, teatro musical, shows corporativos con música, alabanza con banda completa.</li>
+      <li><b>Rock, EDM, a tope:</b> rock y metal, DJs, festivales, cualquier show donde el sistema trabaja pegado al limitador.</li>
+    </ul>
+    <p class="tip">Si dudas entre dos, elige el de <b>mayor consumo</b>. Que sobre planta cuesta poco; que falte cuesta el show.</p>
+    <p style="font-size:13px;color:var(--muted);margin-top:12px">Sólo cambia el consumo de bocinas activas y amplificadores (sus watts aparecen con borde ámbar). Consolas, inalámbricos, video e iluminación no cambian. Si escribes a mano los watts de un equipo, se respeta tu número.</p>
+  </div>
 </div>
 
 <div id="sheet"></div>
@@ -354,11 +419,12 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
   // m: motor (pico de arranque) · nl: carga electrónica no lineal (fuentes conmutadas) · ph:'3F' equipo trifásico.
   const CATS = [
     { id:'audio', name:'Audio', color:'#ffb020', lib:[
-      { n:'Bocina line array activa (por caja)', w:800, pf:.95, nl:1 },
-      { n:'Subwoofer activo 18"', w:1200, pf:.95, nl:1 },
-      { n:'Bocina activa 12"/15" (top o monitor)', w:500, pf:.95, nl:1 },
-      { n:'Amplificador clase D 4 canales', w:2000, pf:.95, nl:1 },
-      { n:'Amplificador clase AB (antiguo)', w:1500, pf:.7 },
+      // pa: amplificación; su consumo depende del tipo de evento (w8 = a 1/8 de potencia, w3 = a 1/3).
+      { n:'Bocina line array activa (por caja)', w8:400, w3:900, pf:.95, nl:1, pa:1 },
+      { n:'Subwoofer activo 18"', w8:500, w3:1200, pf:.95, nl:1, pa:1 },
+      { n:'Bocina activa 12"/15" (top o monitor)', w8:200, w3:450, pf:.95, nl:1, pa:1 },
+      { n:'Amplificador clase D 4 canales', w8:1000, w3:2400, pf:.95, nl:1, pa:1 },
+      { n:'Amplificador clase AB (antiguo)', w8:900, w3:1800, pf:.7, pa:1 },
       { n:'Consola digital', w:300, pf:.95, nl:1 },
       { n:'Stagebox / rack digital', w:150, pf:.95, nl:1 },
       { n:'Rack de inalámbricos / in-ears', w:250, pf:.95, nl:1 },
@@ -400,7 +466,13 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     ]},
   ];
   const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
-  const DF_DEF = { audio:70, video:80, luz:90, otros:100 };
+  const DF_DEF = { audio:100, video:80, luz:90, otros:100 };
+  // Tipo de evento: k = qué tanto del camino entre 1/8 y 1/3 de potencia usa la amplificación.
+  const SHOWS = {
+    habla:     { n:'Conferencia o culto',     d:'Voz, ceremonias, música de fondo', k:0 },
+    concierto: { n:'Concierto o espectáculo', d:'Música en vivo con dinámica',      k:.5 },
+    fuerte:    { n:'Rock, EDM, a tope',       d:'Música fuerte y muy comprimida',   k:1 },
+  };
   const SIZES = [10, 15, 20, 30, 45, 60, 80, 100, 125, 150, 175, 200, 250, 300, 350, 400, 500, 650, 750, 1000];
   const SYSTEMS = {
     '3f220': { label:'Trifásico 220/127 V', ph:3, vln:127, vll:220 },
@@ -417,14 +489,16 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
   // ───────── Estado ─────────
   let uid = 1;
   const S = {
-    ninja:false, view:'calc', ev:'',
+    ver:2, show:'concierto', ninja:false, view:'calc', ev:'',
     items:[], alt:2240, sys:'3f220', temp:30, limit:80, df:{...DF_DEF},
     gen:100,
   };
   try {
     const saved = JSON.parse(localStorage.getItem('fl-kva') || '{}');
     Object.assign(S, saved);
-    S.df = { ...DF_DEF, ...(saved.df || {}) };
+    S.df = { ...DF_DEF, ...(saved.ver === 2 ? saved.df || {} : {}) };
+    S.ver = 2;
+    if (!SHOWS[S.show]) S.show = 'concierto';
     S.items = (S.items || []).filter(i => CAT[i.cat]);
     S.items.forEach(i => uid = Math.max(uid, (i.id || 0) + 1));
   } catch (_) {}
@@ -437,6 +511,9 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
   const nfa = n => isFinite(n) ? (n >= 100 ? nf(n, 0) : n >= 10 ? nf(n, 1) : nf(n, 2)) : '—';
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  // Watts por equipo que usa el cálculo: la amplificación depende del tipo de evento.
+  const effW = it => it.pa ? Math.round((it.w8 + (it.w3 - it.w8) * SHOWS[S.show].k) / 10) * 10 : (it.w || 0);
+  const wLabel = p => p.pa ? `${nf(p.w8)}–${nf(p.w3)} W` : `${nf(p.w)} W`;
 
   // Valores efectivos: en Normal se usan los de fábrica; en Ninja, los tuyos.
   const eff = () => ({
@@ -462,7 +539,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
 
     const units = [];
     for (const it of S.items) {
-      const q = Math.max(0, it.q || 0), w = Math.max(0, it.w || 0), pf = clamp(it.pf || .9, .3, 1);
+      const q = Math.max(0, it.q || 0), w = Math.max(0, effW(it)), pf = clamp(it.pf || .9, .3, 1);
       if (!(q > 0 && w > 0)) continue;
       const df = (E.df[it.cat] ?? 100) / 100;
       const P = q * w, VA = P / pf, Pd = P * df, VAd = VA * df;
@@ -559,7 +636,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
         <div class="add">
           <select data-add="${c.id}" aria-label="Agregar equipo de ${c.name}">
             <option value="">＋ Agregar equipo de ${c.name.toLowerCase()}…</option>
-            ${c.lib.map((p, i) => `<option value="${i}">${esc(p.n)} · ${nf(p.w)} W</option>`).join('')}
+            ${c.lib.map((p, i) => `<option value="${i}">${esc(p.n)} · ${wLabel(p)}</option>`).join('')}
             <option value="custom">Otro equipo (escribe tus datos)</option>
           </select>
         </div>
@@ -572,7 +649,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       <div class="item" data-id="${i.id}">
         <input class="nm" data-f="n" value="${esc(i.n)}" aria-label="Nombre del equipo" autocomplete="off">
         <label class="mini q"><span>Cant.</span><input class="num" data-f="q" value="${i.q}" inputmode="decimal" aria-label="Cantidad" autocomplete="off"></label>
-        <label class="mini w"><span>W c/u</span><input class="num" data-f="w" value="${i.w}" inputmode="decimal" aria-label="Watts por equipo" autocomplete="off"></label>
+        <label class="mini w"><span>W c/u</span><input class="num${i.pa ? ' auto' : ''}" data-f="w" value="${effW(i)}"${i.pa ? ' title="Cambia con el tipo de evento"' : ''} inputmode="decimal" aria-label="Watts por equipo" autocomplete="off"></label>
         <label class="mini pf nj"><span>FP</span><input class="num" data-f="pf" value="${i.pf}" inputmode="decimal" aria-label="Factor de potencia" autocomplete="off"></label>
         <label class="mini ph nj"><span>Fase</span><select data-f="ph" aria-label="Fase">
           ${['A', 'L1', 'L2', 'L3', '3F'].map(o => `<option value="${o}"${i.ph === o ? ' selected' : ''}>${o === 'A' ? 'Auto' : o}</option>`).join('')}
@@ -593,8 +670,9 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       const v = e.target.value; e.target.value = '';
       if (v === '') return;
       const p = v === 'custom' ? { n:'', w:100, pf:.9 } : CAT[add].lib[+v];
-      const it = { id:uid++, cat:add, n:p.n, q:1, w:p.w, pf:p.pf, ph:p.ph || 'A' };
+      const it = { id:uid++, cat:add, n:p.n, q:1, w:p.w || 0, pf:p.pf, ph:p.ph || 'A' };
       if (p.m) it.m = 1; if (p.nl) it.nl = 1;
+      if (p.pa) { it.pa = 1; it.w8 = p.w8; it.w3 = p.w3; }
       S.items.push(it);
       refreshCat(add); update(); save();
       const row = document.querySelector(`.item[data-id="${it.id}"]`);
@@ -611,14 +689,14 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     const f = e.target.dataset.f; if (!f || f === 'ph') return;
     const it = S.items.find(i => i.id === +e.target.closest('.item').dataset.id); if (!it) return;
     if (f === 'n') it.n = e.target.value;
-    else { const v = parse(e.target.value); if (isFinite(v) && v >= 0) it[f] = f === 'pf' ? clamp(v, .3, 1) : v; }
+    else { const v = parse(e.target.value); if (isFinite(v) && v >= 0) { it[f] = f === 'pf' ? clamp(v, .3, 1) : v; if (f === 'w' && it.pa) { it.pa = 0; e.target.classList.remove('auto'); e.target.removeAttribute('title'); } } }
     update(); save();
   });
   $('cats').addEventListener('focusin', e => { if (e.target.classList.contains('num')) e.target.select(); });
   $('cats').addEventListener('focusout', e => {
     const f = e.target.dataset.f; if (!f || f === 'n' || f === 'ph') return;
     const it = S.items.find(i => i.id === +e.target.closest('.item')?.dataset.id);
-    if (it) e.target.value = it[f];
+    if (it) e.target.value = f === 'w' ? effW(it) : it[f];
   });
   $('cats').addEventListener('click', e => {
     const id = e.target.closest('[data-del]')?.dataset.del; if (!id) return;
@@ -633,6 +711,20 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     S.items = []; S.ev = ''; $('evName').value = '';
     renderCats(); update(); save();
   };
+
+  // ───────── UI: tipo de evento ─────────
+  function renderShows() {
+    $('shows').innerHTML = Object.entries(SHOWS).map(([k, v]) =>
+      `<button role="radio" aria-checked="${S.show === k}" class="${S.show === k ? 'on' : ''}" data-show="${k}"><b>${v.n}</b><span>${v.d}</span></button>`).join('');
+  }
+  $('shows').addEventListener('click', e => { const k = e.target.closest('[data-show]')?.dataset.show; if (!k) return; S.show = k; renderShows(); update(); save(); });
+  const modal = $('whyModal');
+  const openWhy = () => { modal.classList.add('open'); $('whyClose').focus(); };
+  const closeWhy = () => { modal.classList.remove('open'); $('whyBtn').focus(); };
+  $('whyBtn').onclick = openWhy;
+  $('whyClose').onclick = closeWhy;
+  modal.addEventListener('click', e => { if (e.target === modal) closeWhy(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeWhy(); });
 
   // ───────── UI: tengo una planta ─────────
   $('genChips').innerHTML = SIZES.filter(s => s >= 15).map(s => `<button data-kva="${s}">${s}</button>`).join('');
@@ -682,7 +774,8 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     const r = compute();
     // Sumas por categoría y por renglón
     for (const c of CATS) { const el = document.querySelector(`[data-sum="${c.id}"]`); if (el) el.innerHTML = `${nf(r.cats[c.id].P)}<small>W</small>`; }
-    for (const it of S.items) { const el = document.querySelector(`[data-tot="${it.id}"]`); if (el) el.innerHTML = `${nf((it.q || 0) * (it.w || 0))}<small> W</small>`; }
+    for (const it of S.items) { const el = document.querySelector(`[data-tot="${it.id}"]`); if (el) el.innerHTML = `${nf((it.q || 0) * effW(it))}<small> W</small>`;
+      if (it.pa) { const inp = document.querySelector(`.item[data-id="${it.id}"] [data-f="w"]`); if (inp && inp !== document.activeElement) inp.value = effW(it); } }
 
     // Resultado principal
     const hero = $('hero');
@@ -741,12 +834,13 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     const L = [];
     L.push(`${S.ev ? S.ev + ' · ' : ''}Cálculo de planta de luz (faderlab.mx/kva)`);
     for (const c of CATS) {
-      const list = S.items.filter(i => i.cat === c.id && i.q > 0 && i.w > 0);
+      const list = S.items.filter(i => i.cat === c.id && i.q > 0 && effW(i) > 0);
       if (!list.length) continue;
       L.push(`\n${c.name.toUpperCase()} · ${nf(r.cats[c.id].P)} W`);
-      list.forEach(i => L.push(`  ${nf(i.q, i.q % 1 ? 1 : 0)} × ${i.n || 'Equipo'} · ${nf(i.w)} W = ${nf(i.q * i.w)} W`));
+      list.forEach(i => L.push(`  ${nf(i.q, i.q % 1 ? 1 : 0)} × ${i.n || 'Equipo'} · ${nf(effW(i))} W = ${nf(i.q * effW(i))} W`));
     }
-    L.push(`\nInstalado: ${nf(r.inst / 1000, 1)} kW · Demanda real: ${nf(r.P / 1000, 1)} kW / ${nf(r.VA / 1000, 1)} kVA`);
+    L.push(`\nTipo de evento: ${SHOWS[S.show].n}`);
+    L.push(`Instalado: ${nf(r.inst / 1000, 1)} kW · Demanda real: ${nf(r.P / 1000, 1)} kW / ${nf(r.VA / 1000, 1)} kVA`);
     L.push(`Lugar: ${nf(S.alt)} m, rinde ${nf(r.der * 100)}% · trabajando a ${nf(r.E.limit)}% máx.`);
     if (r.size) {
       const A = genAmps(r.size, r);
@@ -766,28 +860,29 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     const r = compute();
     const A = r.size ? genAmps(r.size, r) : null;
     const rows = CATS.map(c => {
-      const list = S.items.filter(i => i.cat === c.id && i.q > 0 && i.w > 0);
+      const list = S.items.filter(i => i.cat === c.id && i.q > 0 && effW(i) > 0);
       if (!list.length) return '';
       return `<tr class="cat"><td colspan="4">${c.name}</td><td class="r">${nf(r.cats[c.id].P)} W</td></tr>` +
-        list.map(i => `<tr><td>${esc(i.n || 'Equipo')}</td><td class="r">${nf(i.q, i.q % 1 ? 1 : 0)}</td><td class="r">${nf(i.w)} W</td><td class="r">${nf(i.pf, 2)}</td><td class="r">${nf(i.q * i.w)} W</td></tr>`).join('');
+        list.map(i => `<tr><td>${esc(i.n || 'Equipo')}</td><td class="r">${nf(i.q, i.q % 1 ? 1 : 0)}</td><td class="r">${nf(effW(i))} W</td><td class="r">${nf(i.pf, 2)}</td><td class="r">${nf(i.q * effW(i))} W</td></tr>`).join('');
     }).join('');
     const d = new Date().toLocaleDateString('es-MX', { day:'numeric', month:'long', year:'numeric' });
     $('sheet').innerHTML = `
       <h1>${esc(S.ev || 'Cálculo de planta de luz')}</h1>
-      <p class="sub">${d} · ${esc(r.sys.label)} · ${nf(S.alt)} m de altitud · faderlab.mx/kva</p>
+      <p class="sub">${d} · ${esc(SHOWS[S.show].n)} · ${esc(r.sys.label)} · ${nf(S.alt)} m de altitud · faderlab.mx/kva</p>
       <div class="box"><small>Planta sugerida</small><b>${r.size ? r.size + ' kVA' : (r.n ? '+1,000 kVA' : '—')}</b><small>prime / continua</small></div>
       <div class="box"><small>Límite seguro por fase</small><b>${A ? nfa(A.safe) + ' A' : '—'}</b><small>a ${nf(r.E.limit)}% · rinde ${nf(r.der * 100)}%</small></div>
       <div class="box"><small>Demanda real</small><b>${nf(r.P / 1000, 1)} kW</b><small>${nf(r.VA / 1000, 1)} kVA · instalado ${nf(r.inst / 1000, 1)} kW</small></div>
       <table><thead><tr><th>Equipo</th><th class="r">Cant.</th><th class="r">W c/u</th><th class="r">FP</th><th class="r">Total</th></tr></thead><tbody>${rows || '<tr><td colspan="5">Sin equipos</td></tr>'}</tbody></table>
       ${r.n ? `<p><b>Carga por fase:</b> ${r.phases.map((p, k) => `${r.sys.ph === 1 ? 'F' : 'L' + (k + 1)} ${nfa(p.VA / r.sys.vln)} A`).join(' · ')}</p>` : ''}
       <ul>${notesFor(r, A ? { ...A, kvaDer: r.size * r.der } : null).map(([, t]) => `<li>${t}</li>`).join('')}</ul>
-      <p class="foot">Simultaneidad: ${CATS.map(c => `${c.name} ${nf(r.E.df[c.id])}%`).join(' · ')}. Guía de planeación; confirma con el electricista responsable y las fichas técnicas reales.</p>`;
+      <p class="foot">Audio calculado para «${esc(SHOWS[S.show].n)}». Simultaneidad: ${CATS.map(c => `${c.name} ${nf(r.E.df[c.id])}%`).join(' · ')}. Guía de planeación; confirma con el electricista responsable y las fichas técnicas reales.</p>`;
   }
   $('print').onclick = () => { buildSheet(); window.print(); };
   window.addEventListener('beforeprint', buildSheet);
 
   // ───────── Arranque ─────────
   applyMode();
+  renderShows();
   renderCats();
   update();
 
