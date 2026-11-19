@@ -107,8 +107,8 @@ tr:last-child td{border-bottom:none}
   <div class="rooms" id="rooms"></div>
 
   <h2>Uso por cliente</h2>
-  <div class="hint">Minutos-idioma: tiempo en vivo × número de idiomas. Es lo que cobra OpenAI (cada idioma es una sesión) y te sirve para facturar a cada cliente.</div>
-  <table><thead><tr><th>Cliente</th><th class="n" id="thM0">Este mes</th><th class="n" id="thM1">Mes anterior</th></tr></thead><tbody id="usage"></tbody></table>
+  <div class="hint">Minutos-idioma: tiempo en vivo × número de idiomas. Es lo que cobra OpenAI (cada idioma es una sesión), lo que descuenta del plan de cada cliente y te sirve para facturar.</div>
+  <table><thead><tr><th>Cliente</th><th class="n" id="thM0">Este mes</th><th class="n">Plan</th><th class="n" id="thM1">Mes anterior</th></tr></thead><tbody id="usage"></tbody></table>
   <div class="err" id="err"></div>
 </main>
 
@@ -192,11 +192,18 @@ function render(d, api) {
 
   $("#thM0").textContent = monthName(d.months[0]); $("#thM1").textContent = monthName(d.months[1]);
   const names = Object.fromEntries(d.clients.map((c) => [c.slug, c.name]));
+  const quota = Object.fromEntries(d.clients.map((c) => [c.slug, c.quotaH]));
+  const planCell = (s) => {
+    const q = quota[s]; if (!q) return '<span class="hint">sin límite</span>';
+    const pct = Math.round((m0[s] || 0) / (q * 60) * 100);
+    const col = pct >= 100 ? "#ff7a6a" : pct >= 80 ? "var(--accent)" : "var(--green)";
+    return `${q} h · <b style="color:${col};font-weight:400">${pct}%</b>`;
+  };
   names._sueltas = "Salas sueltas (sin cliente)";
   const slugs = [...new Set([...Object.keys(m0), ...Object.keys(m1)])].sort((a, b) => (m0[b] || 0) - (m0[a] || 0));
   $("#usage").innerHTML = slugs.length
-    ? slugs.map((s) => `<tr><td>${esc(names[s] || s + " (eliminado)")}</td><td class="n">${fmtMin(m0[s])}</td><td class="n">${fmtMin(m1[s])}</td></tr>`).join("")
-    : '<tr><td colspan="3" class="hint">Todavía no hay uso registrado.</td></tr>';
+    ? slugs.map((s) => `<tr><td>${esc(names[s] || s + " (eliminado)")}</td><td class="n">${fmtMin(m0[s])}</td><td class="n">${s === "_sueltas" ? "" : planCell(s)}</td><td class="n">${fmtMin(m1[s])}</td></tr>`).join("")
+    : '<tr><td colspan="4" class="hint">Todavía no hay uso registrado.</td></tr>';
 }
 function showLogin(msg) {
   clearTimeout(timer);

@@ -6,7 +6,8 @@ Hace dos cosas:
 2. **Salas de evento (subtítulos por QR).** Cada sala es un Durable Object que recibe los subtítulos de la consola del operador (`/traductor/evento`) y los reparte por WebSocket a los teléfonos del público (`/traductor/escucha`), cada uno en su idioma.
 3. **Clientes con marca propia.** Cada cliente tiene logo, colores, mensaje y un enlace fijo (`/traductor/escucha/?c=su-enlace`). Su QR no cambia aunque abras salas nuevas. Los permanentes nunca vencen; los "por evento" muestran "evento terminado" al pasar su fecha de fin. Los perfiles viven en el Durable Object `Directory`.
 4. **Códigos de operador y monitoreo.** El código maestro (`ACCESS_CODE`) puede todo. Un código de operador pertenece a un cliente: con él solo se abre y opera la sala de ese cliente. Se guardan solo como hash. El Worker cuenta minutos-idioma (tiempo en vivo × idiomas) por cliente y mes; deja de contar si el operador se desconecta.
-5. **Audio en los teléfonos.** La consola publica la voz traducida de cada idioma en Cloudflare Realtime (SFU) y cada teléfono escucha solo su idioma. El Worker guarda el App Secret del SFU y hace de intermediario; el navegador nunca lo ve. Es opcional: sin `REALTIME_APP_ID` / `REALTIME_APP_SECRET` las salas funcionan solo con subtítulos.
+5. **Horas del plan.** Cada cliente puede tener `quotaH` (horas-idioma al mes: 1 h con 2 idiomas = 2 h; "Original" no cuenta). Al agotarse, el servicio en curso termina normal, pero el operador ya no puede abrir otra sala ese mes (el maestro sí). Un operador solo obtiene sesiones de traducción si la sala de su cliente está abierta.
+6. **Audio en los teléfonos.** La consola publica la voz traducida de cada idioma en Cloudflare Realtime (SFU) y cada teléfono escucha solo su idioma. El Worker guarda el App Secret del SFU y hace de intermediario; el navegador nunca lo ve. Es opcional: sin `REALTIME_APP_ID` / `REALTIME_APP_SECRET` las salas funcionan solo con subtítulos.
 
 ## Desplegar (una vez)
 
@@ -48,6 +49,7 @@ El primer `deploy` crea también el Durable Object de las salas (migración `v1`
 | `GET /client/:slug/codes` | maestro | lista (sin el código, solo etiqueta, fechas e id) |
 | `DELETE /client/:slug/codes/:id` | maestro | revoca |
 | `GET /monitor` | maestro | salas abiertas con estado, oyentes por idioma, operador conectado, y minutos-idioma por cliente (mes actual y anterior) |
+| `GET /usage/:slug` | maestro, u operador de ese cliente | consumo del mes contra el plan: `{month, usedMin, quotaMin, remainingMin, pct, over, live, service}` |
 | `POST /room/:code/audio/publish` | operador (`X-Host-Token`) | `{lang, sdp, mid}` (oferta) → `{sdp, rev}` (respuesta del SFU) |
 | `POST /room/:code/audio/listen` | público | `{lang}` → `{sessionId, sdp, rev}` (oferta del SFU); 404 si ese idioma aún no transmite |
 | `POST /room/:code/audio/answer` | público | `{sessionId, sdp}` (respuesta del teléfono) → `{ok}` |

@@ -30,6 +30,10 @@
 //    GET    /client/:slug/codes         → listar códigos del cliente (maestro)
 //    DELETE /client/:slug/codes/:id     → revocar (maestro)
 //    GET    /monitor                    → salas abiertas, oyentes, operador conectado y minutos por cliente (maestro)
+// 6) Horas del plan por cliente (quotaH en el perfil, en horas-idioma: 1 h con 2 idiomas = 2 h):
+//    GET    /usage/:slug                → consumo del mes contra el plan (maestro, u operador de ese cliente)
+//    Al agotarse: el servicio en curso termina normal, pero el operador ya no puede abrir otra sala.
+//    Además, un operador solo obtiene sesiones de traducción si la sala de su cliente está abierta.
 //
 // Secretos (wrangler secret put ...):
 //   OPENAI_API_KEY       — clave de la API de OpenAI
@@ -125,7 +129,7 @@ export default {
       (parts[2] === "logo" && parts.length === 3 && (req.method === "PUT" || req.method === "DELETE")) ||
       (parts[2] === "codes" && ((parts.length === 3 && (req.method === "GET" || req.method === "POST")) || (parts.length === 4 && req.method === "DELETE"))));
     const isOperatorRoute = (req.method === "POST" && (url.pathname === "/session" || url.pathname === "/room")) ||
-      (req.method === "GET" && (url.pathname === "/clients" || url.pathname === "/me" || url.pathname === "/monitor")) || isClientRoute;
+      (req.method === "GET" && (url.pathname === "/clients" || url.pathname === "/me" || url.pathname === "/monitor" || (parts[0] === "usage" && parts.length === 2))) || isClientRoute;
     if (!isOperatorRoute) return json({ error: "No encontrado" }, 404, cors);
     if (!okOrigin) return json({ error: "Origen no permitido" }, 403, cors);
     // Falla cerrado: sin código configurado no se entrega nada.
@@ -134,7 +138,15 @@ export default {
     if (!who) return json({ error: "Código de acceso incorrecto" }, 401, cors);
     if (url.pathname === "/me") {
       if (who.role === "master") return json({ role: "master" }, 200, cors);
-      return json({ role: "operator", label: who.label, client: await directory(env).get(who.client) }, 200, cors);
+      const c = await directory(env).get(who.client);
+      return json({ role: "operator", label: who.label, client: c, usage: c ? await clientUsage(env, c) : null }, 200, cors);
+    }
+    if (parts[0] === "usage") {
+      const slug = String(parts[1] || "").toLowerCase();
+      if (who.role === "operator" && slug !== who.client) return json({ error: "Este código solo puede ver su cliente" }, 403, cors);
+      const c = SLUG_RE.test(slug) ? await directory(env).get(slug) : null;
+      if (!c) return json({ error: "Cliente no encontrado" }, 404, cors);
+      return json(await clientUsage(env, c), 200, cors);
     }
     // lo que solo puede hacer el maestro
     const masterOnly = url.pathname === "/clients" || url.pathname === "/monitor" || isClientRoute;
@@ -148,6 +160,14 @@ export default {
     if (url.pathname === "/room") {
       if (who.role === "operator") body.client = who.client; // un operador solo abre salas de su cliente
       return createRoom(body, env, cors, who);
+    }
+    if (who.role === "operator") {
+      // el operador solo traduce con la sala de su cliente abierta, y sin exceder su plan (salvo el servicio en curso)
+      const c = await directory(env).get(who.client);
+      const st = c?.room ? await env.ROOMS.get(env.ROOMS.idFromName(c.room)).status() : null;
+      if (!st || st.ended) return json({ error: "Abre la sala de tu cliente en la consola para iniciar la traducción" }, 403, cors);
+      const u = await clientUsage(env, c);
+      if (u.over && !st.host) return json({ error: quotaMsg(u), quota: true, contact: CONTACT, usage: u }, 402, cors);
     }
     return createSession(body, env, cors);
   },
@@ -205,6 +225,11 @@ async function createRoom(body, env, cors, who = { role: "master" }) {
       if (cur && !cur.ended && cur.host && !(who.role === "master" && body.force)) {
         return json({ error: BUSY_MSG, busy: true, canForce: who.role === "master", room: client.room, live: cur.live, contact: CONTACT }, 409, cors);
       }
+    }
+    // horas del plan agotadas: el operador ya no puede abrir otra sala este mes (el maestro sí)
+    if (who.role === "operator") {
+      const u = await clientUsage(env, client);
+      if (u.over) return json({ error: quotaMsg(u), quota: true, contact: CONTACT, usage: u }, 402, cors);
     }
   }
   const title = (String(body.title || "").trim() || client?.name || "").slice(0, 80);
@@ -283,6 +308,7 @@ function cleanProfile(b, slug, prev) {
       bg: HEX_RE.test(b.bg) ? b.bg.toLowerCase() : "#0a0a0a",
       accent: HEX_RE.test(b.accent) ? b.accent.toLowerCase() : "#20c8e8",
       langs, src: b.src !== false, audio: b.audio !== false, poweredBy: b.poweredBy !== false,
+      quotaH: Number.isFinite(+b.quotaH) && +b.quotaH > 0 ? Math.min(1000, Math.round(+b.quotaH * 100) / 100) : null,
       archived: !!b.archived, created: prev?.created || now, updated: now,
     },
   };
@@ -341,6 +367,27 @@ async function clientRoute(slug, sub, req, env, cors, id) {
   return json({ client: r.profile, created: !prev }, 200, cors);
 }
 
+// ---------- horas del plan ----------
+async function clientUsage(env, c) {
+  const month = monthKey();
+  const storedMs = await directory(env).usageOf(c.slug, month);
+  let ongoingMs = 0, live = false, service = false;
+  if (c.room) {
+    const st = await env.ROOMS.get(env.ROOMS.idFromName(c.room)).status();
+    if (st && !st.ended) { ongoingMs = st.ongoingMs || 0; live = st.live; service = st.host; }
+  }
+  const usedMin = Math.round((storedMs + ongoingMs) / 6000) / 10;
+  const quotaMin = c.quotaH ? Math.round(c.quotaH * 60) : null;
+  return {
+    month, usedMin, quotaMin, live, service,
+    remainingMin: quotaMin == null ? null : Math.max(0, Math.round((quotaMin - usedMin) * 10) / 10),
+    pct: quotaMin ? Math.round(usedMin / quotaMin * 1000) / 10 : null,
+    over: quotaMin != null && usedMin >= quotaMin,
+  };
+}
+const fmtH = (min) => { const m = Math.round(min); return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min`; };
+const quotaMsg = (u) => `Se agotaron las horas de traducción de este mes (${fmtH(u.usedMin)} de ${fmtH(u.quotaMin)}). Para ampliar tu plan, contacta a FaderLab: ${CONTACT.label}.`;
+
 // ---------- códigos y monitoreo ----------
 const OP_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const normCode = (c) => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -375,7 +422,7 @@ async function monitor(env) {
   rooms.sort((a, b) => (b.live - a.live) || (b.created - a.created));
   const now = Date.now(), m0 = monthKey(now), d = new Date(now - 6 * 3600e3);
   const m1 = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 15)).toISOString().slice(0, 7);
-  return { now, months: [m0, m1], usage: await dir.usage([m0, m1]), clients: clients.map((c) => ({ slug: c.slug, name: c.name })), rooms };
+  return { now, months: [m0, m1], usage: await dir.usage([m0, m1]), clients: clients.map((c) => ({ slug: c.slug, name: c.name, quotaH: c.quotaH || null })), rooms };
 }
 
 // Directorio de clientes: un solo Durable Object con todos los perfiles y logos.
@@ -429,6 +476,7 @@ export class Directory extends DurableObject {
     const k = `use:${month}:${slug}`;
     await this.ctx.storage.put(k, ((await this.ctx.storage.get(k)) || 0) + ms);
   }
+  async usageOf(slug, month) { return (await this.ctx.storage.get(`use:${month}:${slug}`)) || 0; }
   async usage(months) {
     const out = {};
     for (const m of months) {
@@ -658,8 +706,9 @@ export class Room extends DurableObject {
       const a = ws.deserializeAttachment() || {};
       if (a.role === "listener") { counts[a.lang] = (counts[a.lang] || 0) + 1; total++; }
     }
-    const usedMs = (m.usedMs || 0) + (m.liveSince ? (Date.now() - m.liveSince) * Math.max(1, m.langs.length) : 0);
-    return { live: m.live, ended: m.ended, host: this.hostConnected(), counts, total, liveSince: m.liveSince || null, usedMin: Math.round(usedMs / 6000) / 10, lastText: this.lastText || null };
+    const ongoingMs = m.liveSince ? (Date.now() - m.liveSince) * Math.max(1, m.langs.length) : 0; // aún no registrado en el directorio
+    const usedMs = (m.usedMs || 0) + ongoingMs;
+    return { live: m.live, ended: m.ended, host: this.hostConnected(), counts, total, liveSince: m.liveSince || null, ongoingMs, usedMin: Math.round(usedMs / 6000) / 10, lastText: this.lastText || null };
   }
   async webSocketError() { this.sendCounts(); }
 

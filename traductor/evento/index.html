@@ -152,6 +152,16 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
 .who{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
 .who b{color:var(--accent2);font-weight:400}
 
+/* horas del plan */
+.plan{margin:-2px 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3)}
+.plan-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.plan-top b{font-family:var(--f-mono);font-weight:400;font-size:14px;color:#fff;white-space:nowrap}
+.planbar{height:8px;border-radius:4px;background:#050505;border:1px solid var(--border);overflow:hidden;margin-top:7px}
+.planbar i{display:block;height:100%;width:0;background:var(--green);transition:width .4s}
+.plan.warn{border-color:#5a3d10}.plan.warn .planbar i{background:var(--accent)}
+.plan.over{border-color:#5a1a1a}.plan.over .planbar i{background:var(--red)}
+.plan .hint{margin-top:6px}
+
 /* QR a pantalla completa (proyector / pantalla de bienvenida) */
 #qrFull{position:fixed;inset:0;z-index:20;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:3vh;padding:4vh 4vw;text-align:center;cursor:none}
 #qrFull.on{display:flex}
@@ -182,6 +192,11 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
     <!-- 1. Sala -->
     <section class="card" id="roomCard">
       <h2>1 · Sala <small id="roomState">nueva</small></h2>
+      <div class="plan" id="planBox" hidden>
+        <div class="plan-top"><span class="lbl">Horas del plan · <span id="planMonth"></span></span><b id="planText">—</b></div>
+        <div class="planbar"><i id="planBar"></i></div>
+        <div class="hint" id="planHint"></div>
+      </div>
       <div id="roomNew">
         <div class="field"><label for="cliSel">Cliente</label>
           <div class="row2"><select id="cliSel"><option value="">— Sin cliente (sala suelta) —</option></select><button class="ghost" id="cliNew" type="button">Nuevo</button><button class="ghost" id="cliEdit" type="button" disabled>Editar</button></div>
@@ -296,6 +311,8 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
       <div class="field"><label for="cfFrom">Desde</label><input type="date" id="cfFrom"></div>
       <div class="field"><label for="cfUntil">Hasta (después muestra "evento terminado")</label><input type="date" id="cfUntil"></div>
     </div>
+    <div class="field"><label for="cfQuota">Horas incluidas al mes (vacío = sin límite)</label><input type="text" id="cfQuota" inputmode="decimal" placeholder="8" maxlength="6" style="max-width:140px">
+      <div class="hint">Se cuentan horas × idiomas: 1 h traduciendo a 2 idiomas descuenta 2 h ("Original" no cuenta). Al agotarse, el operador termina el servicio en curso pero ya no puede abrir otra sala ese mes. Tú siempre puedes.</div></div>
     <div class="field"><label for="cfMsg">Mensaje de bienvenida (opcional)</label><textarea id="cfMsg" maxlength="240" placeholder="Bienvenidos. Elige tu idioma para seguir el servicio."></textarea></div>
     <div class="grid2">
       <div class="field"><span class="lbl">Color de fondo</span><div class="colorrow"><input type="color" id="cfBg" value="#0a0a0a"><input type="text" id="cfBgT" value="#0a0a0a" maxlength="7"></div></div>
@@ -325,9 +342,9 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
 
 <dialog id="busyDlg">
   <form method="dialog">
-    <h3>Sala en uso</h3>
-    <p style="line-height:1.5;margin:10px 0 0">Esta sala ya se está usando en otra computadora.</p>
-    <p class="hint" style="font-size:14px;line-height:1.5">Si necesitas operar otra sala al mismo tiempo, contacta a FaderLab para contratar un servicio adicional.</p>
+    <h3 id="busyTitle">Sala en uso</h3>
+    <p style="line-height:1.5;margin:10px 0 0" id="busyText">Esta sala ya se está usando en otra computadora.</p>
+    <p class="hint" style="font-size:14px;line-height:1.5" id="busyHint">Si necesitas operar otra sala al mismo tiempo, contacta a FaderLab para contratar un servicio adicional.</p>
     <menu><a class="ghost" id="busyContact" target="_blank" rel="noopener" style="border-color:var(--accent);color:var(--accent)">Escribir por Instagram</a><button class="ghost" value="ok">Cerrar</button></menu>
   </form>
 </dialog>
@@ -450,6 +467,7 @@ $("#createBtn").onclick = async () => {
     let r;
     try { r = await api("/room", req); }
     catch (err) {
+      if (err.data?.quota) { showBusy(err.data, "quota"); log(err.message, true); refreshPlan(); return; }
       if (!err.data?.busy) throw err;
       // la sala del cliente está en uso en otra computadora
       if (!err.data.canForce) { showBusy(err.data); log(err.message, true); return; }
@@ -461,6 +479,7 @@ $("#createBtn").onclick = async () => {
     if (wantAudio && !r.audio) log("El Worker todavía no tiene configurado el audio (Cloudflare Realtime): esta sala tendrá solo subtítulos.", true);
     saveRoom(room);
     log("Sala creada: " + room.code);
+    refreshPlan();
     showRoom();
   } catch (err) { log(err.message, true); }
   finally { $("#createBtn").disabled = false; }
@@ -476,6 +495,7 @@ $("#endBtn").onclick = () => {
 };
 
 function clearRoom() {
+  setTimeout(refreshPlan, 0);
   if (room) forgetRoom(room.code);
   room = null; setTimeout(drawResume, 0);
   clearTimeout(hostTimer); clearInterval(pingTimer);
@@ -782,7 +802,7 @@ class LangSession {
       body: JSON.stringify({ targetLanguage: this.lang, noiseReduction: $("#nr").value, sourceTranscript: this.withSrc }),
     });
     const data = await r.json().catch(() => ({}));
-    if (!r.ok || !data.value) { const e = new Error(data.error || "El Worker respondió " + r.status); e.fatal = [400, 401, 403, 500].includes(r.status); throw e; }
+    if (!r.ok || !data.value) { const e = new Error(data.error || "El Worker respondió " + r.status); e.fatal = [400, 401, 402, 403, 500].includes(r.status); throw e; }
     if (!this.alive) return;
     const pc = new RTCPeerConnection();
     this.pc = pc;
@@ -911,6 +931,7 @@ async function startTranslation() {
     ensureCtx(); await ctx.resume();
     await openInput();
     running = true; startedAt = Date.now(); lastTick = Date.now();
+    setTimeout(refreshPlan, 5000);
     $("#goBtn").textContent = "DETENER TRADUCCIÓN"; $("#goBtn").classList.add("on");
     setStatus("live", "En vivo · sala " + room.code);
     sendRoom({ t: "live", v: true });
@@ -933,6 +954,7 @@ function stopTranslation() {
   running = false;
   applyMonitor();
   $("#goBtn").textContent = "INICIAR TRADUCCIÓN"; $("#goBtn").classList.remove("on");
+  setTimeout(refreshPlan, 1500);
   if (room) setStatus("", "Sala lista");
 }
 function updateTotals() {
@@ -991,6 +1013,7 @@ async function loadClients() {
 }
 function onClientPick(applyDefaults) {
   const c = clients.find((x) => x.slug === $("#cliSel").value);
+  setTimeout(refreshPlan, 0);
   store.set("evento.client", c?.slug || "");
   $("#cliEdit").disabled = !c;
   $("#cliInfo").hidden = !c;
@@ -1026,6 +1049,7 @@ function openClient(c) {
   document.querySelectorAll("#cfLangs input").forEach((i) => { i.checked = (c?.langs || pickedLangs()).includes(i.value); });
   $("#cfSrc").checked = c ? c.src !== false : true; $("#cfAudio").checked = c ? c.audio !== false : true;
   $("#cfPowered").checked = c ? c.poweredBy !== false : true;
+  $("#cfQuota").value = c?.quotaH ?? "";
   $("#cfArchWrap").hidden = !c; $("#cfArch").checked = !!c?.archived;
   $("#cfLogo").value = "";
   const lp = c?.logoRev ? `${cfg().url}/client/${c.slug}/logo?v=${c.logoRev}` : "";
@@ -1092,6 +1116,7 @@ $("#cfSave").onclick = async () => {
     message: $("#cfMsg").value.trim(), bg: $("#cfBg").value, accent: $("#cfAc").value,
     langs: [...document.querySelectorAll("#cfLangs input:checked")].map((i) => i.value),
     src: $("#cfSrc").checked, audio: $("#cfAudio").checked, poweredBy: $("#cfPowered").checked, archived: $("#cfArch").checked,
+    quotaH: parseFloat(($("#cfQuota").value || "").replace(",", ".")) || null,
   };
   if (!body.name) { $("#cfErr").textContent = "Falta el nombre."; return; }
   if (!/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(slug)) { $("#cfErr").textContent = "El enlace solo puede llevar minúsculas, números y guiones (2 a 40)."; return; }
@@ -1159,12 +1184,57 @@ $("#cfCodeNew").onclick = async () => {
   } catch (err) { $("#cfErr").textContent = err.message; }
 };
 
-function showBusy(d) {
+function showBusy(d, kind) {
+  const quota = kind === "quota";
+  $("#busyTitle").textContent = quota ? "Horas del plan agotadas" : "Sala en uso";
+  $("#busyText").textContent = quota ? `Se usaron ${fmtMin(d.usage?.usedMin)} de las ${fmtMin(d.usage?.quotaMin)} incluidas este mes.` : "Esta sala ya se está usando en otra computadora.";
+  $("#busyHint").textContent = quota ? (running ? "Puedes terminar este servicio con normalidad. Para el siguiente, contacta a FaderLab para ampliar tu plan." : "Para seguir traduciendo este mes, contacta a FaderLab para ampliar tu plan.") : "Si necesitas operar otra sala al mismo tiempo, contacta a FaderLab para contratar un servicio adicional.";
   const c = d.contact || { label: "Instagram @joeaudiopro", url: "https://ig.me/m/joeaudiopro" };
   $("#busyContact").href = c.url;
   $("#busyContact").textContent = /instagram/i.test(c.label) ? "Escribir por Instagram · " + c.label.replace(/^instagram\s*/i, "") : "Contactar · " + c.label;
   $("#busyDlg").showModal();
 }
+
+/* ---------- horas del plan del cliente ---------- */
+const fmtMin = (min) => { const m = Math.round(min || 0); return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min`; };
+let planTimer = null, planState = { slug: null, warned: false, overShown: false };
+function planSlug() { return room?.client || (me?.role === "operator" ? me.client?.slug : $("#cliSel").value) || null; }
+async function refreshPlan() {
+  clearTimeout(planTimer);
+  const slug = planSlug();
+  if (!slug || !cfg().code) { $("#planBox").hidden = true; return; }
+  if (planState.slug !== slug) planState = { slug, warned: false, overShown: false };
+  let u;
+  try { u = await opApi("GET", "/usage/" + slug); }
+  catch { planTimer = setTimeout(refreshPlan, 60000); return; }
+  if (planSlug() !== slug) return;
+  const [y, mo] = u.month.split("-").map(Number);
+  $("#planMonth").textContent = new Date(y, mo - 1, 15).toLocaleDateString("es-MX", { month: "long" });
+  const box = $("#planBox"); box.hidden = false;
+  const op = me?.role === "operator";
+  if (u.quotaMin == null) {
+    box.className = "plan";
+    $("#planText").textContent = `${fmtMin(u.usedMin)} usadas`;
+    $("#planBar").style.width = "0%";
+    $("#planHint").textContent = "Sin límite de horas para este cliente. Se cuentan horas × idiomas.";
+  } else {
+    const pct = Math.min(100, u.pct || 0);
+    box.className = "plan" + (u.over ? " over" : pct >= 80 ? " warn" : "");
+    $("#planText").textContent = `${fmtMin(u.usedMin)} de ${fmtMin(u.quotaMin)}`;
+    $("#planBar").style.width = pct + "%";
+    $("#planHint").textContent = u.over
+      ? (op ? "Llegaste al límite del mes. Puedes terminar el servicio en curso; para el siguiente hay que ampliar el plan." : "Llegó al límite: el operador ya no podrá abrir otra sala este mes (tú sí).")
+      : `Quedan ${fmtMin(u.remainingMin)} este mes. Se cuentan horas × idiomas (1 h con 2 idiomas = 2 h).`;
+    if (pct >= 80 && !u.over && !planState.warned) { planState.warned = true; log(`Aviso: van ${Math.round(pct)}% de las horas del plan; quedan ${fmtMin(u.remainingMin)}.`, true); }
+    if (u.over && !planState.overShown) {
+      planState.overShown = true;
+      log("Se alcanzaron las horas del plan de este mes.", true);
+      if (op && running) showBusy({ usage: u }, "quota");
+    }
+  }
+  planTimer = setTimeout(refreshPlan, running ? 30000 : 120000);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshPlan(); });
 
 /* ---------- quién soy: maestro u operador de un cliente ---------- */
 async function loadMe() {
@@ -1188,6 +1258,7 @@ async function loadMe() {
     $("#cliSel").disabled = true;
     $("#cliSel").value = c?.slug || "";
     onClientPick(!room);
+    refreshPlan();
   } else {
     $("#cliSel").disabled = false;
     await loadClients();
