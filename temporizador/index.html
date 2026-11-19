@@ -141,6 +141,14 @@ body.out.hinting{cursor:auto}
 #outhint p{margin:0;color:var(--muted);line-height:1.5;font-size:15px}
 #outhint .go{font-size:17px;padding:12px 22px}
 
+/* Confirmación de salida */
+#leave{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(5,6,8,.78);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#leave .card{display:grid;gap:12px;max-width:400px;width:100%;padding:24px;background:var(--chrome);border:1px solid var(--line);border-radius:14px}
+#leave h2{font-family:var(--f-digits);font-weight:600;font-size:26px;margin:0}
+#leave p{margin:0;color:var(--muted);line-height:1.5;font-size:15px}
+#leave .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+#leave .acts .exit{color:var(--cue-red)}
+
 /* Ventana de control con salida conectada: el lienzo se vuelve vista previa con la forma de la otra pantalla */
 body.linked{background:#050607}
 body.linked #stage{inset:auto;outline:1px solid var(--line);box-shadow:0 0 0 1px #000,0 18px 60px rgba(0,0,0,.6)}
@@ -180,6 +188,11 @@ body.linked #stage{inset:auto;outline:1px solid var(--line);box-shadow:0 0 0 1px
 
 <aside id="panel" aria-label="Edición"></aside>
 <div id="linklabel" hidden>Pantalla de salida conectada</div>
+<div id="leave" hidden role="dialog" aria-modal="true" aria-labelledby="leave-t"><div class="card">
+  <h2 id="leave-t">¿Salir del temporizador?</h2>
+  <p>Si sales, el temporizador deja de verse en esta pantalla y en la pantalla de salida.</p>
+  <div class="acts"><button class="exit" id="lv-exit">Salir</button><button class="go" id="lv-stay">Quedarme</button></div>
+</div></div>
 <div id="outhint" hidden><div class="card">
   <h1>Pantalla de salida</h1>
   <p>Arrastra esta ventana a la pantalla extendida y toca el botón. Todo se controla desde la ventana principal.</p>
@@ -521,6 +534,31 @@ if(OUT){
       }
     }catch(e){}
   };
+}
+
+/* ---------- confirmar antes de salir ---------- */
+// Flecha atrás / deslizar del trackpad, el botón Herramientas y cerrar o recargar la pestaña piden confirmación.
+let leaving=false,guarded=false,leaveTo=null;
+const leaveBox=$('#leave');
+function askLeave(go){leaveTo=go;leaveBox.hidden=false;wakeBar();$('#lv-stay').focus()}
+function stay(){leaveBox.hidden=true;leaveTo=null}
+$('#lv-stay').onclick=stay;
+$('#lv-exit').onclick=()=>{leaving=true;leaveBox.hidden=true;const go=leaveTo;leaveTo=null;go&&go()};
+leaveBox.addEventListener('click',e=>{if(e.target===leaveBox)stay()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!leaveBox.hidden)stay()},true);
+if(!OUT){
+  // El navegador solo respeta la entrada extra del historial si se crea después de que la persona toca la página.
+  const arm=()=>{if(guarded)return;guarded=true;try{history.pushState({tmz:1},'')}catch(e){}};
+  ['pointerdown','keydown'].forEach(ev=>window.addEventListener(ev,arm,{once:true,capture:true}));
+  window.addEventListener('popstate',()=>{
+    if(leaving)return;
+    try{history.pushState({tmz:1},'')}catch(e){}
+    if(leaveBox.hidden)askLeave(()=>history.go(-2));
+  });
+  document.querySelector('a.home').addEventListener('click',e=>{
+    e.preventDefault();const href=e.currentTarget.href;askLeave(()=>{location.href=href});
+  });
+  window.addEventListener('beforeunload',e=>{if(leaving)return;e.preventDefault();e.returnValue=''});
 }
 
 let toastT;
