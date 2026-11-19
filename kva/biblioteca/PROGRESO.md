@@ -6,7 +6,7 @@ Biblioteca de modelos reales de la Calculadora de KVA (`kva/biblioteca.js`). Cad
 
 | Bloque | Estado | Fecha | Modelos |
 |---|---|---|---|
-| 1 · Integración + amplificadores | ✅ Hecho | 2026-11-19 | 82 |
+| 1 · Integración + amplificadores | ✅ Hecho | 2026-11-19 | 90 |
 | 2 · Bocinas activas, consolas, RF | ⏳ Siguiente | — | — |
 | 3 · Iluminación | Pendiente | — | — |
 | 4 · Video y otros | Pendiente | — | — |
@@ -23,12 +23,13 @@ Biblioteca de modelos reales de la Calculadora de KVA (`kva/biblioteca.js`). Cad
 | d&b audiotechnik | 9 | dbaudio.com |
 | L-Acoustics | 7 | copias del manual oficial en sitios de distribuidores y rentadoras (l-acoustics.com redirige a la portada) |
 | Crest Audio | 4 | peaveycommercialaudio.com |
-| **Total** | **82** | |
+| Lab.gruppen | 8 | copias del manual en sitios de manuales (manualmachine.com, manuals.plus), aprobado por Carlos el 2026-11-19 |
+| **Total** | **90** | |
 
 ## Pendientes
 
 ### Amplificadores
-- **Lab.gruppen** (PLM 20K44, PLM 12K44, PLM 10000Q, PLM 20000Q, FP 10000Q/14000/7000/6400, D 200:4L, D 120:4L, D 80:4L, D 20:4L, D 10:4L, IPD 2400/1200): la fuente oficial no se pudo leer (cdn.mediavalet.com da error de servidor, cdn-media.empowertribe.com pidió autorización, service-tcgroup.tcelectronic.com prohíbe lectura automática). Las fichas de distribuidor (procom-me.com) no traen consumo. Los datos sólo aparecieron en sitios espejo de manuales (manualmachine.com, manuals.plus), que no se usan. Valores vistos ahí, **sin agregar**, para que Carlos decida: PLM 20K44 1/8 = 3548 W a 120 V; PLM 12K44 = 2817 W; D 200:4L = 3529 W (230 V); D 120:4L = 2817 W; D 80:4L = 1907 W; D 20:4L = 441 W; D 10:4L = 252 W (todos 1/8, ruido rosa, 4 Ω × 4). Reintentar mediavalet y empowertribe.
+- **Lab.gruppen PLM 20000Q, FP 10000Q/14000/7000/6400, IPD 2400/1200**: sin dato legible ni en copias (la tabla de FP sale revuelta; IPD 2400 sólo placa cortada; PLM 20000Q placa «2400/2950W» sin condición). Fuente oficial: cdn.mediavalet.com (error), cdn-media.empowertribe.com (autorización), service-tcgroup.tcelectronic.com (robots).
 - **Crown I-Tech 12000HD / 9000HD / 5000HD / 4x3500HD y VRack**: las hojas oficiales "Power Draw & Thermal" (adn.harmanpro.com) salen revueltas al leerlas; no se puede asignar 1/8 y 1/3. Reintentar con otra versión del PDF.
 - **Crown MA-12000i, MA-5002VZ, XLS 1502/2502**: sin tabla de consumo en manual/ficha (la de MA-5002VZ usa ciclos de trabajo y sale revuelta).
 - **Crest Pro 8200, CPX 900/1500/2600, CKi, CPX 1/2/3**: sin ficha oficial legible; CPX 1 se contradice; CPX 2/3 con columnas revueltas. Pro 9200 (2200/5000 W) y CPX 3800 (1185/2975 W) sólo en sitios espejo de manuales.
@@ -36,6 +37,9 @@ Biblioteca de modelos reales de la Calculadora de KVA (`kva/biblioteca.js`). Cad
 - **L-Acoustics LA-RAK II**: el manual no da consumo por rack (son 3 × LA12X, uno por fase).
 - **QSC PLD a 120 V**: sólo hay hoja a 100 V (se usó con FP 0.95).
 - Omitidos a propósito: Crest Ci 20x8 / Ci 30x4 (instalación 70 V, no se rentan).
+
+## Reglas acordadas con Carlos
+- 2026-11-19: se aceptan copias del manual del fabricante en sitios de manuales o espejos cuando la fuente oficial no se puede leer. Esos modelos llevan `copia:1` (en Ninja dice «copia de terceros») y la página muestra un aviso en letra chica.
 
 ## Fuentes bloqueadas
 - l-acoustics.com/documentation (redirige a la portada) y su blob de Azure (PDF ilegible).
@@ -47,3 +51,4 @@ Biblioteca de modelos reales de la Calculadora de KVA (`kva/biblioteca.js`). Cad
 
 ## Corridas
 - 2026-11-19 · Bloque 1: integración del buscador en la app + 82 amplificadores.
+- 2026-11-19 · Ajuste: 8 Lab.gruppen de copias de manuales (aprobado), campo `copia` y aviso de fuentes en la página.

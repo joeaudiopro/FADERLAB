@@ -120,6 +120,7 @@ body.ninja .conds label.nj{display:grid}
 .res button.pa small{color:var(--tally)}
 .res .tp{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
 .res p{margin:2px;font-size:13px;color:#5d636d}
+.res .disc,.disc{font-size:11px;color:#5d636d;line-height:1.35}
 .item .src{display:none;grid-column:1/-1;font-size:12.5px;color:var(--muted);padding:0 4px 2px}
 .item .src a{color:#c9a8ff}
 .item .src .est{color:var(--tally)}
@@ -394,7 +395,9 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     </div>
   </details>
 
-  <footer>FaderLab · Herramientas para producción de eventos</footer>
+  <footer>FaderLab · Herramientas para producción de eventos
+    <p class="disc" style="margin:6px auto 0;max-width:640px">Los consumos de los modelos por marca se recopilaron de fichas técnicas y manuales de los fabricantes; algunos provienen de copias que circulan en internet (distribuidores, rentadoras y sitios espejo de manuales). Pueden tener errores: confirma con la placa del equipo.</p>
+  </footer>
 </div>
 
 <div class="modal" id="whyModal" role="dialog" aria-modal="true" aria-labelledby="whyTitle">
@@ -489,6 +492,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
   ];
   const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
   // Modelos reales con datos de ficha técnica (biblioteca.js). Si no cargó, la app sigue con los genéricos.
+  const DISC = 'Datos de fichas técnicas y manuales de los fabricantes; algunos vienen de copias que circulan en internet (distribuidores y sitios de manuales). Confirma con la placa del equipo.';
   const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const MODS = (Array.isArray(window.FL_MODELOS) ? window.FL_MODELOS : [])
     .filter(m => m && CATS.some(c => c.id === m.cat) && (m.pa ? m.w8 > 0 && m.w3 > 0 : m.w > 0))
@@ -713,7 +717,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
         </select>`}</label>
         <span class="tot" data-tot="${i.id}"></span>
         <button class="del" data-del="${i.id}" aria-label="Quitar ${esc(i.n)}" title="Quitar">✕</button>
-        ${i.src ? `<div class="src">Dato de fábrica: <a href="${esc(i.src)}" target="_blank" rel="noopener">ver ficha</a>${i.pfe ? ' · <span class="est">FP estimado</span>' : ''}${i.w3e ? ' · <span class="est">1/3 de potencia estimado</span>' : ''}</div>` : ''}
+        ${i.src ? `<div class="src">Dato de fábrica: <a href="${esc(i.src)}" target="_blank" rel="noopener">ver ficha</a>${i.copia ? ' (copia de terceros)' : ''}${i.pfe ? ' · <span class="est">FP estimado</span>' : ''}${i.w3e ? ' · <span class="est">1/3 de potencia estimado</span>' : ''}</div>` : ''}
       </div>`).join('');
   }
   function refreshCat(cat) {
@@ -764,7 +768,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     const it = { id:uid++, cat, n:p.n, q:1, w:p.w || 0, pf:p.pf, v:p.v || '1', ph:'A' };
     if (p.m) it.m = 1; if (p.nl) it.nl = 1;
     if (p.pa) { it.pa = 1; it.w8 = p.w8; it.w3 = p.w3; }
-    if (p.fuente) it.src = p.fuente; if (p.pf_est) it.pfe = 1; if (p.w3_est) it.w3e = 1;
+    if (p.fuente) it.src = p.fuente; if (p.pf_est) it.pfe = 1; if (p.w3_est) it.w3e = 1; if (p.copia) it.copia = 1;
     S.items.push(it);
     refreshCat(cat); update(); save();
     const row = document.querySelector(`.item[data-id="${it.id}"]`);
@@ -785,6 +789,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       `<button type="button" class="${m.pa ? 'pa' : ''}${k === 0 ? ' hi' : ''}" data-mod="${MODS.indexOf(m)}"><span><b>${esc(m.n)}</b><span class="tp">${esc(m.tipo || '')}</span></span><small>${wLabel(m)}</small></button>`).join('')
       + (list.length > MAX ? `<p>Y ${list.length - MAX} más: escribe más letras para afinar.</p>` : '')
       : '<p>Sin resultados. Prueba con la marca o usa un genérico.</p>';
+    box.innerHTML += `<p class="disc">${DISC}</p>`;
     box.hidden = false;
   }
   $('cats').addEventListener('input', e => { if (e.target.dataset.find) renderRes(e.target); });
