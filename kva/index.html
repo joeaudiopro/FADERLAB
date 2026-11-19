@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0e">
+<title>KVA · Calculadora de planta de luz para eventos · FaderLab</title>
+<meta name="description" content="Calcula los kVA de la planta de luz para tu evento: suma el consumo de audio, video e iluminación, balancea fases y averigua cuántos amperes por fase da una planta. Gratis.">
+<link rel="canonical" href="https://faderlab.mx/kva/">
+<meta property="og:title" content="KVA · Calculadora de planta de luz · FaderLab">
+<meta property="og:description" content="¿De cuántos kVA rento la planta? Suma tus equipos de audio, video e iluminación y te sugiere la planta y los amperes por fase.">
+<meta property="og:url" content="https://faderlab.mx/kva/">
+<meta property="og:type" content="website">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KVA">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Misma familia visual que /temporizador y /ratio: oscuro de escenario, Barlow, acento ámbar de tally. */
+:root{
+  --ink:#0b0c0e;
+  --chrome:#16181c;
+  --chrome-2:#20232a;
+  --line:#2e323a;
+  --text:#ece8df;
+  --muted:#9097a1;
+  --tally:#ffb020;
+  --tally-dim:rgba(255,176,32,.14);
+  --red:#ff5a4e;
+  --red-dim:rgba(255,90,78,.14);
+  --ok:#5fd38d;
+  --f-digits:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-ui:"Barlow",system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ink);color:var(--text);font-family:var(--f-ui);font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent;min-height:100vh}
+.wrap{max-width:1180px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) calc(32px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+header h1{font-family:var(--f-digits);font-weight:600;font-size:clamp(28px,4vw,40px);letter-spacing:.01em;margin:0;line-height:1}
+header h1 span{color:var(--tally)}
+.h-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header a{font-family:var(--f-digits);font-weight:600;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);text-decoration:none}
+header a:hover{color:var(--text)}
+
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:16px}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.grid > *{min-width:0}
+
+.card{background:var(--chrome);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card + .card{margin-top:14px}
+h2{font-family:var(--f-digits);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.row-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.row-h h2{margin:0}
+
+button{font:inherit;font-weight:600;font-size:15px;color:var(--text);background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;justify-content:center}
+button:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--tally);outline-offset:2px}
+button.on{border-color:var(--tally);color:var(--tally);background:var(--tally-dim)}
+button svg{width:18px;height:18px;flex:none}
+
+input,select{font:inherit;color:var(--text);background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:42px;min-width:0}
+input.num{font-family:var(--f-digits);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+input::placeholder{color:#555b65}
+select{cursor:pointer}
+
+.seg{display:flex;background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;min-height:34px;border:0;background:transparent;font-size:14px;padding:4px 12px;border-radius:7px;color:var(--muted);white-space:nowrap}
+.seg button.on{background:var(--tally);color:#1a1205}
+#modeSeg button[data-m="ninja"].on{background:#b07cff;color:#140a22}
+
+/* Categorías */
+.cat-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cat-h .dot{width:10px;height:10px;border-radius:50%;flex:none}
+.cat-h h2{margin:0;flex:1}
+.cat-h .sum{font-family:var(--f-digits);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.cat-h .sum small{font-size:13px;color:var(--muted);font-weight:500;margin-left:3px}
+
+.items{display:grid;gap:6px}
+.ihead,.item{display:grid;grid-template-columns:minmax(0,1fr) 64px 84px 84px 86px 34px;gap:6px;align-items:center}
+body.ninja .ihead,body.ninja .item{grid-template-columns:minmax(0,1fr) 58px 78px 56px 84px 80px 84px 34px}
+.item .ph-all{font-size:13px;color:var(--muted);text-align:center;display:block}
+.ihead{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 2px}
+.ihead span:not(:first-child){text-align:right}
+.ihead span.c{text-align:center}
+.item input{width:100%}
+.item .nm{font-size:15px;min-height:40px}
+.item .num{font-size:18px;min-height:40px;padding:6px 8px}
+.item select{font-size:14px;min-height:40px;padding:6px 6px;width:100%}
+.item .tot{font-family:var(--f-digits);font-size:18px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.item .tot small{font-size:12px;color:var(--muted);font-weight:500}
+.item .del{min-height:34px;width:34px;padding:0;color:var(--muted);background:transparent;border-color:transparent}
+.item .del:hover{color:var(--red);border-color:var(--line)}
+body:not(.ninja) .nj{display:none !important}
+body.ninja .ihead .nj,body.ninja .item .nj{display:block}
+body.ninja .conds label.nj{display:grid}
+.empty{font-size:14px;color:#5d636d;padding:4px 2px}
+
+.add{display:flex;gap:6px;margin-top:10px}
+.add select{flex:1;font-size:14px}
+
+@media (max-width:620px){
+  .ihead{display:none}
+  .item,body.ninja .item{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(78px,auto);grid-template-areas:"nm nm del" "q w tot" "v v v";background:var(--chrome-2);border:1px solid var(--line);border-radius:12px;padding:8px}
+  body.ninja .item{grid-template-areas:"nm nm del" "q w tot" "v pf ph"}
+  .item .nm{grid-area:nm;background:transparent;border-color:transparent;padding-left:4px}
+  .item .q{grid-area:q}.item .w{grid-area:w}.item .tot{grid-area:tot;align-self:center}.item .del{grid-area:del;justify-self:end}
+  .item .pf{grid-area:pf}.item .ph{grid-area:ph}.item .v{grid-area:v}
+  .item .num{background:var(--chrome)}
+  .item select{background:var(--chrome)}
+  .item label.mini{display:grid;gap:2px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+}
+@media (min-width:621px){.item label.mini > span{display:none}}
+label.mini{display:block}
+
+/* Condiciones */
+.conds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.conds label{display:grid;gap:4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.conds .full{grid-column:1/-1}
+.conds input,.conds select{width:100%;font-size:15px;letter-spacing:0;text-transform:none}
+.conds input.num{font-size:20px}
+.dfs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.dfs label{font-size:11px}
+.hint{font-size:13px;color:var(--muted);margin:10px 2px 0}
+/* Tipo de evento */
+.shows{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.shows button{flex-direction:column;align-items:flex-start;text-align:left;gap:2px;padding:10px 12px;min-height:68px}
+.shows button b{font-family:var(--f-digits);font-size:19px;font-weight:600;line-height:1.1}
+.shows button span{font-size:12.5px;font-weight:500;color:var(--muted);line-height:1.25}
+.shows button.on span{color:#d9b778}
+@media (max-width:620px){.shows{grid-template-columns:minmax(0,1fr)}.shows button{min-height:0}}
+.show-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.show-foot p{margin:0;font-size:13px;color:var(--muted)}
+.why{background:transparent;border:0;padding:4px 0;min-height:0;color:var(--tally);font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.item .num.auto{border-color:rgba(255,176,32,.35)}
+/* Ventana de explicación */
+.modal{position:fixed;inset:0;background:rgba(5,6,8,.78);display:none;align-items:center;justify-content:center;padding:18px;z-index:20}
+.modal.open{display:flex}
+.modal-box{background:var(--chrome);border:1px solid var(--line);border-radius:16px;max-width:620px;width:100%;max-height:calc(100vh - 36px);overflow:auto;padding:20px 22px;font-size:15px;color:#d6d2c9}
+.modal-box h3{font-family:var(--f-digits);font-weight:600;font-size:26px;margin:0 0 10px;color:var(--text)}
+.modal-box h4{font-family:var(--f-digits);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+.modal-box p{margin:0 0 10px}
+.modal-box b{color:var(--text)}
+.modal-box ul{margin:0 0 10px;padding-left:18px}
+.modal-box li{margin-bottom:6px}
+.ex{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 6px}
+.ex div{background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.ex small{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.ex b{font-family:var(--f-digits);font-size:26px;font-weight:600;white-space:nowrap}
+@media (max-width:440px){.ex{gap:6px}.ex div{padding:7px 8px}.ex b{font-size:21px}}
+.modal-box .tip{border-left:3px solid var(--tally);padding:8px 12px;background:var(--tally-dim);border-radius:0 8px 8px 0;color:#e8dcc4}
+.modal-close{position:sticky;top:0;float:right;margin:-6px -8px 0 10px}
+@media (max-width:620px){.conds{grid-template-columns:minmax(0,1fr)}.dfs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.hint b{color:var(--tally);font-weight:600}
+
+/* Resultado */
+.result{position:sticky;top:14px}
+@media (max-width:900px){.result{position:static}}
+.hero{border:1px solid var(--tally);background:var(--tally-dim);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.hero small{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--tally)}
+.hero .big{font-family:var(--f-digits);font-weight:700;font-size:clamp(54px,8vw,72px);line-height:.95;font-variant-numeric:tabular-nums}
+.hero .big span{font-size:.42em;font-weight:600;color:var(--muted);margin-left:6px}
+.hero p{margin:6px 0 0;font-size:13px;color:var(--muted)}
+.hero.zero{border-color:var(--line);background:var(--chrome-2)}
+.hero.zero small{color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat{background:var(--chrome-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.stat small{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-family:var(--f-digits);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat b span{font-size:14px;color:var(--muted);font-weight:500;margin-left:2px}
+
+.phases{margin-top:14px;display:grid;gap:10px}
+.ph-row{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center}
+.ph-row .lbl{font-family:var(--f-digits);font-weight:700;font-size:18px}
+.ph-track{position:relative;height:22px;background:var(--chrome-2);border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex}
+.ph-track i{display:block;height:100%}
+.ph-track .lim{position:absolute;top:0;bottom:0;width:2px;background:var(--text);opacity:.6}
+.ph-row .amp{font-family:var(--f-digits);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;min-width:92px}
+.ph-row .amp small{color:var(--muted);font-weight:500;font-size:13px}
+.ph-row.over .amp{color:var(--red)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:2px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:0}
+
+.notes{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.notes li{font-size:13.5px;line-height:1.4;color:var(--muted);padding:8px 10px 8px 12px;border-left:3px solid var(--line);background:rgba(255,255,255,.02);border-radius:0 8px 8px 0}
+.notes li b{color:var(--text);font-weight:600}
+.notes li.warn{border-left-color:var(--tally);color:#d9cdb6}
+.notes li.bad{border-left-color:var(--red);color:#f0c9c5}
+
+.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.actions button{flex:1}
+
+/* Tengo una planta */
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;margin-top:10px}
+.chips button{font-family:var(--f-digits);font-size:18px;padding:4px;font-variant-numeric:tabular-nums}
+.kva-in{display:flex;align-items:center;gap:10px}
+.kva-in input{flex:1;font-size:40px;min-height:64px;text-align:center}
+.kva-in span{font-family:var(--f-digits);font-size:24px;color:var(--muted);font-weight:600}
+.amps-big{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.amps-big > div{border:1px solid var(--line);background:var(--chrome-2);border-radius:12px;padding:12px 14px}
+.amps-big > div.safe{border-color:var(--ok);background:rgba(95,211,141,.1)}
+.amps-big small{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.amps-big .safe small{color:var(--ok)}
+.amps-big b{font-family:var(--f-digits);font-size:clamp(40px,6vw,54px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.amps-big b span{font-size:.4em;color:var(--muted);font-weight:600;margin-left:4px}
+.amps-big p{margin:4px 0 0;font-size:12.5px;color:var(--muted)}
+
+/* Explicación */
+details.card{padding:0;margin-top:14px}
+details summary{list-style:none;cursor:pointer;padding:16px;display:flex;justify-content:space-between;align-items:center}
+details summary::-webkit-details-marker{display:none}
+details summary h2{margin:0}
+details summary .chev{color:var(--muted);transition:transform .2s}
+details[open] summary .chev{transform:rotate(180deg)}
+.how{padding:0 16px 16px;font-size:14.5px;color:#cfcbc2}
+.how p{margin:0 0 10px}
+.how code{font-family:var(--f-digits);font-size:16px;background:var(--chrome-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--text);white-space:nowrap}
+.how b{color:var(--text)}
+
+[hidden]{display:none !important}
+footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
+
+/* Hoja para imprimir */
+#sheet{display:none}
+@media print{
+  @page{margin:14mm}
+  body{background:#fff;color:#111}
+  .wrap{display:none}
+  #sheet{display:block;font-family:var(--f-ui);font-size:11pt;color:#111}
+  #sheet h1{font-family:var(--f-digits);font-size:22pt;margin:0 0 2px}
+  #sheet .sub{color:#555;margin:0 0 14px;font-size:10pt}
+  #sheet table{width:100%;border-collapse:collapse;margin:8px 0 14px}
+  #sheet th,#sheet td{border-bottom:1px solid #ccc;padding:4px 6px;text-align:left;font-size:10pt}
+  #sheet th{font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#555}
+  #sheet td.r,#sheet th.r{text-align:right}
+  #sheet tr.cat td{background:#f2f2f2;font-weight:600}
+  #sheet .box{border:2px solid #111;border-radius:8px;padding:10px 14px;display:inline-block;margin:0 12px 10px 0;vertical-align:top}
+  #sheet .box b{font-family:var(--f-digits);font-size:24pt;display:block;line-height:1}
+  #sheet .box small{font-size:8.5pt;text-transform:uppercase;letter-spacing:.1em;color:#555}
+  #sheet ul{padding-left:18px;margin:4px 0}
+  #sheet li{margin-bottom:3px;font-size:10pt}
+  #sheet .foot{margin-top:16px;color:#777;font-size:8.5pt}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Calculadora de <span>KVA</span></h1>
+    <div class="h-right">
+      <div class="seg" id="modeSeg" role="group" aria-label="Nivel">
+        <button data-m="normal">Normal</button><button data-m="ninja">Ninja</button>
+      </div>
+      <a href="/">← Herramientas</a>
+    </div>
+  </header>
+
+  <div class="bar">
+    <div class="seg" id="viewSeg" role="tablist">
+      <button data-v="calc" role="tab">¿Qué planta rento?</button>
+      <button data-v="gen" role="tab">Tengo una planta</button>
+    </div>
+    <input id="evName" placeholder="Nombre del evento (opcional)" autocomplete="off" style="flex:1;min-width:200px;max-width:380px">
+  </div>
+
+  <!-- ─────────── Vista: calcular planta ─────────── -->
+  <div class="grid" id="vCalc">
+    <div>
+      <section class="card" id="showCard">
+        <h2>Tipo de evento</h2>
+        <div class="shows" id="shows" role="radiogroup" aria-label="Tipo de evento"></div>
+        <div class="show-foot">
+          <p>Ajusta cuánto consumen las bocinas activas y los amplificadores.</p>
+          <button class="why" id="whyBtn">¿Por qué debo seleccionar esto?</button>
+        </div>
+      </section>
+      <div id="cats"></div>
+
+      <section class="card">
+        <h2>Condiciones del lugar</h2>
+        <div class="conds">
+          <label>Ciudad / altitud<select id="city"></select></label>
+          <label>Sistema eléctrico<select id="sys"></select></label>
+          <label class="nj">Altitud (m)<input id="alt" class="num" inputmode="numeric" autocomplete="off"></label>
+          <label class="nj">Temperatura máx. (°C)<input id="temp" class="num" inputmode="numeric" autocomplete="off"></label>
+          <label class="nj full">Carga máxima continua de la planta (%)<input id="limit" class="num" inputmode="numeric" autocomplete="off"></label>
+          <div class="nj full">
+            <label style="margin-bottom:6px">Simultaneidad por área (% que realmente está prendido a la vez)</label>
+            <div class="dfs" id="dfs"></div>
+          </div>
+        </div>
+        <p class="hint" id="condHint"></p>
+      </section>
+    </div>
+
+    <section class="card result">
+      <h2>Resultado</h2>
+      <div class="hero zero" id="hero">
+        <small>Planta sugerida</small>
+        <div class="big" id="heroBig">—</div>
+        <p id="heroSub">Agrega equipos para calcular.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><small>Instalado</small><b id="sInst">—</b></div>
+        <div class="stat"><small>Demanda real</small><b id="sDem">—</b></div>
+        <div class="stat"><small>Demanda en kVA</small><b id="sDemKva">—</b></div>
+        <div class="stat"><small>Necesitas al menos</small><b id="sReq">—</b></div>
+      </div>
+      <div class="phases" id="phases"></div>
+      <ul class="notes" id="notes"></ul>
+      <div class="actions">
+        <button id="copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copiar</span></button>
+        <button id="print"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>Imprimir / PDF</button>
+        <button id="reset" title="Borrar todos los equipos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Nuevo</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ─────────── Vista: tengo una planta ─────────── -->
+  <div class="grid" id="vGen" hidden>
+    <div>
+      <section class="card">
+        <h2>¿De cuántos kVA es la planta?</h2>
+        <div class="kva-in"><input id="genKva" class="num" inputmode="decimal" autocomplete="off" placeholder="0"><span>kVA</span></div>
+        <div class="chips" id="genChips"></div>
+        <p class="hint">Usa la potencia <b>prime</b> (continua) de la placa o la ficha. Si la rentadora sólo te da la <i>standby</i>, la prime suele ser como un 10% menos.</p>
+      </section>
+      <section class="card">
+        <h2>Condiciones</h2>
+        <div class="conds">
+          <label>Ciudad / altitud<select id="city2"></select></label>
+          <label>Sistema eléctrico<select id="sys2"></select></label>
+          <label class="nj">Altitud (m)<input id="alt2" class="num" inputmode="numeric" autocomplete="off"></label>
+          <label class="nj">Temperatura máx. (°C)<input id="temp2" class="num" inputmode="numeric" autocomplete="off"></label>
+          <label class="nj full">Carga máxima continua (%)<input id="limit2" class="num" inputmode="numeric" autocomplete="off"></label>
+        </div>
+        <p class="hint" id="condHint2"></p>
+      </section>
+    </div>
+    <section class="card result">
+      <h2>Lo que te da por fase</h2>
+      <div class="amps-big">
+        <div><small>Máximo teórico</small><b id="gNom">—</b><p>Nominal de placa. No trabajes aquí.</p></div>
+        <div class="safe"><small>Sin morir en el intento</small><b id="gSafe">—</b><p id="gSafeSub">Lo que puedes cargar todo el show.</p></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><small>Potencia real (FP 0.8)</small><b id="gKw">—</b></div>
+        <div class="stat"><small>Utilizable continuo</small><b id="gKwSafe">—</b></div>
+        <div class="stat"><small>Watts por fase</small><b id="gWph">—</b></div>
+        <div class="stat"><small>Pérdida por lugar</small><b id="gDer">—</b></div>
+      </div>
+      <div class="phases" id="gPhases"></div>
+      <ul class="notes" id="gNotes"></ul>
+    </section>
+  </div>
+
+  <details class="card" id="howBox">
+    <summary><h2>¿Cómo se calcula?</h2><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <div class="how">
+      <p><b>1. Watts a kVA.</b> Cada equipo consume watts reales (W), pero la planta se mide en potencia aparente (VA). La diferencia es el factor de potencia: <code>VA = W ÷ FP</code>. Un amplificador clase D moderno anda en 0.95; uno clase AB viejo en 0.7, así que pide más planta por el mismo watt.</p>
+      <p><b>2. Simultaneidad.</b> Nunca está todo al máximo a la vez: la pantalla LED casi nunca está en blanco total y las cabezas no están todas a full. Por eso video se multiplica por 80%, iluminación por 90% y otros por 100% (en Ninja puedes ajustarlo). En audio manda el <b>tipo de evento</b>: las bocinas activas y amplificadores usan su consumo a 1/8 de potencia en una conferencia, a 1/3 en un show a tope y un punto intermedio en un concierto.</p>
+      <p><b>3. kW y kVA a la vez.</b> Las plantas se fabrican para FP 0.8: una de 100 kVA sólo da 80 kW. Si tu carga es casi toda LED y clase D (FP alto), el límite real son los kW, no los kVA. La calculadora revisa los dos y usa el más exigente.</p>
+      <p><b>4. Lugar.</b> El motor pierde potencia con la altura y el calor (aprox. 1.2% por cada 100 m arriba de 1,000 m y 0.4% por °C arriba de 30 °C). En CDMX eso es cerca de 15% menos planta. La curva exacta depende del fabricante.</p>
+      <p><b>5. Margen.</b> Una planta no debe trabajar arriba de ~80% continuo: deja aire para picos de los amplificadores, arranques y el calor. <code>kVA planta = demanda ÷ (0.8 × factor del lugar)</code>.</p>
+      <p><b>6. Fases.</b> En trifásico 220/127 V cada fase da <code>A = kVA × 1000 ÷ (3 × 127)</code>. Si las fases quedan desbalanceadas, la fase más cargada manda: la calculadora reparte los equipos para emparejarlas y, si aun así una se pasa, sube la planta.</p>
+      <p><b>7. 127 V o 220 V.</b> En México los equipos de 127 V van entre una fase y el neutro; los de 220 V (como muchos aires acondicionados) van entre dos fases. El mismo equipo a 220 V jala menos amperes (<code>A = VA ÷ 220</code>), pero los jala de dos fases a la vez. La calculadora lo cuenta así, del lado seguro.</p>
+      <p><b>Ojo:</b> esto es una guía de planeación, no sustituye al electricista responsable ni la ficha técnica real de cada equipo y de la planta.</p>
+    </div>
+  </details>
+
+  <footer>FaderLab · Herramientas para producción de eventos</footer>
+</div>
+
+<div class="modal" id="whyModal" role="dialog" aria-modal="true" aria-labelledby="whyTitle">
+  <div class="modal-box">
+    <button class="modal-close" id="whyClose" aria-label="Cerrar">✕</button>
+    <h3 id="whyTitle">¿Por qué importa el tipo de evento?</h3>
+    <p>Las bocinas activas y los amplificadores <b>no consumen siempre lo mismo</b>. Su consumo depende de qué tan fuerte y qué tan comprimido suene el show. Por eso las fichas técnicas dan varios consumos:</p>
+    <ul>
+      <li><b>A 1/8 de potencia:</b> voz o música con dinámica, con golpes fuertes y momentos bajos. Es el dato estándar de las fichas.</li>
+      <li><b>A 1/3 de potencia:</b> música muy comprimida y pegada al limitador, como rock pesado, EDM o un show a tope toda la noche.</li>
+      <li><b>Máximo:</b> tono continuo a full. En un show real no pasa, pero es lo que dice la placa.</li>
+    </ul>
+    <h4>Mismo equipo, distinto evento</h4>
+    <p>10 amplificadores clase D de 4 canales (genéricos):</p>
+    <div class="ex">
+      <div><small>Conferencia o culto</small><b>10 kW</b></div>
+      <div><small>Concierto</small><b>17 kW</b></div>
+      <div><small>Rock / EDM</small><b>24 kW</b></div>
+    </div>
+    <p>Con el mismo sistema de audio, un show de EDM puede consumir <b>más del doble</b> que una conferencia. Eso cambia la planta que tienes que rentar.</p>
+    <h4>¿Cuál elijo?</h4>
+    <ul>
+      <li><b>Conferencia o culto:</b> congresos, conferencias, misas y cultos, bodas, ceremonias, graduaciones, música de fondo.</li>
+      <li><b>Concierto o espectáculo:</b> banda en vivo, teatro musical, shows corporativos con música, alabanza con banda completa.</li>
+      <li><b>Rock, EDM, a tope:</b> rock y metal, DJs, festivales, cualquier show donde el sistema trabaja pegado al limitador.</li>
+    </ul>
+    <p class="tip">Si dudas entre dos, elige el de <b>mayor consumo</b>. Que sobre planta cuesta poco; que falte cuesta el show.</p>
+    <p style="font-size:13px;color:var(--muted);margin-top:12px">Sólo cambia el consumo de bocinas activas y amplificadores (sus watts aparecen con borde ámbar). Consolas, inalámbricos, video e iluminación no cambian. Si escribes a mano los watts de un equipo, se respeta tu número.</p>
+  </div>
+</div>
+
+<div id="sheet"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  // ───────── Datos ─────────
+  // Biblioteca genérica: W = consumo máximo típico de ficha por equipo; pf = factor de potencia.
+  // m: motor (pico de arranque) · nl: carga electrónica no lineal (fuentes conmutadas)
+  // v: conexión — '1' entre fase y neutro (127 V), '2' entre dos fases (220 V), '3' trifásico. Si no se indica, '1'.
+  const CATS = [
+    { id:'audio', name:'Audio', color:'#ffb020', lib:[
+      // pa: amplificación; su consumo depende del tipo de evento (w8 = a 1/8 de potencia, w3 = a 1/3).
+      { n:'Bocina line array activa (por caja)', w8:400, w3:900, pf:.95, nl:1, pa:1 },
+      { n:'Subwoofer activo 18"', w8:500, w3:1200, pf:.95, nl:1, pa:1 },
+      { n:'Bocina activa 12"/15" (top o monitor)', w8:200, w3:450, pf:.95, nl:1, pa:1 },
+      { n:'Amplificador clase D 4 canales', w8:1000, w3:2400, pf:.95, nl:1, pa:1 },
+      { n:'Amplificador clase AB (antiguo)', w8:900, w3:1800, pf:.7, pa:1 },
+      { n:'Consola digital', w:300, pf:.95, nl:1 },
+      { n:'Stagebox / rack digital', w:150, pf:.95, nl:1 },
+      { n:'Receptor inalámbrico (por unidad)', w:25, pf:.95, nl:1 },
+      { n:'Transmisor de in-ears (por unidad)', w:20, pf:.95, nl:1 },
+      { n:'Distribuidor de antenas / combinador', w:30, pf:.95, nl:1 },
+      { n:'Amplificador de bajo', w:500, pf:.9, nl:1 },
+      { n:'Amplificador de guitarra', w:150, pf:.9 },
+      { n:'Teclado / sintetizador', w:60, pf:.9, nl:1 },
+    ]},
+    { id:'video', name:'Video', color:'#4fb6ff', lib:[
+      { n:'Pantalla LED (por m²)', w:600, pf:.95, nl:1 },
+      { n:'Proyector láser 10–20 mil lúmenes', w:1200, pf:.95, nl:1 },
+      { n:'Proyector 5–8 mil lúmenes', w:500, pf:.9, nl:1 },
+      { n:'Procesador / switcher de video', w:250, pf:.95, nl:1 },
+      { n:'Cámara con CCU', w:150, pf:.95, nl:1 },
+      { n:'Pantalla / TV 65"', w:250, pf:.95, nl:1 },
+      { n:'Computadora de playback / media server', w:500, pf:.95, nl:1 },
+      { n:'Equipo de streaming', w:300, pf:.95, nl:1 },
+    ]},
+    { id:'luz', name:'Iluminación', color:'#b07cff', lib:[
+      { n:'Cabeza móvil LED (spot / wash)', w:450, pf:.95, nl:1 },
+      { n:'Cabeza móvil de lámpara (beam)', w:470, pf:.85, nl:1 },
+      { n:'PAR LED', w:200, pf:.9, nl:1 },
+      { n:'Barra LED / pixel bar', w:250, pf:.9, nl:1 },
+      { n:'Elipsoidal / leko LED', w:300, pf:.95, nl:1 },
+      { n:'Elipsoidal / leko halógeno 750 W', w:750, pf:1 },
+      { n:'Blinder 2 lámparas (tungsteno)', w:1300, pf:1 },
+      { n:'Estrobo LED', w:1000, pf:.95, nl:1 },
+      { n:'Máquina de humo / hazer', w:1500, pf:1 },
+      { n:'Consola de iluminación', w:300, pf:.95, nl:1 },
+      { n:'Seguidor (follow spot) LED', w:800, pf:.95, nl:1 },
+    ]},
+    { id:'otros', name:'Otros', color:'#5fd38d', lib:[
+      { n:'Polipasto / motor de cadena 1 t', w:1500, pf:.8, m:1, v:'3' },
+      { n:'Aire acondicionado minisplit 1.5 t', w:1800, pf:.85, m:1, v:'2' },
+      { n:'Ventilador industrial', w:400, pf:.8, m:1 },
+      { n:'Iluminación de trabajo / backstage', w:500, pf:.95, nl:1 },
+      { n:'Contactos camerinos / producción', w:1000, pf:.9 },
+      { n:'Cafetera / catering', w:1500, pf:1 },
+      { n:'Refrigerador', w:300, pf:.8, m:1 },
+    ]},
+  ];
+  const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+  const DF_DEF = { audio:100, video:80, luz:90, otros:100 };
+  // Tipo de evento: k = qué tanto del camino entre 1/8 y 1/3 de potencia usa la amplificación.
+  const SHOWS = {
+    habla:     { n:'Conferencia o culto',     d:'Voz, ceremonias, música de fondo', k:0 },
+    concierto: { n:'Concierto o espectáculo', d:'Música en vivo con dinámica',      k:.5 },
+    fuerte:    { n:'Rock, EDM, a tope',       d:'Música fuerte y muy comprimida',   k:1 },
+  };
+  const SIZES = [10, 15, 20, 30, 45, 60, 80, 100, 125, 150, 175, 200, 250, 300, 350, 400, 500, 650, 750, 1000];
+  const SYSTEMS = {
+    '3f220': { label:'Trifásico 220/127 V', ph:3, vln:127, vll:220 },
+    '3f440': { label:'Trifásico 440/254 V', ph:3, vln:254, vll:440, ninja:true },
+    '1f127': { label:'Monofásico 127 V', ph:1, vln:127, vll:127 },
+  };
+  const CITIES = [
+    ['Nivel del mar / costa', 0], ['Mérida', 10], ['Lima', 150], ['Hermosillo', 210], ['Monterrey', 540], ['Santiago de Chile', 570],
+    ['Guadalajara', 1566], ['Morelia', 1920], ['León', 1815], ['Querétaro', 1820], ['San Luis Potosí', 1860], ['Aguascalientes', 1880],
+    ['Puebla', 2135], ['Ciudad de México', 2240], ['Bogotá', 2640], ['Toluca', 2660], ['Quito', 2850],
+  ];
+  const DEF = { temp:30, limit:80 };
+
+  // ───────── Estado ─────────
+  let uid = 1;
+  const S = {
+    ver:2, show:'concierto', ninja:false, view:'calc', ev:'',
+    items:[], alt:2240, sys:'3f220', temp:30, limit:80, df:{...DF_DEF},
+    gen:100,
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem('fl-kva') || '{}');
+    Object.assign(S, saved);
+    S.df = { ...DF_DEF, ...(saved.ver === 2 ? saved.df || {} : {}) };
+    S.ver = 2;
+    if (!SHOWS[S.show]) S.show = 'concierto';
+    S.items = (S.items || []).filter(i => CAT[i.cat]);
+    S.items.forEach(i => { uid = Math.max(uid, (i.id || 0) + 1); if (i.ph === '3F') { i.v = '3'; i.ph = 'A'; } if (!i.v) i.v = '1'; });
+  } catch (_) {}
+  if (!SYSTEMS[S.sys]) S.sys = '3f220';
+  const save = () => { try { localStorage.setItem('fl-kva', JSON.stringify(S)); } catch (_) {} };
+
+  // ───────── Utilidades ─────────
+  const parse = v => { const n = parseFloat(String(v).replace(/,/g, '.').replace(/[^\d.\-]/g, '')); return isFinite(n) ? n : NaN; };
+  const nf = (n, d = 0) => isFinite(n) ? n.toLocaleString('es-MX', { minimumFractionDigits:d, maximumFractionDigits:d }) : '—';
+  const nfa = n => isFinite(n) ? (n >= 100 ? nf(n, 0) : n >= 10 ? nf(n, 1) : nf(n, 2)) : '—';
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  // Watts por equipo que usa el cálculo: la amplificación depende del tipo de evento.
+  const effW = it => it.pa ? Math.round((it.w8 + (it.w3 - it.w8) * SHOWS[S.show].k) / 10) * 10 : (it.w || 0);
+  // Etiquetas de voltaje según el sistema (127/220 en México; 254/440 en industrial).
+  const vLabel = (v, sys) => v === '3' ? 'Trifásico' : (v === '2' ? sys.vll : sys.vln) + ' V';
+  const PAIRS = { L12:[0, 1], L23:[1, 2], L13:[0, 2] };
+  const wLabel = p => p.pa ? `${nf(p.w8)}–${nf(p.w3)} W` : `${nf(p.w)} W`;
+
+  // Valores efectivos: en Normal se usan los de fábrica; en Ninja, los tuyos.
+  const eff = () => ({
+    temp: S.ninja ? S.temp : DEF.temp,
+    limit: S.ninja ? clamp(S.limit, 40, 100) : DEF.limit,
+    df: S.ninja ? S.df : DF_DEF,
+    sys: SYSTEMS[S.sys].ninja && !S.ninja ? '3f220' : S.sys,
+  });
+  function derate(alt, temp) {
+    const a = 1 - Math.max(0, alt - 1000) / 100 * 0.012;
+    const t = 1 - Math.max(0, temp - 30) * 0.004;
+    return clamp(a * t, 0.3, 1);
+  }
+
+  // ───────── Cálculo ─────────
+  function compute() {
+    const E = eff(), sys = SYSTEMS[E.sys];
+    const NP = sys.ph;
+    const der = derate(S.alt, E.temp), lim = E.limit / 100;
+    const res = { E, sys, der, lim, inst:0, instVA:0, P:0, VA:0, cats:{}, phases:[], motors:[], nlP:0, n:0 };
+    for (const c of CATS) res.cats[c.id] = { P:0, VA:0, Pd:0, VAd:0, n:0 };
+    for (let k = 0; k < NP; k++) res.phases.push({ VA:0, by:{ audio:0, video:0, luz:0, otros:0 } });
+
+    const units = [];
+    for (const it of S.items) {
+      const q = Math.max(0, it.q || 0), w = Math.max(0, effW(it)), pf = clamp(it.pf || .9, .3, 1);
+      if (!(q > 0 && w > 0)) continue;
+      const df = (E.df[it.cat] ?? 100) / 100;
+      const P = q * w, VA = P / pf, Pd = P * df, VAd = VA * df;
+      const c = res.cats[it.cat];
+      c.P += P; c.VA += VA; c.Pd += Pd; c.VAd += VAd; c.n += q;
+      res.inst += P; res.instVA += VA; res.P += Pd; res.VA += VAd; res.n++;
+      if (it.nl) res.nlP += Pd;
+      if (it.m) res.motors.push({ n:it.n, kva: w / pf / 1000 });
+      // Fases: todo se lleva a "VA equivalentes por fase" (amperes de esa fase × voltaje fase-neutro).
+      const v = it.v || '1';
+      const add = (k, va) => { res.phases[k].VA += va; res.phases[k].by[it.cat] += va; };
+      if (v === '2') res.has220 = true;
+      if (NP === 1) { add(0, VAd); if (v !== '1') res.badV = true; }
+      else if (v === '3') res.phases.forEach((p, k) => add(k, VAd / 3));
+      else {
+        // Un equipo de 220 V jala A = VA ÷ 220 por CADA una de sus dos fases.
+        const share = v === '2' ? sys.vln / sys.vll : 1;
+        const fix = S.ninja ? it.ph : 'A';
+        if (v === '1' && /^L[123]$/.test(fix)) add(+fix[1] - 1, VAd);
+        else if (v === '2' && PAIRS[fix]) PAIRS[fix].forEach(k => add(k, VAd * share));
+        else {
+          // Reparto automático: cada equipo es una unidad; muchos m² de LED se parten en trozos.
+          const count = Math.min(Math.ceil(q), 300), per = VAd / q, chunk = q / count;
+          for (let k = 0; k < count; k++) { const qq = Math.min(chunk, q - k * chunk); units.push({ va: per * qq * share, cat: it.cat, two: v === '2' }); }
+        }
+      }
+    }
+    // Balanceo: del más grande al más chico. 127 V va a la fase más libre; 220 V al par de fases más libre.
+    units.sort((a, b) => b.va * (b.two ? 2 : 1) - a.va * (a.two ? 2 : 1));
+    for (const u of units) {
+      const P = res.phases;
+      if (u.two) {
+        let best = null;
+        for (const pr of Object.values(PAIRS)) if (!best || P[pr[0]].VA + P[pr[1]].VA < P[best[0]].VA + P[best[1]].VA) best = pr;
+        best.forEach(k => { P[k].VA += u.va; P[k].by[u.cat] += u.va; });
+      } else {
+        let best = P[0];
+        for (const p of P) if (p.VA < best.VA) best = p;
+        best.VA += u.va; best.by[u.cat] += u.va;
+      }
+    }
+
+    const maxPh = Math.max(...res.phases.map(p => p.VA));
+    const avgPh = res.phases.reduce((s, p) => s + p.VA, 0) / NP;
+    res.imb = NP > 1 && avgPh > 0 ? (maxPh - avgPh) / avgPh * 100 : 0;
+    res.kvaByVA = res.VA / 1000 / (lim * der);
+    res.kvaByKW = res.P / 0.8 / 1000 / (lim * der);
+    res.kvaByPh = NP > 1 ? NP * maxPh / 1000 / (lim * der) : 0;
+    res.req = Math.max(res.kvaByVA, res.kvaByKW, res.kvaByPh);
+    res.bind = res.req === 0 ? '' : res.req === res.kvaByPh && res.kvaByPh > Math.max(res.kvaByVA, res.kvaByKW) * 1.001 ? 'ph' : res.kvaByKW >= res.kvaByVA ? 'kw' : 'va';
+    res.size = res.req > 0 ? (SIZES.find(s => s >= res.req - 1e-9) || null) : 0;
+    res.pfAvg = res.VA > 0 ? res.P / res.VA : 0;
+    return res;
+  }
+
+  // Amperes por fase de una planta de `kva` con las condiciones actuales.
+  function genAmps(kva, r) {
+    const nom = kva * 1000 / (r.sys.ph * r.sys.vln);
+    return { nom, safe: nom * r.lim * r.der };
+  }
+
+  // ───────── UI: modo y vista ─────────
+  function applyMode() {
+    document.body.classList.toggle('ninja', S.ninja);
+    [...$('modeSeg').children].forEach(b => b.classList.toggle('on', (b.dataset.m === 'ninja') === S.ninja));
+    [...$('viewSeg').children].forEach(b => { const on = b.dataset.v === S.view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    $('vCalc').hidden = S.view !== 'calc';
+    $('vGen').hidden = S.view !== 'gen';
+    fillSelects();
+  }
+  $('modeSeg').addEventListener('click', e => { const m = e.target.closest('button')?.dataset.m; if (!m) return; S.ninja = m === 'ninja'; applyMode(); renderCats(); update(); save(); });
+  $('viewSeg').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; if (!v) return; S.view = v; applyMode(); update(); save(); });
+  $('evName').value = S.ev || '';
+  $('evName').addEventListener('input', e => { S.ev = e.target.value; save(); });
+
+  // ───────── UI: condiciones (las dos vistas comparten estado) ─────────
+  function fillSelects() {
+    const E = eff();
+    for (const id of ['city', 'city2']) {
+      const sel = $(id);
+      const match = CITIES.find(c => c[1] === S.alt);
+      sel.innerHTML = CITIES.map(([n, a]) => `<option value="${a}">${esc(n)} · ${nf(a)} m</option>`).join('')
+        + (match ? '' : `<option value="custom">Otra · ${nf(S.alt)} m</option>`);
+      sel.value = match ? String(S.alt) : 'custom';
+    }
+    for (const id of ['sys', 'sys2']) {
+      $(id).innerHTML = Object.entries(SYSTEMS).filter(([, s]) => S.ninja || !s.ninja).map(([k, s]) => `<option value="${k}">${s.label}</option>`).join('');
+      $(id).value = E.sys;
+    }
+    const act = document.activeElement?.id;
+    [['alt', S.alt], ['alt2', S.alt], ['temp', S.temp], ['temp2', S.temp], ['limit', S.limit], ['limit2', S.limit]].forEach(([id, v]) => { if (act !== id) $(id).value = v; });
+    $('dfs').innerHTML = CATS.map(c => `<label>${c.name}<input class="num" data-df="${c.id}" inputmode="numeric" value="${S.df[c.id]}"></label>`).join('');
+  }
+  ['city', 'city2'].forEach(id => $(id).addEventListener('change', e => { if (e.target.value !== 'custom') { S.alt = +e.target.value; fillSelects(); update(); save(); } }));
+  ['sys', 'sys2'].forEach(id => $(id).addEventListener('change', e => { S.sys = e.target.value; fillSelects(); renderCats(); update(); save(); }));
+  [['alt', 'alt', 0, 5000], ['alt2', 'alt', 0, 5000], ['temp', 'temp', -10, 55], ['temp2', 'temp', -10, 55], ['limit', 'limit', 40, 100], ['limit2', 'limit', 40, 100]].forEach(([id, key, a, b]) => {
+    $(id).addEventListener('input', () => { const v = parse($(id).value); if (isFinite(v)) { S[key] = clamp(v, a, b); update(); save(); } });
+    $(id).addEventListener('blur', () => fillSelects());
+  });
+  $('dfs').addEventListener('input', e => { const k = e.target.dataset.df; if (!k) return; const v = parse(e.target.value); if (isFinite(v)) { S.df[k] = clamp(v, 0, 100); update(); save(); } });
+
+  // ───────── UI: listas de equipos ─────────
+  function renderCats() {
+    $('cats').innerHTML = CATS.map(c => `
+      <section class="card" data-cat="${c.id}">
+        <div class="cat-h"><span class="dot" style="background:${c.color}"></span><h2>${c.name}</h2><span class="sum" data-sum="${c.id}">0<small>W</small></span></div>
+        <div class="ihead"${S.items.some(i => i.cat === c.id) ? '' : ' hidden'}><span>Equipo</span><span>Cant.</span><span>W c/u</span><span class="nj">FP</span><span class="c">Voltaje</span><span class="nj c">Fase</span><span>Total</span><span></span></div>
+        <div class="items" data-items="${c.id}">${itemsHTML(c.id)}</div>
+        <div class="add">
+          <select data-add="${c.id}" aria-label="Agregar equipo de ${c.name}">
+            <option value="">＋ Agregar equipo de ${c.name.toLowerCase()}…</option>
+            ${c.lib.map((p, i) => `<option value="${i}">${esc(p.n)} · ${wLabel(p)}</option>`).join('')}
+            <option value="custom">Otro equipo (escribe tus datos)</option>
+          </select>
+        </div>
+      </section>`).join('');
+  }
+  const sysNow = () => SYSTEMS[eff().sys];
+  function itemsHTML(cat) {
+    const list = S.items.filter(i => i.cat === cat);
+    if (!list.length) return '<p class="empty">Sin equipos.</p>';
+    return list.map(i => `
+      <div class="item" data-id="${i.id}">
+        <input class="nm" data-f="n" value="${esc(i.n)}" aria-label="Nombre del equipo" autocomplete="off">
+        <label class="mini q"><span>Cant.</span><input class="num" data-f="q" value="${i.q}" inputmode="decimal" aria-label="Cantidad" autocomplete="off"></label>
+        <label class="mini w"><span>W c/u</span><input class="num${i.pa ? ' auto' : ''}" data-f="w" value="${effW(i)}"${i.pa ? ' title="Cambia con el tipo de evento"' : ''} inputmode="decimal" aria-label="Watts por equipo" autocomplete="off"></label>
+        <label class="mini pf nj"><span>FP</span><input class="num" data-f="pf" value="${i.pf}" inputmode="decimal" aria-label="Factor de potencia" autocomplete="off"></label>
+        <label class="mini v"><span>Voltaje</span><select data-f="v" aria-label="Voltaje de conexión">
+          ${(sysNow().ph === 1 ? ['1'] : ['1', '2', '3']).map(o => `<option value="${o}"${(i.v || '1') === o ? ' selected' : ''}>${vLabel(o, sysNow())}</option>`).join('')}
+        </select></label>
+        <label class="mini ph nj"><span>Fase</span>${(i.v || '1') === '3' || sysNow().ph === 1 ? '<span class="ph-all">Todas</span>' : `<select data-f="ph" aria-label="Fase">
+          ${((i.v || '1') === '2' ? ['A', 'L12', 'L23', 'L13'] : ['A', 'L1', 'L2', 'L3']).map(o => `<option value="${o}"${i.ph === o ? ' selected' : ''}>${o === 'A' ? 'Auto' : o.length === 3 ? 'L' + o[1] + '-L' + o[2] : o}</option>`).join('')}
+        </select>`}</label>
+        <span class="tot" data-tot="${i.id}"></span>
+        <button class="del" data-del="${i.id}" aria-label="Quitar ${esc(i.n)}" title="Quitar">✕</button>
+      </div>`).join('');
+  }
+  function refreshCat(cat) {
+    const box = document.querySelector(`[data-items="${cat}"]`);
+    box.innerHTML = itemsHTML(cat);
+    box.previousElementSibling.hidden = !S.items.some(i => i.cat === cat);
+  }
+
+  $('cats').addEventListener('change', e => {
+    const add = e.target.dataset.add;
+    if (add) {
+      const v = e.target.value; e.target.value = '';
+      if (v === '') return;
+      const p = v === 'custom' ? { n:'', w:100, pf:.9 } : CAT[add].lib[+v];
+      const it = { id:uid++, cat:add, n:p.n, q:1, w:p.w || 0, pf:p.pf, v:p.v || '1', ph:'A' };
+      if (p.m) it.m = 1; if (p.nl) it.nl = 1;
+      if (p.pa) { it.pa = 1; it.w8 = p.w8; it.w3 = p.w3; }
+      S.items.push(it);
+      refreshCat(add); update(); save();
+      const row = document.querySelector(`.item[data-id="${it.id}"]`);
+      const f = row?.querySelector(v === 'custom' ? '[data-f="n"]' : '[data-f="q"]');
+      if (f) { f.focus(); f.select(); }
+      return;
+    }
+    if (e.target.dataset.f === 'ph') {
+      const it = S.items.find(i => i.id === +e.target.closest('.item').dataset.id);
+      if (it) { it.ph = e.target.value; update(); save(); }
+    }
+    if (e.target.dataset.f === 'v') {
+      const it = S.items.find(i => i.id === +e.target.closest('.item').dataset.id);
+      if (it) { it.v = e.target.value; it.ph = 'A'; refreshCat(it.cat); update(); save(); }
+    }
+  });
+  $('cats').addEventListener('input', e => {
+    const f = e.target.dataset.f; if (!f || f === 'ph' || f === 'v') return;
+    const it = S.items.find(i => i.id === +e.target.closest('.item').dataset.id); if (!it) return;
+    if (f === 'n') it.n = e.target.value;
+    else { const v = parse(e.target.value); if (isFinite(v) && v >= 0) { it[f] = f === 'pf' ? clamp(v, .3, 1) : v; if (f === 'w' && it.pa) { it.pa = 0; e.target.classList.remove('auto'); e.target.removeAttribute('title'); } } }
+    update(); save();
+  });
+  $('cats').addEventListener('focusin', e => { if (e.target.classList.contains('num')) e.target.select(); });
+  $('cats').addEventListener('focusout', e => {
+    const f = e.target.dataset.f; if (!f || f === 'n' || f === 'ph' || f === 'v') return;
+    const it = S.items.find(i => i.id === +e.target.closest('.item')?.dataset.id);
+    if (it) e.target.value = f === 'w' ? effW(it) : it[f];
+  });
+  $('cats').addEventListener('click', e => {
+    const id = e.target.closest('[data-del]')?.dataset.del; if (!id) return;
+    const it = S.items.find(i => i.id === +id); if (!it) return;
+    S.items = S.items.filter(i => i !== it);
+    refreshCat(it.cat); update(); save();
+  });
+
+  $('reset').onclick = () => {
+    if (!S.items.length) return;
+    if (!confirm('¿Borrar todos los equipos y empezar un cálculo nuevo?')) return;
+    S.items = []; S.ev = ''; $('evName').value = '';
+    renderCats(); update(); save();
+  };
+
+  // ───────── UI: tipo de evento ─────────
+  function renderShows() {
+    $('shows').innerHTML = Object.entries(SHOWS).map(([k, v]) =>
+      `<button role="radio" aria-checked="${S.show === k}" class="${S.show === k ? 'on' : ''}" data-show="${k}"><b>${v.n}</b><span>${v.d}</span></button>`).join('');
+  }
+  $('shows').addEventListener('click', e => { const k = e.target.closest('[data-show]')?.dataset.show; if (!k) return; S.show = k; renderShows(); update(); save(); });
+  const modal = $('whyModal');
+  const openWhy = () => { modal.classList.add('open'); $('whyClose').focus(); };
+  const closeWhy = () => { modal.classList.remove('open'); $('whyBtn').focus(); };
+  $('whyBtn').onclick = openWhy;
+  $('whyClose').onclick = closeWhy;
+  modal.addEventListener('click', e => { if (e.target === modal) closeWhy(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeWhy(); });
+
+  // ───────── UI: tengo una planta ─────────
+  $('genChips').innerHTML = SIZES.filter(s => s >= 15).map(s => `<button data-kva="${s}">${s}</button>`).join('');
+  $('genChips').addEventListener('click', e => { const k = e.target.closest('[data-kva]')?.dataset.kva; if (!k) return; S.gen = +k; $('genKva').value = k; update(); save(); });
+  $('genKva').value = S.gen || '';
+  $('genKva').addEventListener('input', () => { const v = parse($('genKva').value); S.gen = v > 0 ? v : 0; update(); save(); });
+  $('genKva').addEventListener('focus', e => e.target.select());
+
+  // ───────── Render de resultados ─────────
+  function phaseBars(r, kva, target) {
+    if (!r.n) { target.innerHTML = ''; return; }
+    const A = kva > 0 ? genAmps(kva, r) : null;
+    const amps = r.phases.map(p => p.VA / r.sys.vln);
+    const scale = Math.max(...amps, A ? A.nom : 0) || 1;
+    target.innerHTML = r.phases.map((p, k) => {
+      const a = amps[k], over = A && a > A.safe;
+      const segs = CATS.map(c => `<i style="width:${(p.by[c.id] / r.sys.vln) / scale * 100}%;background:${c.color}"></i>`).join('');
+      const limL = A ? `<span class="lim" style="left:${A.safe / scale * 100}%" title="Límite seguro ${nfa(A.safe)} A"></span>` : '';
+      return `<div class="ph-row${over ? ' over' : ''}"><span class="lbl">${r.sys.ph === 1 ? 'F' : 'L' + (k + 1)}</span><div class="ph-track">${segs}${limL}</div><span class="amp">${nfa(a)} A${A ? `<small> / ${nfa(A.safe)}</small>` : ''}</span></div>`;
+    }).join('') + `<div class="legend">${CATS.filter(c => r.cats[c.id].VAd > 0).map(c => `<span><i style="background:${c.color}"></i>${c.name}</span>`).join('')}${A ? '<span>│ límite seguro</span>' : ''}</div>`;
+  }
+
+  function condText(r) {
+    const city = CITIES.find(c => c[1] === S.alt);
+    const lost = (1 - r.der) * 100;
+    return `${city ? city[0] : nf(S.alt) + ' m'}: la planta rinde ${nf(r.der * 100)}%${lost >= 0.5 ? ` (pierde ~${nf(lost)}% por altitud${r.E.temp > 30 ? ' y calor' : ''})` : ''}. Se calcula trabajándola a máximo <b>${nf(r.E.limit)}%</b>.`;
+  }
+
+  function notesFor(r, A) {
+    const N = [];
+    if (r.bind === 'kw') N.push(['', `Tu carga es casi toda electrónica (FP promedio ${nf(r.pfAvg, 2)}), así que el límite son los <b>kW</b>: las plantas dan 80% de sus kVA en kW.`]);
+    if (r.bind === 'ph') N.push(['warn', `La fase más cargada es la que define el tamaño. Balancea mejor las fases y podrías bajar de planta.`]);
+    if (r.sys.ph > 1 && r.imb > 15) N.push(['warn', `Desbalance de fases de <b>${nf(r.imb)}%</b>. Lo sano es menos de 10–15%.`]);
+    if (r.badV) N.push(['bad', `Tienes equipos de ${r.sys.vll === 127 ? '220 V' : 'dos fases'} o trifásicos, pero elegiste una planta monofásica de ${r.sys.vln} V: no se pueden conectar. Cambia a trifásico o revisa esos equipos.`]);
+    else if (r.has220) N.push(['', `Los equipos de ${r.sys.vll} V van entre dos fases: jalan menos amperes (A = VA ÷ ${r.sys.vll}) pero cargan las dos fases a la vez. Ya están considerados en el reparto.`]);
+    if (r.motors.length) {
+      const big = Math.max(...r.motors.map(m => m.kva));
+      const startKva = r.VA / 1000 + 5 * big;
+      const cap = A ? A.kvaDer : 0;
+      N.push([cap && startKva > cap ? 'bad' : 'warn', `Hay motores: al arrancar jalan hasta 6 veces su consumo${cap && startKva > cap ? `; el arranque (≈${nf(startKva)} kVA) supera la planta` : ''}. Mueve polipastos y prende aires <b>antes</b> de encender audio y luces, y de uno en uno.`]);
+    }
+    if (r.P > 0 && r.nlP / r.P > 0.7) N.push(['', `Más del 70% es carga electrónica (LED, clase D): genera armónicos. Pide planta con regulador electrónico (AVR digital) y no la trabajes al límite.`]);
+    if (r.size === null) N.push(['bad', `Pasa de 1,000 kVA: necesitas varias plantas sincronizadas o repartir el evento en varios tableros.`]);
+    if (r.n) N.push(['', `Pide la planta en potencia <b>prime</b> (continua), no standby, y audio en su propio tablero con la misma tierra que iluminación y video.`]);
+    return N;
+  }
+
+  function update() {
+    const r = compute();
+    // Sumas por categoría y por renglón
+    for (const c of CATS) { const el = document.querySelector(`[data-sum="${c.id}"]`); if (el) el.innerHTML = `${nf(r.cats[c.id].P)}<small>W</small>`; }
+    for (const it of S.items) { const el = document.querySelector(`[data-tot="${it.id}"]`); if (el) el.innerHTML = `${nf((it.q || 0) * effW(it))}<small> W</small>`;
+      if (it.pa) { const inp = document.querySelector(`.item[data-id="${it.id}"] [data-f="w"]`); if (inp && inp !== document.activeElement) inp.value = effW(it); } }
+
+    // Resultado principal
+    const hero = $('hero');
+    if (!r.n) {
+      hero.classList.add('zero'); $('heroBig').innerHTML = '—'; $('heroSub').textContent = 'Agrega equipos para calcular.';
+      ['sInst', 'sDem', 'sDemKva', 'sReq'].forEach(id => $(id).textContent = '—');
+    } else {
+      hero.classList.remove('zero');
+      $('heroBig').innerHTML = r.size ? `${r.size}<span>kVA</span>` : `+1,000<span>kVA</span>`;
+      const A = r.size ? genAmps(r.size, r) : null;
+      $('heroSub').innerHTML = A ? `${r.sys.label} · trabajaría al ${nf(r.req / r.size * r.E.limit)}% · hasta ${nfa(A.safe)} A por fase` : 'Varias plantas en paralelo';
+      $('sInst').innerHTML = `${nf(r.inst / 1000, 1)}<span>kW</span>`;
+      $('sDem').innerHTML = `${nf(r.P / 1000, 1)}<span>kW</span>`;
+      $('sDemKva').innerHTML = `${nf(r.VA / 1000, 1)}<span>kVA</span>`;
+      $('sReq').innerHTML = `${nf(r.req, 1)}<span>kVA</span>`;
+    }
+    phaseBars(r, r.size || 0, $('phases'));
+    const A1 = r.size ? { ...genAmps(r.size, r), kvaDer: r.size * r.der } : null;
+    $('notes').innerHTML = notesFor(r, A1).map(([c, t]) => `<li class="${c}">${t}</li>`).join('');
+    $('condHint').innerHTML = condText(r);
+    $('condHint2').innerHTML = condText(r);
+
+    // Tengo una planta
+    [...$('genChips').children].forEach(b => b.classList.toggle('on', +b.dataset.kva === S.gen));
+    const kva = S.gen || 0;
+    if (kva > 0) {
+      const G = genAmps(kva, r);
+      const u = r.sys.ph > 1 ? 'A <span>por fase</span>' : 'A';
+      $('gNom').innerHTML = `${nfa(G.nom)}<span>A</span>`;
+      $('gSafe').innerHTML = `${nfa(G.safe)}<span>A</span>`;
+      $('gSafeSub').textContent = `${r.sys.ph > 1 ? 'Por fase, ' : ''}trabajando al ${nf(r.E.limit)}% y con la pérdida por lugar.`;
+      $('gKw').innerHTML = `${nf(kva * 0.8, 1)}<span>kW</span>`;
+      $('gKwSafe').innerHTML = `${nf(kva * 0.8 * r.lim * r.der, 1)}<span>kW</span>`;
+      $('gWph').innerHTML = `${nf(G.safe * r.sys.vln * 0.95 / 1000, 1)}<span>kW a ${r.sys.vln} V</span>`;
+      $('gDer').innerHTML = `${nf((1 - r.der) * 100)}<span>%</span>`;
+      const gn = [];
+      gn.push(['', `Fórmula: <b>${nf(kva)} kVA × 1000 ÷ (${r.sys.ph > 1 ? '3 × ' : ''}${r.sys.vln} V) = ${nfa(G.nom)} A</b>${r.sys.ph > 1 ? ' por fase' : ''}.`]);
+      if (r.n) {
+        const amps = r.phases.map(p => p.VA / r.sys.vln), mx = Math.max(...amps);
+        const ok = mx <= G.safe;
+        gn.push([ok ? '' : 'bad', `Con tu lista de equipos la fase más cargada lleva <b>${nfa(mx)} A</b> de ${nfa(G.safe)} A seguros (${nf(mx / G.safe * 100)}%). ${ok ? 'Te alcanza.' : 'No te alcanza: sube de planta o quita carga.'}`]);
+        if (r.P / 1000 > kva * 0.8 * r.lim * r.der) gn.push(['bad', `Tu demanda real (${nf(r.P / 1000, 1)} kW) pasa los kW utilizables de esta planta.`]);
+      } else gn.push(['', 'Agrega tus equipos en «¿Qué planta rento?» y aquí verás si te alcanza fase por fase.']);
+      gn.push(['', `Nunca dejes el interruptor de la planta como única protección: cada circuito de 127 V con su breaker (15–20 A típicos).`]);
+      $('gNotes').innerHTML = gn.map(([c, t]) => `<li class="${c}">${t}</li>`).join('');
+      phaseBars(r, kva, $('gPhases'));
+    } else {
+      ['gNom', 'gSafe', 'gKw', 'gKwSafe', 'gWph', 'gDer'].forEach(id => $(id).textContent = '—');
+      $('gNotes').innerHTML = ''; $('gPhases').innerHTML = '';
+    }
+    window.__kva = r; // para depurar desde la consola
+  }
+
+  // ───────── Copiar e imprimir ─────────
+  function summaryText(r) {
+    const L = [];
+    L.push(`${S.ev ? S.ev + ' · ' : ''}Cálculo de planta de luz (faderlab.mx/kva)`);
+    for (const c of CATS) {
+      const list = S.items.filter(i => i.cat === c.id && i.q > 0 && effW(i) > 0);
+      if (!list.length) continue;
+      L.push(`\n${c.name.toUpperCase()} · ${nf(r.cats[c.id].P)} W`);
+      list.forEach(i => L.push(`  ${nf(i.q, i.q % 1 ? 1 : 0)} × ${i.n || 'Equipo'} · ${nf(effW(i))} W${(i.v || '1') !== '1' ? ' · ' + vLabel(i.v, r.sys) : ''} = ${nf(i.q * effW(i))} W`));
+    }
+    L.push(`\nTipo de evento: ${SHOWS[S.show].n}`);
+    L.push(`Instalado: ${nf(r.inst / 1000, 1)} kW · Demanda real: ${nf(r.P / 1000, 1)} kW / ${nf(r.VA / 1000, 1)} kVA`);
+    L.push(`Lugar: ${nf(S.alt)} m, rinde ${nf(r.der * 100)}% · trabajando a ${nf(r.E.limit)}% máx.`);
+    if (r.size) {
+      const A = genAmps(r.size, r);
+      L.push(`PLANTA SUGERIDA: ${r.size} kVA prime · ${r.sys.label}`);
+      L.push(`Límite seguro: ${nfa(A.safe)} A por fase`);
+      L.push('Carga por fase: ' + r.phases.map((p, k) => `${r.sys.ph === 1 ? 'F' : 'L' + (k + 1)} ${nfa(p.VA / r.sys.vln)} A`).join(' · '));
+    }
+    return L.join('\n');
+  }
+  $('copy').onclick = async () => {
+    const r = compute(), span = $('copy').querySelector('span');
+    try { await navigator.clipboard.writeText(summaryText(r)); span.textContent = 'Copiado'; }
+    catch (_) { span.textContent = 'No se pudo'; }
+    setTimeout(() => span.textContent = 'Copiar', 1400);
+  };
+  function buildSheet() {
+    const r = compute();
+    const A = r.size ? genAmps(r.size, r) : null;
+    const rows = CATS.map(c => {
+      const list = S.items.filter(i => i.cat === c.id && i.q > 0 && effW(i) > 0);
+      if (!list.length) return '';
+      return `<tr class="cat"><td colspan="5">${c.name}</td><td class="r">${nf(r.cats[c.id].P)} W</td></tr>` +
+        list.map(i => `<tr><td>${esc(i.n || 'Equipo')}</td><td class="r">${nf(i.q, i.q % 1 ? 1 : 0)}</td><td class="r">${nf(effW(i))} W</td><td class="r">${nf(i.pf, 2)}</td><td class="r">${vLabel(i.v || '1', r.sys)}</td><td class="r">${nf(i.q * effW(i))} W</td></tr>`).join('');
+    }).join('');
+    const d = new Date().toLocaleDateString('es-MX', { day:'numeric', month:'long', year:'numeric' });
+    $('sheet').innerHTML = `
+      <h1>${esc(S.ev || 'Cálculo de planta de luz')}</h1>
+      <p class="sub">${d} · ${esc(SHOWS[S.show].n)} · ${esc(r.sys.label)} · ${nf(S.alt)} m de altitud · faderlab.mx/kva</p>
+      <div class="box"><small>Planta sugerida</small><b>${r.size ? r.size + ' kVA' : (r.n ? '+1,000 kVA' : '—')}</b><small>prime / continua</small></div>
+      <div class="box"><small>Límite seguro por fase</small><b>${A ? nfa(A.safe) + ' A' : '—'}</b><small>a ${nf(r.E.limit)}% · rinde ${nf(r.der * 100)}%</small></div>
+      <div class="box"><small>Demanda real</small><b>${nf(r.P / 1000, 1)} kW</b><small>${nf(r.VA / 1000, 1)} kVA · instalado ${nf(r.inst / 1000, 1)} kW</small></div>
+      <table><thead><tr><th>Equipo</th><th class="r">Cant.</th><th class="r">W c/u</th><th class="r">FP</th><th class="r">Voltaje</th><th class="r">Total</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Sin equipos</td></tr>'}</tbody></table>
+      ${r.n ? `<p><b>Carga por fase:</b> ${r.phases.map((p, k) => `${r.sys.ph === 1 ? 'F' : 'L' + (k + 1)} ${nfa(p.VA / r.sys.vln)} A`).join(' · ')}</p>` : ''}
+      <ul>${notesFor(r, A ? { ...A, kvaDer: r.size * r.der } : null).map(([, t]) => `<li>${t}</li>`).join('')}</ul>
+      <p class="foot">Audio calculado para «${esc(SHOWS[S.show].n)}». Simultaneidad: ${CATS.map(c => `${c.name} ${nf(r.E.df[c.id])}%`).join(' · ')}. Guía de planeación; confirma con el electricista responsable y las fichas técnicas reales.</p>`;
+  }
+  $('print').onclick = () => { buildSheet(); window.print(); };
+  window.addEventListener('beforeprint', buildSheet);
+
+  // ───────── Arranque ─────────
+  applyMode();
+  renderShows();
+  renderCats();
+  update();
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+</body>
+</html>
