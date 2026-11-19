@@ -323,6 +323,15 @@ dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px
   </form>
 </dialog>
 
+<dialog id="busyDlg">
+  <form method="dialog">
+    <h3>Sala en uso</h3>
+    <p style="line-height:1.5;margin:10px 0 0">Esta sala ya se está usando en otra computadora.</p>
+    <p class="hint" style="font-size:14px;line-height:1.5">Si necesitas operar otra sala al mismo tiempo, contacta a FaderLab para contratar un servicio adicional.</p>
+    <menu><a class="ghost" id="busyContact" target="_blank" rel="noopener" style="border-color:var(--accent);color:var(--accent)">Escribir por Instagram</a><button class="ghost" value="ok">Cerrar</button></menu>
+  </form>
+</dialog>
+
 <dialog id="cfg">
   <form method="dialog">
     <h3>Configuración</h3>
@@ -443,7 +452,7 @@ $("#createBtn").onclick = async () => {
     catch (err) {
       if (!err.data?.busy) throw err;
       // la sala del cliente está en uso en otra computadora
-      if (!err.data.canForce) { alert(err.message); log(err.message, true); return; }
+      if (!err.data.canForce) { showBusy(err.data); log(err.message, true); return; }
       if (!confirm(`La sala de ${cli?.name || "este cliente"} se está ${err.data.live ? "transmitiendo" : "operando"} en otra computadora.\n\nSi la reemplazas, esa transmisión se corta y el público pasa a la sala nueva. ¿Reemplazarla?`)) return;
       r = await api("/room", { ...req, force: true });
     }
@@ -1149,6 +1158,13 @@ $("#cfCodeNew").onclick = async () => {
     loadCodes(editing.slug);
   } catch (err) { $("#cfErr").textContent = err.message; }
 };
+
+function showBusy(d) {
+  const c = d.contact || { label: "Instagram @joeaudiopro", url: "https://ig.me/m/joeaudiopro" };
+  $("#busyContact").href = c.url;
+  $("#busyContact").textContent = /instagram/i.test(c.label) ? "Escribir por Instagram · " + c.label.replace(/^instagram\s*/i, "") : "Contactar · " + c.label;
+  $("#busyDlg").showModal();
+}
 
 /* ---------- quién soy: maestro u operador de un cliente ---------- */
 async function loadMe() {

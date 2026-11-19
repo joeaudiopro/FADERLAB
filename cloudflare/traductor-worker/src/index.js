@@ -185,7 +185,9 @@ async function createSession(body, env, cors) {
   return json({ value: data.value, expires_at: data.expires_at }, 200, cors);
 }
 
-const BUSY_MSG = "Esta sala ya se está usando en otra computadora. Si necesitas operar otra sala al mismo tiempo, contacta a FaderLab para contratar un servicio adicional.";
+// Contacto de ventas que ven los operadores (un solo lugar para cambiarlo: agrega teléfono cuando lo haya).
+const CONTACT = { label: "Instagram @joeaudiopro", url: "https://ig.me/m/joeaudiopro" };
+const BUSY_MSG = `Esta sala ya se está usando en otra computadora. Si necesitas operar otra sala al mismo tiempo, contacta a FaderLab para contratar un servicio adicional: ${CONTACT.label}.`;
 
 async function createRoom(body, env, cors, who = { role: "master" }) {
   // sala de un cliente: valida vigencia y usa su nombre si no viene título
@@ -201,7 +203,7 @@ async function createRoom(body, env, cors, who = { role: "master" }) {
     if (client.room) {
       const cur = await env.ROOMS.get(env.ROOMS.idFromName(client.room)).status();
       if (cur && !cur.ended && cur.host && !(who.role === "master" && body.force)) {
-        return json({ error: BUSY_MSG, busy: true, canForce: who.role === "master", room: client.room, live: cur.live }, 409, cors);
+        return json({ error: BUSY_MSG, busy: true, canForce: who.role === "master", room: client.room, live: cur.live, contact: CONTACT }, 409, cors);
       }
     }
   }
