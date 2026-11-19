@@ -2,643 +2,372 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0a0a0a">
-<title>Traductor Simultáneo · FaderLab</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0e">
+<title>Traductor simultáneo para iglesias y eventos · FaderLab</title>
+<meta name="description" content="Traducción simultánea en vivo para iglesias, congresos y eventos: el público escanea un QR y sigue el mensaje en su celular con subtítulos y voz traducida. Sin cabinas ni receptores.">
+<link rel="canonical" href="https://faderlab.mx/traductor/">
+<meta property="og:title" content="Traductor simultáneo · FaderLab">
+<meta property="og:description" content="El público escanea un QR y sigue tu evento en su idioma, con subtítulos y voz en su celular.">
+<meta property="og:url" content="https://faderlab.mx/traductor/">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=DM+Sans:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
-/* Mismo lenguaje visual que la consola: negro, ámbar como acento, cian para la señal traducida. */
+/* Página de presentación del traductor. Misma familia visual que el menú de faderlab.mx. */
 :root{
-  --bg:#0a0a0a; --bg2:#111; --bg3:#181818; --border:#242424;
-  --accent:#e8a020; --accent2:#20c8e8; --green:#20e880; --red:#e82020;
-  --text:#d4d4d4; --dim:#6a6a6a;
-  --f-head:"Bebas Neue",Impact,sans-serif; --f-mono:"Share Tech Mono",ui-monospace,monospace; --f-ui:"DM Sans",system-ui,sans-serif;
-  --subs-size:44px; --subs-bg:#000;
+  --ink:#0b0c0e; --chrome:#16181c; --chrome-2:#20232a; --line:#2e323a;
+  --text:#ece8df; --muted:#9097a1; --soft:#c5c1b8;
+  --tally:#ffb020; --tally-dim:rgba(255,176,32,.14); --cyan:#4fd6ff;
+  --f-digits:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-ui:"Barlow",system-ui,-apple-system,sans-serif;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:15px}
-button,select,input{font:inherit;color:inherit}
+html,body{margin:0}
+html{scroll-behavior:smooth}
+body{background:var(--ink);color:var(--text);font-family:var(--f-ui);font-size:17px;line-height:1.5;-webkit-tap-highlight-color:transparent;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:32px 32px}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(36px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
 
-/* ---------- barra superior ---------- */
-header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:5}
-.brand{font-family:var(--f-head);font-size:26px;letter-spacing:.06em;line-height:1}
-.brand b{color:var(--accent);font-weight:400}
-.brand span{color:var(--dim);font-size:18px;margin-left:6px}
-.pill{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;padding:5px 10px;border:1px solid var(--border);border-radius:999px;display:flex;align-items:center;gap:8px;text-transform:uppercase}
-.pill i{width:8px;height:8px;border-radius:50%;background:var(--dim)}
-.pill.live i{background:var(--red);box-shadow:0 0 10px var(--red)}
-.pill.live{color:#fff;border-color:#5a1a1a}
-.pill.busy i{background:var(--accent);animation:blink 1s infinite}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:44px}
+.brand{font-family:var(--f-digits);font-weight:700;font-size:22px;letter-spacing:.14em;text-decoration:none}
+.brand span{color:var(--tally)}
+.top nav{display:flex;gap:18px}
+.top nav a{font-family:var(--f-digits);font-weight:600;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-decoration:none}
+.top nav a:hover{color:var(--text)}
+@media (max-width:480px){.top nav a.hide-s{display:none}}
+
+.kicker{font-family:var(--f-digits);font-weight:600;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--tally);margin:0 0 12px}
+h1,h2,h3{font-family:var(--f-digits);font-weight:600;line-height:1.02;margin:0}
+h1{font-size:clamp(40px,6vw,68px);letter-spacing:.003em}
+h2{font-size:clamp(30px,4vw,44px);margin-bottom:10px}
+h3{font-size:24px;margin-bottom:6px}
+.lead{font-size:clamp(17px,1.9vw,20px);color:var(--soft);max-width:560px;margin:18px 0 26px}
+.sub{color:var(--muted);max-width:640px;margin:0 0 26px}
+
+.btn{font:inherit;font-weight:600;font-size:16px;color:var(--text);background:var(--chrome-2);border:1px solid var(--line);border-radius:12px;padding:12px 18px;min-height:50px;cursor:pointer;display:inline-flex;gap:9px;align-items:center;justify-content:center;text-decoration:none}
+.btn:hover{border-color:#4a4f58}
+.btn.go{background:var(--tally);color:#1a1205;border-color:var(--tally)}
+.btn.go:hover{filter:brightness(1.06)}
+.btn svg{width:20px;height:20px;flex:none}
+.btn:focus-visible{outline:2px solid var(--tally);outline-offset:2px}
+.ctas{display:flex;gap:10px;flex-wrap:wrap}
+.note{font-size:14px;color:var(--muted);margin-top:12px}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center;margin-bottom:84px}
+@media (max-width:860px){.hero{grid-template-columns:1fr;gap:36px}}
+
+/* Teléfono de muestra */
+.phone{justify-self:center;width:min(300px,82vw);aspect-ratio:9/18.5;border-radius:42px;background:#050607;border:1px solid #3a3f48;padding:12px;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 6px #111317}
+.screen{height:100%;border-radius:32px;overflow:hidden;display:flex;flex-direction:column;background:linear-gradient(180deg,#1a1430,#0e0c18);position:relative}
+.notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:84px;height:22px;border-radius:99px;background:#050607}
+.scr-head{padding:42px 18px 14px;text-align:center;border-bottom:1px solid rgba(255,255,255,.08)}
+.logo-ph{width:46px;height:46px;border-radius:12px;margin:0 auto 8px;background:#7c5cff;display:grid;place-items:center;font-family:var(--f-digits);font-weight:700;font-size:20px;color:#fff}
+.scr-head b{display:block;font-family:var(--f-digits);font-size:19px;letter-spacing:.02em}
+.scr-head small{color:#a9a3c4;font-size:12px}
+.pill{display:inline-flex;gap:6px;align-items:center;margin-top:10px;font-size:12px;font-weight:600;background:rgba(124,92,255,.22);color:#d9d0ff;border-radius:99px;padding:4px 10px}
+.live{width:7px;height:7px;border-radius:50%;background:#ff4d5e;animation:blink 1.4s infinite}
 @keyframes blink{50%{opacity:.25}}
-.clock{font-family:var(--f-mono);color:var(--dim);font-size:13px}
-.spacer{flex:1}
-.ghost{background:none;border:1px solid var(--border);border-radius:6px;padding:7px 12px;cursor:pointer;font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
-.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.subs{flex:1;padding:16px 18px;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;overflow:hidden}
+.subs p{margin:0;font-size:16px;line-height:1.35;color:#8f89ab;transition:color .4s}
+.subs p:last-child{color:#fff}
+.scr-foot{padding:12px 16px 18px;display:flex;align-items:center;gap:10px;border-top:1px solid rgba(255,255,255,.08)}
+.listen{flex:1;border-radius:14px;background:#7c5cff;color:#fff;font-weight:600;font-size:14px;padding:11px;text-align:center;display:flex;gap:8px;justify-content:center;align-items:center}
+.bars{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+.bars i{width:3px;background:#fff;border-radius:2px;animation:eq 1s infinite ease-in-out}
+.bars i:nth-child(2){animation-delay:.2s}.bars i:nth-child(3){animation-delay:.4s}.bars i:nth-child(4){animation-delay:.1s}
+@keyframes eq{0%,100%{height:4px}50%{height:14px}}
+@media (prefers-reduced-motion:reduce){.live,.bars i{animation:none}.bars i{height:10px}}
 
-/* ---------- layout ---------- */
-main{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:16px;padding:16px 20px 28px;max-width:1500px;margin:0 auto}
-@media (max-width:900px){main{grid-template-columns:1fr;padding:12px 16px 24px}header{padding:10px 16px;flex-wrap:wrap}}
-.col{display:flex;flex-direction:column;gap:12px;min-width:0}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 14px 16px}
-.card h2{font-family:var(--f-head);font-weight:400;font-size:20px;letter-spacing:.08em;margin:0 0 10px;display:flex;align-items:center;gap:8px}
-.card h2 small{font-family:var(--f-mono);font-size:11px;color:var(--dim);letter-spacing:.06em;margin-left:auto;text-transform:uppercase}
-.field{display:flex;flex-direction:column;gap:5px;margin-top:10px}
-.field>label,.lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
-select,input[type=text],input[type=password],input[type=url]{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;min-width:0}
-select:focus,input:focus{outline:none;border-color:var(--accent)}
-.row{display:flex;gap:10px;align-items:center}
-.row>*{flex:1;min-width:0}
-.check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;cursor:pointer}
-.check input{accent-color:var(--accent);width:16px;height:16px}
-.hint{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.4}
+/* Secciones */
+section{margin-bottom:84px}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr))}
+.card{background:var(--chrome);border:1px solid var(--line);border-radius:18px;padding:24px}
+.card p{margin:0;color:var(--soft)}
+.step{font-family:var(--f-digits);font-weight:700;font-size:15px;letter-spacing:.14em;color:var(--tally);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.step span{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--tally-dim);border:1px solid rgba(255,176,32,.45);font-size:17px;letter-spacing:0}
+.ico{width:48px;height:48px;border-radius:13px;background:var(--chrome-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--tally);margin-bottom:16px}
+.ico svg{width:26px;height:26px}
 
-/* fader horizontal + medidor */
-.fader{display:grid;grid-template-columns:80px 1fr 56px;align-items:center;gap:10px;margin-top:12px}
-.fader output{font-family:var(--f-mono);font-size:12px;text-align:right;color:var(--text)}
-input[type=range]{width:100%;accent-color:var(--accent)}
-.meter{height:10px;border-radius:3px;background:#050505;border:1px solid var(--border);overflow:hidden;position:relative;margin-top:10px}
-.meter i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,#1a8f50 0%,var(--green) 65%,var(--accent) 85%,var(--red) 100%);background-size:var(--w,300px) 100%;transition:width .05s linear}
-.meter.cyan i{background:linear-gradient(90deg,#0f6070,var(--accent2) 80%,#fff)}
-.meter-row{display:grid;grid-template-columns:80px 1fr 56px;gap:10px;align-items:center}
-.meter-row .meter{margin-top:0}
-.meter-row output{font-family:var(--f-mono);font-size:12px;text-align:right;color:var(--dim)}
+.uses{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px}
+.use{border-left:3px solid var(--tally);padding:4px 0 4px 18px}
+.use h3{font-size:22px}
+.use p{margin:0;color:var(--muted);font-size:16px}
 
-/* botón principal */
-#goBtn{width:100%;padding:16px;border-radius:10px;border:1px solid #6b4a10;background:linear-gradient(#2a1d06,#1a1204);color:var(--accent);font-family:var(--f-head);font-size:28px;letter-spacing:.12em;cursor:pointer}
-#goBtn:hover{border-color:var(--accent)}
-#goBtn.on{background:linear-gradient(#3a0c0c,#200606);border-color:var(--red);color:#fff}
-#goBtn:disabled{opacity:.5;cursor:wait}
+.langs{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.langs span{font-size:15px;font-weight:500;background:var(--chrome-2);border:1px solid var(--line);border-radius:99px;padding:6px 13px}
+.langs span.alt{color:var(--tally);border-color:rgba(255,176,32,.45);background:var(--tally-dim)}
 
-/* ---------- subtítulos ---------- */
-.stage{position:relative;background:var(--subs-bg);border:1px solid var(--border);border-radius:10px;min-height:300px;display:flex;flex-direction:column;justify-content:flex-end;padding:28px 32px;overflow:hidden}
-.stage .empty{position:absolute;inset:0;display:grid;place-items:center;color:#3a3a3a;font-family:var(--f-mono);font-size:13px;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:20px}
-.subs{font-family:var(--f-ui);font-weight:500;font-size:var(--subs-size);line-height:1.22;color:#fff;text-wrap:pretty;text-shadow:0 2px 8px rgba(0,0,0,.6)}
-.subs .prev{color:rgba(255,255,255,.45)}
-.subs .src{display:block;font-size:.42em;color:rgba(255,255,255,.55);margin-top:.6em;font-weight:400}
-.stage.center{justify-content:center;text-align:center}
-.stage-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
-.stage-tools .field{margin-top:0;flex:1;min-width:140px}
-.history{max-height:260px;overflow:auto;font-size:14px;line-height:1.5}
-.history p{margin:0 0 8px;padding-bottom:8px;border-bottom:1px dashed var(--border)}
-.history p small{display:block;color:var(--dim);font-size:12px}
-.history time{font-family:var(--f-mono);font-size:11px;color:var(--dim);margin-right:8px}
-.log{font-family:var(--f-mono);font-size:11px;color:var(--dim);max-height:110px;overflow:auto;white-space:pre-wrap;margin-top:8px}
-.log .err{color:#ff7a6a}
+.plan{display:flex;flex-direction:column}
+.plan .tag{align-self:flex-start;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#1a1205;background:var(--tally);border-radius:99px;padding:3px 10px;margin-bottom:14px}
+.plan .tag.alt{color:var(--tally);background:var(--tally-dim);border:1px solid rgba(255,176,32,.45)}
+.plan ul{margin:14px 0 22px;padding:0;list-style:none;display:grid;gap:9px}
+.plan li{display:flex;gap:10px;color:var(--soft)}
+.plan li::before{content:"";flex:none;width:18px;height:18px;margin-top:3px;background:var(--tally);-webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>') center/contain no-repeat;mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>') center/contain no-repeat}
+.plan .btn{margin-top:auto}
 
-/* ---------- diálogo configuración ---------- */
-dialog{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:20px;width:min(440px,calc(100vw - 32px))}
-dialog::backdrop{background:rgba(0,0,0,.7)}
-dialog h3{font-family:var(--f-head);font-weight:400;font-size:24px;letter-spacing:.08em;margin:0 0 4px}
-dialog menu{display:flex;justify-content:flex-end;gap:10px;padding:0;margin:18px 0 0}
+.needs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.need{display:flex;gap:14px;align-items:flex-start}
+.need .ico{margin:0;flex:none}
+.need p{margin:2px 0 0;color:var(--muted);font-size:16px}
+.need b{display:block;color:var(--text);font-size:17px}
 
-/* ---------- vista solo subtítulos (ventana para proyector) ---------- */
-body.solo header,body.solo main{display:none}
-#soloStage{display:none}
-body.solo #soloStage{display:flex;position:fixed;inset:0;border:none;border-radius:0;padding:4vh 6vw}
-body.solo{cursor:none;background:var(--subs-bg)}
+details{background:var(--chrome);border:1px solid var(--line);border-radius:14px;padding:0 20px;margin-bottom:10px}
+summary{cursor:pointer;list-style:none;font-weight:600;font-size:17px;padding:18px 28px 18px 0;position:relative}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";position:absolute;right:0;top:50%;transform:translateY(-50%);font-family:var(--f-digits);font-size:26px;color:var(--tally)}
+details[open] summary::after{content:"–"}
+details p{margin:0 0 18px;color:var(--soft)}
+
+.final{text-align:center;background:var(--chrome);border:1px solid var(--line);border-radius:22px;padding:44px 24px}
+.final .ctas{justify-content:center}
+.final .sub{margin:0 auto 24px}
+
+footer{padding-top:22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+footer strong{color:var(--text);font-weight:600}
+footer nav{display:flex;gap:16px;flex-wrap:wrap}
+footer a{text-decoration:none}
+footer a:hover{color:var(--text)}
 </style>
 </head>
 <body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/">FADER<span>LAB</span></a>
+    <nav><a class="hide-s" href="#como">Cómo funciona</a><a class="hide-s" href="#planes">Planes</a><a href="/">Herramientas</a></nav>
+  </header>
 
-<header>
-  <div class="brand"><b>FADER</b>LAB<span>· TRADUCTOR</span></div>
-  <div class="pill" id="status"><i></i><span>Detenido</span></div>
-  <div class="clock" id="clock">00:00:00</div>
-  <div class="spacer"></div>
-  <a class="ghost" href="evento/" style="text-decoration:none" title="Varios idiomas a la vez; el público los sigue en su teléfono con un código QR">Modo evento (QR)</a>
-  <button class="ghost" id="popBtn" title="Abre una ventana solo con subtítulos para proyector o segunda pantalla">Ventana de subtítulos</button>
-  <button class="ghost" id="cfgBtn">Configuración</button>
-</header>
-
-<main>
-  <div class="col">
-    <section class="card">
-      <h2>Entrada <small id="inInfo">—</small></h2>
-      <div class="field"><label for="inDev">Interfaz / dispositivo</label><select id="inDev"></select></div>
-      <div class="field"><label for="inCh">Canal de entrada</label><select id="inCh"><option value="0">Ch 1</option></select></div>
-      <div class="fader"><span class="lbl">Ganancia</span><input type="range" id="inGain" min="-24" max="24" step="0.5" value="0"><output id="inGainOut">0.0 dB</output></div>
-      <div class="meter-row" style="margin-top:10px"><span class="lbl">Nivel</span><div class="meter"><i id="inMeter"></i></div><output id="inDb">-∞</output></div>
-      <div class="hint" id="permHint">Pulsa <b>Iniciar</b> o <a href="#" id="permLink" style="color:var(--accent)">permite el acceso al audio</a> para ver los nombres de tus dispositivos.</div>
-    </section>
-
-    <section class="card">
-      <h2>Traducción</h2>
-      <div class="field"><label for="lang">Traducir a</label><select id="lang"></select></div>
-      <div class="hint">El idioma de origen se detecta solo (70+ idiomas). Lo que ya venga en el idioma de salida no se vuelve a decir: por eso conviene dejar algo de original en la mezcla.</div>
-      <div class="field"><label for="nr">Reducción de ruido</label>
-        <select id="nr">
-          <option value="off">Apagada (línea / mezcla limpia)</option>
-          <option value="near_field">Campo cercano (micrófono de mano o diadema)</option>
-          <option value="far_field">Campo lejano (micrófono ambiental / sala)</option>
-        </select>
+  <div class="hero">
+    <div>
+      <p class="kicker">Traductor simultáneo</p>
+      <h1>Que cada persona escuche tu evento en su idioma.</h1>
+      <p class="lead">Tu público escanea un código QR y sigue el mensaje en su celular, con subtítulos en vivo y voz traducida en sus audífonos. No hacen falta cabinas, intérpretes por idioma ni renta de receptores.</p>
+      <div class="ctas">
+        <a class="btn go" data-contact href="https://ig.me/m/joeaudiopro" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>
+          Cotizar mi evento
+        </a>
+        <a class="btn" href="#como">Cómo funciona</a>
       </div>
-      <label class="check"><input type="checkbox" id="srcTx" checked> Transcribir también el original</label>
-    </section>
+      <p class="note">Te respondo por Instagram en <b>@joeaudiopro</b>.</p>
+    </div>
 
-    <section class="card">
-      <h2>Salida <small id="outInfo">—</small></h2>
-      <div class="field"><label for="outDev">Dispositivo de salida</label><select id="outDev"></select></div>
-      <div class="field"><label for="outCh">Canales de salida</label><select id="outCh"><option value="s0">Ch 1-2</option></select></div>
-      <div class="fader"><span class="lbl">Traducción</span><input type="range" id="tGain" min="-60" max="12" step="0.5" value="0"><output id="tGainOut">0.0 dB</output></div>
-      <div class="fader"><span class="lbl">Original</span><input type="range" id="oGain" min="-60" max="0" step="0.5" value="-60"><output id="oGainOut">OFF</output></div>
-      <label class="check"><input type="checkbox" id="duck" checked> Bajar el original mientras habla la traducción (−12 dB)</label>
-      <div class="meter-row" style="margin-top:12px"><span class="lbl">Traducida</span><div class="meter cyan"><i id="tMeter"></i></div><output id="tDb">-∞</output></div>
-      <label class="check"><input type="checkbox" id="mute"> Silenciar salida de audio (solo subtítulos)</label>
-    </section>
-
-    <button id="goBtn">INICIAR</button>
+    <div class="phone" aria-label="Ejemplo de lo que ve el público en su celular" role="img">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="scr-head">
+          <div class="logo-ph">TU</div>
+          <b>Tu logo y tus colores</b>
+          <small>Servicio dominical</small><br>
+          <span class="pill"><span class="live"></span><span id="demoLang">English</span></span>
+        </div>
+        <div class="subs" id="demoSubs" aria-hidden="true"></div>
+        <div class="scr-foot"><div class="listen"><span class="bars"><i></i><i></i><i></i><i></i></span>Escuchando</div></div>
+      </div>
+    </div>
   </div>
 
-  <div class="col">
-    <section class="card">
-      <h2>Subtítulos <small>vista previa · lo que ve el público</small></h2>
-      <div class="stage" id="stage">
-        <div class="empty" id="stageEmpty">Los subtítulos aparecen aquí</div>
-        <div class="subs" id="subs"></div>
+  <section id="como">
+    <p class="kicker">Cómo funciona</p>
+    <h2>Tres pasos, sin instalar nada</h2>
+    <p class="sub">Se conecta a tu sistema de audio como cualquier otra salida de la consola.</p>
+    <div class="grid g3">
+      <div class="card">
+        <div class="step"><span>1</span>CONECTA</div>
+        <h3>El audio sale de tu consola</h3>
+        <p>Una salida de la consola entra a una computadora con internet. Ahí se elige a qué idiomas traducir y se arranca el servicio.</p>
       </div>
-      <div class="stage-tools">
-        <div class="field"><label for="subsSize">Tamaño</label><input type="range" id="subsSize" min="20" max="120" value="44"></div>
-        <div class="field"><label for="subsBg">Fondo</label>
-          <select id="subsBg"><option value="#000000">Negro</option><option value="#00b140">Verde (chroma)</option><option value="#0047bb">Azul (chroma)</option></select>
-        </div>
-        <div class="field"><label for="subsPos">Posición</label>
-          <select id="subsPos"><option value="bottom">Abajo</option><option value="center">Centro</option></select>
-        </div>
-        <label class="check" style="margin-top:18px"><input type="checkbox" id="subsSrc"> Mostrar original</label>
-        <button class="ghost" id="fsBtn" style="margin-top:18px">Pantalla completa</button>
+      <div class="card">
+        <div class="step"><span>2</span>ESCANEA</div>
+        <h3>El público abre el QR</h3>
+        <p>Lo proyectas en pantalla o lo imprimes. Se abre en el navegador del celular, sin descargar ninguna app, y cada quien elige su idioma.</p>
       </div>
-    </section>
+      <div class="card">
+        <div class="step"><span>3</span>ESCUCHA</div>
+        <h3>Subtítulos y voz en vivo</h3>
+        <p>La traducción llega con apenas unos segundos de retraso: se lee en pantalla o se escucha con audífonos.</p>
+      </div>
+    </div>
+  </section>
 
-    <section class="card">
-      <h2>Transcripción <small><a href="#" id="dlBtn" style="color:var(--accent)">Descargar .txt</a> · <a href="#" id="clrBtn" style="color:var(--dim)">Borrar</a></small></h2>
-      <div class="history" id="history"><p style="color:var(--dim);border:none">Aún no hay nada.</p></div>
-      <div class="log" id="log"></div>
-    </section>
-  </div>
-</main>
+  <section>
+    <p class="kicker">Para quién</p>
+    <h2>Ideal cuando tu público habla más de un idioma</h2>
+    <p class="sub">Para recibir visitantes, misiones o invitados internacionales sin montar un equipo de interpretación.</p>
+    <div class="uses">
+      <div class="use"><h3>Iglesias</h3><p>Servicios cada semana para miembros y visitantes de otros países, con un QR fijo en la entrada.</p></div>
+      <div class="use"><h3>Congresos y conferencias</h3><p>Ponentes internacionales y asistentes de varios países en la misma sala.</p></div>
+      <div class="use"><h3>Eventos corporativos</h3><p>Convenciones, capacitaciones y lanzamientos con equipos de distintos países.</p></div>
+      <div class="use"><h3>Eventos sociales</h3><p>Bodas y celebraciones con familia que viene de otro país.</p></div>
+    </div>
+  </section>
 
-<div class="stage" id="soloStage"><div class="subs" id="soloSubs"></div></div>
+  <section>
+    <p class="kicker">Qué incluye</p>
+    <h2>Hecho para usarse en vivo</h2>
+    <div class="grid g3" style="margin-top:22px">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
+        <h3>Varios idiomas a la vez</h3>
+        <p>Hasta 8 idiomas al mismo tiempo en el mismo evento, además del idioma original transcrito.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.5V11a7.2 7.2 0 0 1 14.4 0v1.5"/><rect x="3.3" y="12" width="3.4" height="5.8" rx="1"/><rect x="17.3" y="12" width="3.4" height="5.8" rx="1"/></svg></div>
+        <h3>Voz y subtítulos</h3>
+        <p>Cada persona decide si lee o escucha. La voz traducida se oye en sus propios audífonos.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-.5-.2-.9-.5-1.2-.3-.4-.5-.7-.5-1.2 0-.9.7-1.5 1.6-1.5H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7.5" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg></div>
+        <h3>Con tu marca</h3>
+        <p>Tu logo, tus colores y un mensaje de bienvenida en la página que abre el público. El QR también lleva tu logo.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3h-3"/></svg></div>
+        <h3>Un QR que no cambia</h3>
+        <p>Para iglesias y espacios fijos el QR es siempre el mismo: lo imprimes una vez y sirve cada semana.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+        <h3>Lo opera tu técnico</h3>
+        <p>Tu equipo de audio recibe su propio código de acceso y opera solo tus servicios desde la consola del lugar.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20h4v-2a3 3 0 0 0-5.4-1.8M17 20H7m10 0v-2c0-.7-.1-1.3-.4-1.8M7 20H3v-2a3 3 0 0 1 5.4-1.8M7 20v-2c0-.7.1-1.3.4-1.8m0 0a5 5 0 0 1 9.2 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg></div>
+        <h3>Sin cobro por persona</h3>
+        <p>Da igual si te siguen 10 o 500 personas: el precio depende de los idiomas y las horas de servicio.</p>
+      </div>
+    </div>
 
-<dialog id="cfg">
-  <form method="dialog">
-    <h3>Configuración</h3>
-    <div class="hint">Se guarda solo en este navegador.</div>
-    <div class="field"><label for="cfgUrl">URL del Worker</label><input type="url" id="cfgUrl" placeholder="https://traductor-api.faderlab.mx"></div>
-    <div class="field"><label for="cfgCode">Código de acceso</label><input type="password" id="cfgCode" autocomplete="off"></div>
-    <menu><button class="ghost" value="cancel">Cancelar</button><button class="ghost" value="ok" id="cfgOk" style="border-color:var(--accent);color:var(--accent)">Guardar</button></menu>
-  </form>
-</dialog>
+    <div class="card" style="margin-top:14px">
+      <h3>Idiomas disponibles</h3>
+      <div class="langs">
+        <span>English</span><span>Español</span><span>Português</span><span>Français</span><span>Deutsch</span><span>Italiano</span><span>日本語</span><span>中文</span><span>한국어</span><span>Русский</span><span>हिन्दी</span><span>Bahasa Indonesia</span><span>Tiếng Việt</span><span class="alt">+ idioma original transcrito</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="planes">
+    <p class="kicker">Planes</p>
+    <h2>Por mes o por evento</h2>
+    <p class="sub">El precio depende de cuántos idiomas necesitas y cuántas horas de servicio. Escríbeme y te preparo una cotización.</p>
+    <div class="grid g2">
+      <div class="card plan">
+        <span class="tag">Mensual</span>
+        <h3>Iglesias y espacios fijos</h3>
+        <p>Para servicios o reuniones cada semana.</p>
+        <ul>
+          <li>QR fijo con tu logo, para imprimir una sola vez</li>
+          <li>Página con tu marca y mensaje de bienvenida</li>
+          <li>Horas de servicio incluidas cada mes</li>
+          <li>Códigos de acceso para tus técnicos</li>
+          <li>Te ayudo con la primera instalación</li>
+        </ul>
+        <a class="btn go" data-contact href="https://ig.me/m/joeaudiopro" target="_blank" rel="noopener">Cotizar plan mensual</a>
+      </div>
+      <div class="card plan">
+        <span class="tag alt">Por evento</span>
+        <h3>Congresos, conferencias y eventos</h3>
+        <p>Para una fecha o un fin de semana.</p>
+        <ul>
+          <li>QR del evento con tu logo, activo solo esas fechas</li>
+          <li>Página con la marca del evento</li>
+          <li>Los idiomas que tu público necesite</li>
+          <li>Lo opera tu técnico o lo operamos nosotros</li>
+          <li>Prueba previa para verificar el audio</li>
+        </ul>
+        <a class="btn" data-contact href="https://ig.me/m/joeaudiopro" target="_blank" rel="noopener">Cotizar un evento</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Qué necesitas</p>
+    <h2>Lo que debe tener el lugar</h2>
+    <div class="needs" style="margin-top:22px">
+      <div class="need">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 3v18M12 3v18M18 3v18" stroke-opacity=".4"/><rect x="3.5" y="13.5" width="5" height="3.2" rx=".6"/><rect x="9.5" y="6" width="5" height="3.2" rx=".6"/><rect x="15.5" y="10" width="5" height="3.2" rx=".6"/></svg></div>
+        <div><b>Una salida limpia de la consola</b><p>Una mezcla solo de voz (sin música de fondo) da la mejor traducción.</p></div>
+      </div>
+      <div class="need">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg></div>
+        <div><b>Una computadora con interfaz de audio</b><p>Con Chrome o Edge. La que ya usas en cabina normalmente sirve.</p></div>
+      </div>
+      <div class="need">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg></div>
+        <div><b>Internet estable</b><p>En la computadora y para el público (wifi del lugar o sus datos móviles).</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Preguntas frecuentes</p>
+    <h2>Antes de contratar</h2>
+    <div style="margin-top:22px">
+      <details><summary>¿Es un intérprete humano?</summary><p>No. La traducción la hace inteligencia artificial en tiempo real. Funciona muy bien con una voz clara, aunque puede fallar con nombres propios o términos muy específicos. Por eso recomendamos hacer una prueba antes del evento.</p></details>
+      <details><summary>¿Cuánto retraso tiene?</summary><p>Unos pocos segundos: la traducción espera a que la frase tenga sentido antes de decirla, igual que un intérprete.</p></details>
+      <details><summary>¿El público tiene que descargar algo?</summary><p>No. Escanean el QR con la cámara y se abre una página en su navegador. Para escuchar la voz solo necesitan audífonos.</p></details>
+      <details><summary>¿Cuántas personas lo pueden usar?</summary><p>No hay un límite por persona: el mismo servicio llega a todos los celulares conectados. El precio depende de los idiomas y las horas, no del público.</p></details>
+      <details><summary>¿Necesito que vayan a instalarlo?</summary><p>No es necesario. Tu técnico lo opera desde su computadora con un código propio. En la primera instalación te ayudo a dejarlo listo.</p></details>
+      <details><summary>¿Puedo probarlo antes?</summary><p>Sí. Escríbeme y hacemos una prueba con tu audio para que veas cómo se escucha antes de decidir.</p></details>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2>¿Tu próximo evento necesita traducción?</h2>
+    <p class="sub">Cuéntame qué tipo de evento es, cuántos idiomas necesitas y la fecha. Te respondo con una cotización.</p>
+    <div class="ctas">
+      <a class="btn go" data-contact href="https://ig.me/m/joeaudiopro" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg>
+        Escribir a @joeaudiopro
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <div>Hecho en México por <strong>Joe Mendoza</strong> · Ingeniero de audio y docente</div>
+    <nav>
+      <a href="/">Herramientas FaderLab</a>
+      <a href="operador/">Acceso para técnicos</a>
+      <a href="evento/">Consola</a>
+    </nav>
+  </footer>
+</div>
 
 <script>
-"use strict";
-const $ = (s) => document.querySelector(s);
-const DEFAULT_WORKER = "https://traductor-api.faderlab.mx";
-const OPENAI_CALLS = "https://api.openai.com/v1/realtime/translations/calls";
-const LANGS = [["es","Español"],["en","Inglés"],["pt","Portugués"],["fr","Francés"],["de","Alemán"],["it","Italiano"],["ja","Japonés"],["zh","Chino"],["ko","Coreano"],["ru","Ruso"],["hi","Hindi"],["id","Indonesio"],["vi","Vietnamita"]];
-const DUCK_DB = -12, DUCK_THRESH = 0.01; // umbral RMS (~ −40 dBFS) de la traducción para activar el ducking
-const PAUSE_MS = 2200;                    // pausa que cierra un renglón de subtítulo
-const CLEAR_MS = 9000;                    // silencio que limpia la pantalla
-
-const store = {
-  get(k, d) { try { const v = localStorage.getItem("trad." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem("trad." + k, JSON.stringify(v)); } catch {} },
-};
-const bc = ("BroadcastChannel" in window) ? new BroadcastChannel("faderlab-traductor") : null;
-const SOLO = new URLSearchParams(location.search).get("vista") === "subtitulos";
-
-/* ================= Subtítulos (compartido por ambas vistas) ================= */
-const subsState = { prev: "", cur: "", src: "", style: { size: 44, bg: "#000000", pos: "bottom", showSrc: false } };
-function esc(s) { return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
-function tail(s, n) { if (s.length <= n) return s; const cut = s.slice(-n); const i = cut.indexOf(" "); return "…" + (i > 0 ? cut.slice(i + 1) : cut); }
-function renderSubs(el, stage, scale) {
-  const st = subsState.style;
-  stage.style.setProperty("--subs-bg", st.bg);
-  document.documentElement.style.setProperty("--subs-bg", st.bg);
-  el.style.fontSize = scale ? `calc(${st.size}px * ${scale})` : st.size + "px";
-  stage.classList.toggle("center", st.pos === "center");
-  const room = Math.max(60, Math.round(9000 / st.size)); // menos caracteres cuanto más grande la letra
-  let html = "";
-  if (subsState.prev && subsState.cur.length < room * 0.6) html += `<span class="prev">${esc(tail(subsState.prev, Math.round(room * 0.6)))}</span> `;
-  html += esc(tail(subsState.cur, room));
-  if (st.showSrc && subsState.src) html += `<span class="src">${esc(tail(subsState.src, Math.round(room * 1.4)))}</span>`;
-  el.innerHTML = html;
-}
-
-if (SOLO) {
-  document.body.classList.add("solo");
-  document.title = "Subtítulos · FaderLab";
-  const draw = () => renderSubs($("#soloSubs"), $("#soloStage"), Math.max(1, innerWidth / 1100));
-  bc?.addEventListener("message", (e) => { if (e.data?.type === "subs") { Object.assign(subsState, e.data.state); draw(); } });
-  bc?.postMessage({ type: "hello" });
-  addEventListener("resize", draw);
-  addEventListener("dblclick", () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.());
-} else {
-  initMain();
-}
-
-/* ================= Consola principal ================= */
-function initMain() {
-  // ---------- estado ----------
-  let ctx = null;
-  const A = {}; // nodos de audio
-  let inStream = null, pc = null, dc = null, remoteEl = null;
-  let running = false, stopping = false, reconnectTries = 0, reconnectTimer = null, discTimer = null;
-  let startedAt = 0, lastDelta = 0;
-  const history = []; // {t, text, src}
-  let segSrc = "";
-
-  // ---------- utilidades UI ----------
-  const log = (msg, err) => {
-    const d = document.createElement("div");
-    if (err) d.className = "err";
-    d.textContent = new Date().toLocaleTimeString() + "  " + msg;
-    $("#log").prepend(d);
-    while ($("#log").childNodes.length > 60) $("#log").lastChild.remove();
-  };
-  const setStatus = (kind, text) => {
-    $("#status").className = "pill " + kind;
-    $("#status span").textContent = text;
-  };
-  const db2g = (db) => db <= -60 ? 0 : Math.pow(10, db / 20);
-  const fmtDb = (db, off) => (off && db <= -60) ? "OFF" : (db > 0 ? "+" : "") + Number(db).toFixed(1) + " dB";
-
-  // ---------- controles persistentes ----------
-  $("#lang").innerHTML = LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join("");
-  const persisted = ["lang", "nr", "inGain", "tGain", "oGain", "subsSize", "subsBg", "subsPos"];
-  const checks = ["srcTx", "duck", "mute", "subsSrc"];
-  persisted.forEach((id) => { const v = store.get(id, null); if (v !== null) $("#" + id).value = v; });
-  checks.forEach((id) => { const v = store.get(id, null); if (v !== null) $("#" + id).checked = v; });
-  if (store.get("lang", null) === null) $("#lang").value = "en";
-  persisted.forEach((id) => $("#" + id).addEventListener("change", () => store.set(id, $("#" + id).value)));
-  checks.forEach((id) => $("#" + id).addEventListener("change", () => store.set(id, $("#" + id).checked)));
-
-  // ---------- subtítulos (vista previa + ventana) ----------
-  function pushSubs() {
-    const s = subsState.style;
-    s.size = +$("#subsSize").value; s.bg = $("#subsBg").value; s.pos = $("#subsPos").value; s.showSrc = $("#subsSrc").checked;
-    $("#stageEmpty").style.display = (subsState.cur || subsState.prev) ? "none" : "";
-    renderSubs($("#subs"), $("#stage"), 0);
-    bc?.postMessage({ type: "subs", state: { prev: subsState.prev, cur: subsState.cur, src: subsState.src, style: { ...s } } });
-  }
-  ["subsSize", "subsBg", "subsPos", "subsSrc"].forEach((id) => $("#" + id).addEventListener("input", pushSubs));
-  bc?.addEventListener("message", (e) => { if (e.data?.type === "hello") pushSubs(); });
-  pushSubs();
-
-  $("#popBtn").onclick = () => window.open(location.pathname + "?vista=subtitulos", "faderlab-subs", "width=1280,height=400");
-  $("#fsBtn").onclick = () => $("#stage").requestFullscreen?.();
-
-  function onTranslated(delta) {
-    lastDelta = performance.now();
-    subsState.cur += delta;
-    pushSubs();
-  }
-  function onSource(delta) { subsState.src += delta; segSrc += delta; pushSubs(); }
-  function closeSegment() {
-    const text = subsState.cur.trim();
-    if (!text) return;
-    history.push({ t: new Date(), text, src: segSrc.trim() });
-    addHistory(history[history.length - 1]);
-    subsState.prev = text; subsState.cur = ""; subsState.src = ""; segSrc = "";
-    pushSubs();
-  }
-  setInterval(() => {
-    if (!lastDelta) return;
-    const idle = performance.now() - lastDelta;
-    if (subsState.cur && idle > PAUSE_MS) closeSegment();
-    if (!subsState.cur && subsState.prev && idle > CLEAR_MS) { subsState.prev = ""; subsState.src = ""; pushSubs(); }
-  }, 300);
-
-  function addHistory(h) {
-    const box = $("#history");
-    if (history.length === 1) box.innerHTML = "";
-    const p = document.createElement("p");
-    p.innerHTML = `<time>${h.t.toLocaleTimeString()}</time>${esc(h.text)}` + (h.src ? `<small>${esc(h.src)}</small>` : "");
-    box.appendChild(p);
-    box.scrollTop = box.scrollHeight;
-  }
-  $("#dlBtn").onclick = (e) => {
-    e.preventDefault();
-    if (subsState.cur) closeSegment();
-    const txt = history.map((h) => `[${h.t.toLocaleTimeString()}] ${h.text}` + (h.src ? `\n    (${h.src})` : "")).join("\n\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([txt], { type: "text/plain;charset=utf-8" }));
-    a.download = `traduccion-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.txt`;
-    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
-  $("#clrBtn").onclick = (e) => { e.preventDefault(); history.length = 0; $("#history").innerHTML = '<p style="color:var(--dim);border:none">Aún no hay nada.</p>'; };
-
-  // ---------- configuración ----------
-  const cfg = () => ({ url: (store.get("workerUrl", "") || DEFAULT_WORKER).replace(/\/+$/, ""), code: store.get("code", "") });
-  $("#cfgBtn").onclick = () => { $("#cfgUrl").value = store.get("workerUrl", "") || DEFAULT_WORKER; $("#cfgCode").value = store.get("code", ""); $("#cfg").showModal(); };
-  $("#cfg").addEventListener("close", () => {
-    if ($("#cfg").returnValue !== "ok") return;
-    store.set("workerUrl", $("#cfgUrl").value.trim()); store.set("code", $("#cfgCode").value);
-    log("Configuración guardada.");
-  });
-
-  // ---------- dispositivos ----------
-  async function listDevices() {
-    const devs = await navigator.mediaDevices.enumerateDevices();
-    const fill = (sel, kind, key) => {
-      const want = store.get(key, sel.value || "");
-      const list = devs.filter((d) => d.kind === kind);
-      sel.innerHTML = list.map((d, i) => `<option value="${d.deviceId}">${esc(d.label || (kind === "audioinput" ? "Entrada " : "Salida ") + (i + 1))}</option>`).join("");
-      if (list.some((d) => d.deviceId === want)) sel.value = want;
-    };
-    fill($("#inDev"), "audioinput", "inDev");
-    fill($("#outDev"), "audiooutput", "outDev");
-    if (devs.some((d) => d.label)) $("#permHint").style.display = "none";
-    if (!$("#outDev").options.length) $("#outDev").innerHTML = '<option value="">Salida del sistema</option>';
-  }
-  $("#permLink").onclick = async (e) => {
-    e.preventDefault();
-    try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach((t) => t.stop()); await listDevices(); }
-    catch (err) { log("Sin permiso de audio: " + err.message, true); }
-  };
-  navigator.mediaDevices.addEventListener?.("devicechange", listDevices);
-  listDevices();
-
-  // ---------- grafo de audio ----------
-  function ensureCtx() {
-    if (ctx) return;
-    ctx = new AudioContext({ latencyHint: "interactive" });
-    // Señal mono a mandar a OpenAI
-    A.inSel = ctx.createGain();
-    A.inSel.channelCount = 1; A.inSel.channelCountMode = "explicit";
-    A.inGain = ctx.createGain();
-    A.inAn = ctx.createAnalyser(); A.inAn.fftSize = 1024;
-    A.send = ctx.createMediaStreamDestination(); A.send.channelCount = 1;
-    A.inSel.connect(A.inGain); A.inGain.connect(A.inAn); A.inGain.connect(A.send);
-    // Mezcla de salida: traducción + original (con ducking)
-    A.tMono = ctx.createGain(); A.tMono.channelCount = 1; A.tMono.channelCountMode = "explicit";
-    A.tGain = ctx.createGain();
-    A.tAn = ctx.createAnalyser(); A.tAn.fftSize = 1024;
-    A.oGain = ctx.createGain(); A.oGain.gain.value = 0;
-    A.outMono = ctx.createGain(); A.outMono.channelCount = 1; A.outMono.channelCountMode = "explicit";
-    A.tMono.connect(A.tAn); A.tMono.connect(A.tGain); A.tGain.connect(A.outMono);
-    A.inGain.connect(A.oGain); A.oGain.connect(A.outMono);
-    buildOutput();
-    applyLevels();
-    requestAnimationFrame(meterLoop);
-  }
-
-  function buildOutput() {
-    try { A.merger?.disconnect(); } catch {}
-    try { A.outMono.disconnect(); } catch {}
-    const dest = ctx.destination;
-    const max = Math.max(2, dest.maxChannelCount || 2);
-    dest.channelCount = max; dest.channelCountMode = "explicit"; dest.channelInterpretation = "discrete";
-    A.merger = ctx.createChannelMerger(max);
-    A.merger.connect(dest);
-    // opciones: pares estéreo y canales sueltos
-    const sel = $("#outCh"), want = store.get("outCh", sel.value || "s0");
-    let html = "";
-    for (let i = 0; i + 1 < max; i += 2) html += `<option value="s${i}">Ch ${i + 1}-${i + 2} (estéreo)</option>`;
-    for (let i = 0; i < max; i++) html += `<option value="m${i}">Ch ${i + 1} (mono)</option>`;
-    sel.innerHTML = html;
-    if ([...sel.options].some((o) => o.value === want)) sel.value = want;
-    $("#outInfo").textContent = max + " canales";
-    routeOutput();
-  }
-  function routeOutput() {
-    if (!ctx) return;
-    try { A.outMono.disconnect(); } catch {}
-    const v = $("#outCh").value || "s0", ch = +v.slice(1);
-    A.outMono.connect(A.merger, 0, ch);
-    if (v[0] === "s") A.outMono.connect(A.merger, 0, ch + 1);
-  }
-  $("#outCh").addEventListener("change", () => { store.set("outCh", $("#outCh").value); routeOutput(); });
-
-  $("#outDev").addEventListener("change", async () => {
-    store.set("outDev", $("#outDev").value);
-    if (ctx) await applySink();
-  });
-  async function applySink() {
-    const id = $("#outDev").value;
-    if (!ctx.setSinkId) { log("Este navegador no permite elegir salida desde Web Audio; usa Chrome o Edge.", true); return; }
-    try { await ctx.setSinkId(id || ""); buildOutput(); log("Salida: " + ($("#outDev").selectedOptions[0]?.text || "sistema")); }
-    catch (err) { log("No pude abrir la salida: " + err.message, true); }
-  }
-
-  async function openInput() {
-    ensureCtx();
-    closeInput();
-    const id = $("#inDev").value;
-    inStream = await navigator.mediaDevices.getUserMedia({ audio: {
-      deviceId: id ? { exact: id } : undefined,
-      echoCancellation: false, noiseSuppression: false, autoGainControl: false,
-      channelCount: { ideal: 32 },
-    } });
-    await listDevices();
-    const track = inStream.getAudioTracks()[0];
-    if (id) $("#inDev").value = id;
-    const n = Math.max(1, track.getSettings().channelCount || 2);
-    A.inSrc = ctx.createMediaStreamSource(inStream);
-    A.split = ctx.createChannelSplitter(n);
-    A.inSrc.connect(A.split);
-    const sel = $("#inCh"), want = store.get("inCh", sel.value || "0");
-    let html = "";
-    for (let i = 0; i < n; i++) html += `<option value="${i}">Ch ${i + 1}</option>`;
-    for (let i = 0; i + 1 < n; i += 2) html += `<option value="${i}+">Ch ${i + 1}+${i + 2} (suma)</option>`;
-    sel.innerHTML = html;
-    if ([...sel.options].some((o) => o.value === want)) sel.value = want;
-    $("#inInfo").textContent = n + (n === 1 ? " canal" : " canales");
-    routeInput();
-    track.addEventListener("ended", () => { log("La entrada se desconectó.", true); if (running) stop(); });
-  }
-  function closeInput() {
-    try { A.split?.disconnect(); A.inSrc?.disconnect(); } catch {}
-    inStream?.getTracks().forEach((t) => t.stop());
-    inStream = null;
-  }
-  function routeInput() {
-    if (!A.split) return;
-    try { A.split.disconnect(); } catch {}
-    const v = $("#inCh").value, ch = parseInt(v, 10) || 0;
-    A.split.connect(A.inSel, ch);
-    A.inSel.gain.value = 1;
-    if (v.endsWith("+")) { A.split.connect(A.inSel, ch + 1); A.inSel.gain.value = 0.5; }
-  }
-  $("#inCh").addEventListener("change", () => { store.set("inCh", $("#inCh").value); routeInput(); });
-  $("#inDev").addEventListener("change", async () => {
-    store.set("inDev", $("#inDev").value);
-    if (ctx && inStream) { try { await openInput(); log("Entrada: " + $("#inDev").selectedOptions[0]?.text); } catch (err) { log("No pude abrir la entrada: " + err.message, true); } }
-  });
-
-  function applyLevels() {
-    const ig = +$("#inGain").value, tg = +$("#tGain").value, og = +$("#oGain").value;
-    $("#inGainOut").textContent = fmtDb(ig); $("#tGainOut").textContent = fmtDb(tg, true); $("#oGainOut").textContent = fmtDb(og, true);
-    if (!ctx) return;
-    const now = ctx.currentTime;
-    A.inGain.gain.setTargetAtTime(db2g(ig), now, 0.02);
-    A.tGain.gain.setTargetAtTime($("#mute").checked ? 0 : db2g(tg), now, 0.02);
-    A.oBase = $("#mute").checked ? 0 : db2g(og);
-  }
-  ["inGain", "tGain", "oGain"].forEach((id) => $("#" + id).addEventListener("input", applyLevels));
-  $("#mute").addEventListener("change", applyLevels);
-  applyLevels();
-
-  // medidores + ducking
-  const buf = new Float32Array(1024);
-  let ducked = null;
-  function rms(an) { an.getFloatTimeDomainData(buf); let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i]; return Math.sqrt(s / buf.length); }
-  function showMeter(bar, out, r) {
-    const db = r > 0 ? 20 * Math.log10(r) : -Infinity;
-    const pct = Math.max(0, Math.min(100, (db + 60) / 60 * 100));
-    bar.style.width = pct + "%";
-    bar.style.setProperty("--w", (bar.parentElement.clientWidth || 300) + "px");
-    out.textContent = isFinite(db) && db > -60 ? db.toFixed(0) + " dB" : "-∞";
-  }
-  function meterLoop() {
-    const ri = rms(A.inAn), rt = rms(A.tAn);
-    showMeter($("#inMeter"), $("#inDb"), ri);
-    showMeter($("#tMeter"), $("#tDb"), rt);
-    const duck = $("#duck").checked && rt > DUCK_THRESH;
-    const target = (A.oBase || 0) * (duck ? db2g(DUCK_DB) : 1);
-    if (target !== ducked) { A.oGain.gain.setTargetAtTime(target, ctx.currentTime, duck ? 0.05 : 0.6); ducked = target; }
-    if (running && startedAt) {
-      const s = Math.floor((Date.now() - startedAt) / 1000);
-      $("#clock").textContent = [s / 3600, (s % 3600) / 60, s % 60].map((x) => String(Math.floor(x)).padStart(2, "0")).join(":");
+// Demo del teléfono: renglones que aparecen como llegarían en vivo, en varios idiomas.
+(() => {
+  const DEMO = [
+    ["English", ["Good morning, and welcome to everyone joining us today.", "We are so glad you are here with us.", "Let's open our hearts to today's message."]],
+    ["Português", ["Bom dia e bem-vindos a todos que estão conosco hoje.", "Estamos muito felizes por vocês estarem aqui.", "Vamos abrir o coração para a mensagem de hoje."]],
+    ["한국어", ["좋은 아침입니다. 오늘 함께해 주신 모든 분들을 환영합니다.", "여러분이 이곳에 함께해 주셔서 정말 기쁩니다.", "오늘의 말씀에 마음을 열어 봅시다."]],
+  ];
+  const box = document.getElementById("demoSubs"), lang = document.getElementById("demoLang");
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let li = 0;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  async function run() {
+    for (;;) {
+      const [name, lines] = DEMO[li % DEMO.length]; li++;
+      lang.textContent = name; box.innerHTML = "";
+      for (const line of lines) {
+        const p = document.createElement("p"); box.appendChild(p);
+        if (still) { p.textContent = line; await sleep(1500); continue; }
+        const words = line.split(" ");
+        for (let i = 0; i < words.length; i++) { p.textContent = words.slice(0, i + 1).join(" "); await sleep(words.length > 6 ? 170 : 260); }
+        await sleep(900);
+      }
+      await sleep(2200);
     }
-    requestAnimationFrame(meterLoop);
   }
-
-  // ---------- sesión de traducción (WebRTC) ----------
-  async function connect() {
-    const { url, code } = cfg();
-    if (!code) { $("#cfgBtn").click(); const e = new Error("Falta el código de acceso (Configuración)."); e.fatal = true; throw e; }
-    setStatus("busy", reconnectTries ? "Reconectando" : "Conectando");
-    const r = await fetch(url + "/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Access-Code": code },
-      body: JSON.stringify({ targetLanguage: $("#lang").value, noiseReduction: $("#nr").value, sourceTranscript: $("#srcTx").checked }),
-    });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok || !data.value) { const e = new Error(data.error || "El Worker respondió " + r.status); e.fatal = [400, 401, 403, 500].includes(r.status); throw e; }
-
-    const conn = new RTCPeerConnection();
-    pc = conn;
-    conn.addTrack(A.send.stream.getAudioTracks()[0], A.send.stream);
-    conn.ontrack = (e) => attachRemote(e.streams[0] || new MediaStream([e.track]));
-    const ch = conn.createDataChannel("oai-events");
-    dc = ch;
-    ch.onmessage = (e) => onEvent(e.data);
-    ch.onclose = () => { if (pc === conn) dropped("canal de eventos cerrado"); };
-    conn.onconnectionstatechange = () => {
-      if (pc !== conn) return;
-      const s = conn.connectionState;
-      if (s === "connected") {
-        clearTimeout(discTimer);
-        reconnectTries = 0;
-        setStatus("live", "En vivo · " + $("#lang").selectedOptions[0].text);
-        log("Conectado.");
-      } else if (s === "failed" || s === "closed") dropped("conexión " + s);
-      else if (s === "disconnected") { clearTimeout(discTimer); discTimer = setTimeout(() => { if (pc === conn && conn.connectionState === "disconnected") dropped("sin red"); }, 4000); }
-    };
-    const offer = await conn.createOffer();
-    await conn.setLocalDescription(offer);
-    const sdp = await fetch(OPENAI_CALLS, {
-      method: "POST",
-      headers: { Authorization: "Bearer " + data.value, "Content-Type": "application/sdp" },
-      body: offer.sdp,
-    });
-    const answer = await sdp.text();
-    if (!sdp.ok) throw new Error("OpenAI " + sdp.status + ": " + answer.slice(0, 200));
-    if (pc !== conn) return; // se detuvo mientras conectaba
-    await conn.setRemoteDescription({ type: "answer", sdp: answer });
-  }
-
-  function attachRemote(stream) {
-    // Chrome solo entrega audio WebRTC a Web Audio si un <audio> lo está "reproduciendo" (silenciado).
-    if (!remoteEl) { remoteEl = new Audio(); remoteEl.muted = true; remoteEl.autoplay = true; }
-    remoteEl.srcObject = stream;
-    remoteEl.play().catch(() => {});
-    try { A.tSrc?.disconnect(); } catch {}
-    A.tSrc = ctx.createMediaStreamSource(stream);
-    A.tSrc.connect(A.tMono);
-  }
-
-  const seen = new Set();
-  function onEvent(raw) {
-    let ev; try { ev = JSON.parse(raw); } catch { return; }
-    const t = ev.type || "";
-    if (t === "session.output_transcript.delta") onTranslated(ev.delta || "");
-    else if (t === "session.input_transcript.delta") onSource(ev.delta || "");
-    else if (t === "error" || ev.error) log("OpenAI: " + (ev.error?.message || JSON.stringify(ev).slice(0, 200)), true);
-    else if (!seen.has(t)) { seen.add(t); log("evento: " + t); }
-  }
-
-  function closePc() {
-    const old = pc; pc = null; dc = null;
-    clearTimeout(discTimer);
-    try { old?.getSenders().forEach((s) => s.replaceTrack?.(null)); } catch {}
-    try { old?.close(); } catch {}
-  }
-
-  function dropped(why) {
-    if (!running || stopping) return;
-    closePc();
-    log("Se cayó la sesión (" + why + ").", true);
-    scheduleReconnect();
-  }
-  function scheduleReconnect() {
-    clearTimeout(reconnectTimer);
-    if (reconnectTries >= 10) { log("No pude reconectar después de 10 intentos.", true); stop(); return; }
-    const wait = [500, 1000, 2000, 4000, 8000][Math.min(reconnectTries, 4)];
-    reconnectTries++;
-    setStatus("busy", "Reconectando");
-    reconnectTimer = setTimeout(async () => {
-      try { await connect(); }
-      catch (err) { log(err.message, true); if (err.fatal) stop(); else scheduleReconnect(); }
-    }, wait);
-  }
-
-  // Cambiar idioma u opciones en vivo = nueva sesión (cada sesión tiene un solo idioma de salida)
-  ["lang", "nr", "srcTx"].forEach((id) => $("#" + id).addEventListener("change", () => {
-    if (!running) return;
-    closeSegment();
-    log("Reiniciando sesión con la nueva configuración…");
-    closePc(); reconnectTries = 0;
-    connect().catch((err) => { log(err.message, true); if (err.fatal) stop(); else scheduleReconnect(); });
-  }));
-
-  async function start() {
-    if (!cfg().code) { log("Escribe tu código de acceso en Configuración y vuelve a pulsar INICIAR.", true); $("#cfgBtn").click(); return; }
-    $("#goBtn").disabled = true;
-    try {
-      ensureCtx();
-      await ctx.resume();
-      await openInput();
-      await applySink();
-      running = true; stopping = false; reconnectTries = 0; startedAt = Date.now();
-      $("#goBtn").textContent = "DETENER"; $("#goBtn").classList.add("on");
-      await connect();
-    } catch (err) {
-      log(err.message, true);
-      if (running && !err.fatal && err.name !== "NotAllowedError") scheduleReconnect();
-      else stop();
-    } finally { $("#goBtn").disabled = false; }
-  }
-  function stop() {
-    stopping = true; running = false;
-    clearTimeout(reconnectTimer);
-    closePc();
-    closeInput();
-    try { A.tSrc?.disconnect(); } catch {}
-    if (remoteEl) remoteEl.srcObject = null;
-    closeSegment();
-    setStatus("", "Detenido");
-    $("#goBtn").textContent = "INICIAR"; $("#goBtn").classList.remove("on");
-  }
-  $("#goBtn").onclick = () => running ? stop() : start();
-  addEventListener("beforeunload", (e) => { if (running) { e.preventDefault(); e.returnValue = ""; } });
-
-  if (!cfg().code) log("Primero abre Configuración y escribe el código de acceso del Worker.");
-}
+  run();
+})();
 </script>
 </body>
 </html>
