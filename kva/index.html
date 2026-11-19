@@ -106,8 +106,25 @@ body.ninja .ihead .nj,body.ninja .item .nj{display:block}
 body.ninja .conds label.nj{display:grid}
 .empty{font-size:14px;color:#5d636d;padding:4px 2px}
 
-.add{display:flex;gap:6px;margin-top:10px}
-.add select{flex:1;font-size:14px}
+.add{display:grid;gap:6px;margin-top:10px}
+.add select{width:100%;font-size:14px}
+/* Buscador de modelos reales (biblioteca.js) */
+.find{position:relative}
+.find input{width:100%;font-size:14px;padding-left:34px}
+.find > svg{position:absolute;left:11px;top:12px;width:16px;height:16px;color:var(--muted);pointer-events:none}
+.res{display:grid;gap:4px;margin-top:6px;max-height:320px;overflow:auto;overscroll-behavior:contain}
+.res button{justify-content:space-between;text-align:left;font-weight:500;font-size:14px;min-height:40px;padding:6px 10px;background:var(--chrome-2)}
+.res button:hover,.res button.hi{border-color:var(--tally)}
+.res button b{font-weight:600}
+.res button small{font-family:var(--f-digits);font-size:16px;font-weight:600;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.res button.pa small{color:var(--tally)}
+.res .tp{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
+.res p{margin:2px;font-size:13px;color:#5d636d}
+.res .disc,.disc{font-size:11px;color:#5d636d;line-height:1.35}
+.item .src{display:none;grid-column:1/-1;font-size:12.5px;color:var(--muted);padding:0 4px 2px}
+.item .src a{color:#c9a8ff}
+.item .src .est{color:var(--tally)}
+body.ninja .item:hover .src,body.ninja .item:focus-within .src,body.ninja .item.tap .src{display:block}
 
 @media (max-width:620px){
   .ihead{display:none}
@@ -378,7 +395,9 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     </div>
   </details>
 
-  <footer>FaderLab · Herramientas para producción de eventos</footer>
+  <footer>FaderLab · Herramientas para producción de eventos
+    <p class="disc" style="margin:6px auto 0;max-width:640px">Los consumos de los modelos por marca se recopilaron de fichas técnicas y manuales de los fabricantes; algunos provienen de copias que circulan en internet (distribuidores, rentadoras y sitios espejo de manuales). Pueden tener errores: confirma con la placa del equipo.</p>
+  </footer>
 </div>
 
 <div class="modal" id="whyModal" role="dialog" aria-modal="true" aria-labelledby="whyTitle">
@@ -392,7 +411,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       <li><b>Máximo:</b> tono continuo a full. En un show real no pasa, pero es lo que dice la placa.</li>
     </ul>
     <h4>Mismo equipo, distinto evento</h4>
-    <p>10 amplificadores clase D de 4 canales (genéricos):</p>
+    <p>10 amplificadores clase D de 4 canales (genéricos, de instalación o gira chica):</p>
     <div class="ex">
       <div><small>Conferencia o culto</small><b>10 kW</b></div>
       <div><small>Concierto</small><b>17 kW</b></div>
@@ -412,6 +431,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
 
 <div id="sheet"></div>
 
+<script src="biblioteca.js"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -426,8 +446,9 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
       { n:'Bocina line array activa (por caja)', w8:400, w3:900, pf:.95, nl:1, pa:1 },
       { n:'Subwoofer activo 18"', w8:500, w3:1200, pf:.95, nl:1, pa:1 },
       { n:'Bocina activa 12"/15" (top o monitor)', w8:200, w3:450, pf:.95, nl:1, pa:1 },
-      { n:'Amplificador clase D 4 canales', w8:1000, w3:2400, pf:.95, nl:1, pa:1 },
-      { n:'Amplificador clase AB (antiguo)', w8:900, w3:1800, pf:.7, pa:1 },
+      { n:'Amplificador clase D 4 canales (instalación / gira chica)', w8:1000, w3:2400, pf:.95, nl:1, pa:1 },
+      { n:'Amplificador de gira 4 canales (alta potencia)', w8:2000, w3:4200, pf:.95, nl:1, pa:1 },
+      { n:'Amplificador clase AB (antiguo)', w8:900, w3:1800, pf:.6, pa:1 },
       { n:'Consola digital', w:300, pf:.95, nl:1 },
       { n:'Stagebox / rack digital', w:150, pf:.95, nl:1 },
       { n:'Receptor inalámbrico (por unidad)', w:25, pf:.95, nl:1 },
@@ -471,6 +492,13 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     ]},
   ];
   const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+  // Modelos reales con datos de ficha técnica (biblioteca.js). Si no cargó, la app sigue con los genéricos.
+  const DISC = 'Datos de fichas técnicas y manuales de los fabricantes; algunos vienen de copias que circulan en internet (distribuidores y sitios de manuales). Confirma con la placa del equipo.';
+  const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const MODS = (Array.isArray(window.FL_MODELOS) ? window.FL_MODELOS : [])
+    .filter(m => m && CATS.some(c => c.id === m.cat) && (m.pa ? m.w8 > 0 && m.w3 > 0 : m.w > 0))
+    .map(m => ({ ...m, n: `${m.marca} ${m.modelo}`, key: norm(`${m.marca} ${m.modelo} ${m.tipo || ''}`) }))
+    .sort((a, b) => a.n.localeCompare(b.n, 'es', { numeric:true }));
   const DF_DEF = { audio:100, video:80, luz:90, otros:100 };
   // Tipo de evento: k = qué tanto del camino entre 1/8 y 1/3 de potencia usa la amplificación.
   const SHOWS = {
@@ -659,9 +687,16 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
         <div class="add">
           <select data-add="${c.id}" aria-label="Agregar equipo de ${c.name}">
             <option value="">＋ Agregar equipo de ${c.name.toLowerCase()}…</option>
+            <optgroup label="Genéricos">
             ${c.lib.map((p, i) => `<option value="${i}">${esc(p.n)} · ${wLabel(p)}</option>`).join('')}
+            </optgroup>
             <option value="custom">Otro equipo (escribe tus datos)</option>
           </select>
+          ${MODS.some(m => m.cat === c.id) ? `<div class="find">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input type="search" data-find="${c.id}" placeholder="Buscar modelo (marca o modelo)…" aria-label="Buscar modelo de ${c.name.toLowerCase()}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+            <div class="res" data-res="${c.id}" hidden></div>
+          </div>` : ''}
         </div>
       </section>`).join('');
   }
@@ -683,6 +718,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
         </select>`}</label>
         <span class="tot" data-tot="${i.id}"></span>
         <button class="del" data-del="${i.id}" aria-label="Quitar ${esc(i.n)}" title="Quitar">✕</button>
+        ${i.src ? `<div class="src">Dato de fábrica: <a href="${esc(i.src)}" target="_blank" rel="noopener">ver ficha</a>${i.copia ? ' (copia de terceros)' : ''}${i.pfe ? ' · <span class="est">FP estimado</span>' : ''}${i.w3e ? ' · <span class="est">1/3 de potencia estimado</span>' : ''}</div>` : ''}
       </div>`).join('');
   }
   function refreshCat(cat) {
@@ -696,15 +732,7 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     if (add) {
       const v = e.target.value; e.target.value = '';
       if (v === '') return;
-      const p = v === 'custom' ? { n:'', w:100, pf:.9 } : CAT[add].lib[+v];
-      const it = { id:uid++, cat:add, n:p.n, q:1, w:p.w || 0, pf:p.pf, v:p.v || '1', ph:'A' };
-      if (p.m) it.m = 1; if (p.nl) it.nl = 1;
-      if (p.pa) { it.pa = 1; it.w8 = p.w8; it.w3 = p.w3; }
-      S.items.push(it);
-      refreshCat(add); update(); save();
-      const row = document.querySelector(`.item[data-id="${it.id}"]`);
-      const f = row?.querySelector(v === 'custom' ? '[data-f="n"]' : '[data-f="q"]');
-      if (f) { f.focus(); f.select(); }
+      addItem(add, v === 'custom' ? { n:'', w:100, pf:.9 } : CAT[add].lib[+v], v === 'custom');
       return;
     }
     if (e.target.dataset.f === 'ph') {
@@ -734,6 +762,54 @@ footer{margin-top:22px;font-size:12px;color:#5d636d;text-align:center}
     const it = S.items.find(i => i.id === +id); if (!it) return;
     S.items = S.items.filter(i => i !== it);
     refreshCat(it.cat); update(); save();
+  });
+
+  // ───────── UI: buscador de modelos reales ─────────
+  function addItem(cat, p, focusName) {
+    const it = { id:uid++, cat, n:p.n, q:1, w:p.w || 0, pf:p.pf, v:p.v || '1', ph:'A' };
+    if (p.m) it.m = 1; if (p.nl) it.nl = 1;
+    if (p.pa) { it.pa = 1; it.w8 = p.w8; it.w3 = p.w3; }
+    if (p.fuente) it.src = p.fuente; if (p.pf_est) it.pfe = 1; if (p.w3_est) it.w3e = 1; if (p.copia) it.copia = 1;
+    S.items.push(it);
+    refreshCat(cat); update(); save();
+    const row = document.querySelector(`.item[data-id="${it.id}"]`);
+    const f = row?.querySelector(focusName ? '[data-f="n"]' : '[data-f="q"]');
+    if (f) { f.focus({ preventScroll:true }); f.select(); row.scrollIntoView({ block:'nearest' }); }
+  }
+  function findModels(cat, q) {
+    const t = norm(q).split(/\s+/).filter(Boolean);
+    if (!t.length) return [];
+    return MODS.filter(m => m.cat === cat && t.every(x => m.key.includes(x)));
+  }
+  function renderRes(inp) {
+    const cat = inp.dataset.find, box = document.querySelector(`[data-res="${cat}"]`);
+    const list = findModels(cat, inp.value);
+    if (!inp.value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
+    const MAX = 40;
+    box.innerHTML = list.length ? list.slice(0, MAX).map((m, k) =>
+      `<button type="button" class="${m.pa ? 'pa' : ''}${k === 0 ? ' hi' : ''}" data-mod="${MODS.indexOf(m)}"><span><b>${esc(m.n)}</b><span class="tp">${esc(m.tipo || '')}</span></span><small>${wLabel(m)}</small></button>`).join('')
+      + (list.length > MAX ? `<p>Y ${list.length - MAX} más: escribe más letras para afinar.</p>` : '')
+      : '<p>Sin resultados. Prueba con la marca o usa un genérico.</p>';
+    box.innerHTML += `<p class="disc">${DISC}</p>`;
+    box.hidden = false;
+  }
+  $('cats').addEventListener('input', e => { if (e.target.dataset.find) renderRes(e.target); });
+  $('cats').addEventListener('keydown', e => {
+    const cat = e.target.dataset.find; if (!cat) return;
+    if (e.key === 'Enter') { e.preventDefault(); document.querySelector(`[data-res="${cat}"] [data-mod]`)?.click(); }
+    if (e.key === 'Escape') { e.target.value = ''; renderRes(e.target); }
+  });
+  $('cats').addEventListener('click', e => {
+    const b = e.target.closest('[data-mod]');
+    if (b) {
+      const m = MODS[+b.dataset.mod], inp = document.querySelector(`[data-find="${m.cat}"]`);
+      if (inp) { inp.value = ''; renderRes(inp); }
+      addItem(m.cat, m);
+      return;
+    }
+    // En celular no hay "hover": tocar un equipo real muestra su fuente (modo Ninja).
+    const row = e.target.closest('.item');
+    if (row && S.ninja && !e.target.closest('a,button,input,select')) row.classList.toggle('tap');
   });
 
   $('reset').onclick = () => {
