@@ -8,8 +8,8 @@ Biblioteca de modelos reales de la Calculadora de KVA (`kva/biblioteca.js`). Cad
 |---|---|---|---|
 | 1 · Integración + amplificadores | ✅ Hecho | 2026-11-19 | 90 |
 | 2 · Bocinas activas, consolas, RF | ✅ Hecho | 2026-11-20 | 195 |
-| 3 · Iluminación | ⏳ Siguiente | — | — |
-| 4 · Video y otros | Pendiente | — | — |
+| 3 · Iluminación | ✅ Hecho | 2026-11-21 | 192 |
+| 4 · Video y otros | ⏳ Siguiente | — | — |
 | Mantenimiento semanal | Cuando estén los 4 bloques | — | — |
 
 ## Marcas hechas (bloque 1)
@@ -47,7 +47,33 @@ Biblioteca de modelos reales de la Calculadora de KVA (`kva/biblioteca.js`). Cad
 | Sennheiser | 15 | docs.cloud.sennheiser.com y copias |
 | **Total** | **195** | |
 
+## Marcas hechas (bloque 3)
+
+| Marca | Modelos | Fuentes |
+|---|---|---|
+| Chauvet Professional | 21 | PDF oficiales (W y A por voltaje; FP = W / VA) |
+| Martin (iluminación) | 16 | todas copias (martin.com rechaza la descarga): Full Compass, 4Wall, distribuidores |
+| Robe | 15 | Product Guide 2022 oficial (sin FP → estimado); Robin 600 LEDWash de copia del manual |
+| Ayrton | 14 | páginas de producto y catálogo 2019 oficiales |
+| Elation | 14 | páginas oficiales («Max Power Consumption», FP estimado) |
+| Chauvet DJ | 13 | PDF oficiales (incluye Hurricane, Geyser y Nimbus) |
+| ETC | 18 | etcconnect.com y artículos de soporte; S4 LED S3 de copia |
+| Clay Paky | 12 | fichas oficiales en VA (w = VA × FP estimado); 4 de copias |
+| MA Lighting | 10 | help.malighting.com (sólo VA → w = VA, FP 1.0 estimado) |
+| GLP | 9 | glp.de (sin FP) y copias |
+| Vari-Lite | 8 | vari-lite.com y copias |
+| Antari 8 · MDG 4 · Look Solutions 3 | 15 | catálogo Antari 2024, mdgfog.com, copias de Look |
+| High End Systems | 7 | etcconnect.com / copias |
+| Genéricos chinos | 20 | fichas de Big Dipper, Beyond, Stairville, Eurolite, MJ, Aolait, Monster, Showven, TourPro, etc.; 11 de copias/distribuidor |
+| **Total** | **192** | 54 con `copia:1` |
+
 ## Pendientes
+
+### Bloque 3 · iluminación
+- **Sin dato o sin leer:** Martin Atomic 3000 de lámpara (no hay dato para la versión 120 V), Martin ELP, MAC Encore Wash; High End SolaFrame 750 (etcconnect DownloadAsset con robots), SolaSpot; Vari-Lite VL4000 BeamWash (manual redirige a portada); GLP KNV (la PSU no da potencia), JDC2 no IP, X4 Bar 10 oficial «tba»; Clay Paky Skylos, Sharpy nuevo (2025, la web sólo da lámpara); Ayrton Cobra original (leaflet en ampco-flashlight sin revisar); Elation Artiste DaVinci (1300 W en la web vs 470 W en ficha FIL), Proteus Hybrid original, Paladin, KL Panel, Platinum Spot 5R; Chauvet Ovation E-910FC, epix Strip, Rogue R1 Beam y R2 Spot originales, SlimPAR Q12; ETC Response gateways; grandMA2 ultra-light/replay/fader wing (dato visto en help.malighting.com, fácil de agregar).
+- **Genéricos:** beam 295 10R (sin ficha con consumo), 3 en 1 230 W LED, spot 150 W, estrobo 1000 W Amixled y humo 1500 W «sin marca» (fichas sin fabricante, no entran).
+- **Para revisar:** VL3500 Wash (calculado con 12 A × 200 V, el máximo del rango), VL4000 Spot (FP 0.85 estimado, quizá tenga PFC), Perseo (800 W actual vs 900 W catálogo 2019).
+
 
 ### Bloque 2 · sólo dato máximo (no entran hasta que Carlos decida el criterio)
 - **Meyer Sound (20):** LEOPARD, 900-LFC, 1100-LFC, PANTHER, 2100-LFC, 750-LFC, LINA, ULTRA-X40/X42, X20/22/23, X80/82, UPQ-D1, 700-HP, UPA-1P, UPJ-1P, MJF-212A, MICA, MILO 120, MINA, 650-P, UMS-1P. Las fichas sólo dan idle / continuo >10 s / burst <1 s / pico, a 115 y 230 V. PANTHER, 2100-LFC, ULTRA-X80 y 1100-LFC son sólo 200–240 V (v:'2').
@@ -82,7 +108,11 @@ Biblioteca de modelos reales de la Calculadora de KVA (`kva/biblioteca.js`). Cad
 - manualshive.com (anti-bots).
 - jblpro.com (error), m.musictribe.com (robots), rcf.it (descargas devuelven HTML), sennheiser.com/globalassets (redirige a optimizely), pubs.shure.com/guide (permiso), soundhouse.co.jp (robots), datasheets binarios de electrovoice.com (robots).
 
+## Fuentes bloqueadas (bloque 3)
+- martin.com (client_error en productos y site_elements), cdn.aws.robe.cz (permiso no respondido), etcconnect.com/WorkArea/DownloadAsset (robots), vari-lite.com/b-dam (redirige a portada), www2.glp.de (portada) y catálogo GLP 2026 (falla), antari.com/products (permiso), en.acme.com.cn (portada), thomann (permiso).
+
 ## Corridas
 - 2026-11-19 · Bloque 1: integración del buscador en la app + 82 amplificadores.
 - 2026-11-19 · Ajuste: 8 Lab.gruppen de copias de manuales (aprobado), campo `copia` y aviso de fuentes en la página.
 - 2026-11-20 · Bloque 2: 195 modelos (93 bocinas/subs/line arrays activos, 62 consolas/stageboxes/racks, 41 RF e in-ears). Meyer y 4 Martin Audio fuera por tener sólo máximos.
+- 2026-11-21 · Bloque 3: 192 modelos de iluminación (cabezas, wash, beams, PAR, barras, blinders, estrobos, elipsoidales, consolas, humo y hazers, genéricos chinos). sw.js → v8.
